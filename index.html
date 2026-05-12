@@ -6,46 +6,79 @@
     <title>Operator Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --matrix-green: #00ff41; --bg-color: #0d0d0d; --box-bg: #1a1a1a; --border-radius: 12px; }
-        body { background-color: var(--bg-color); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        h2 { font-size: 1.2rem; font-weight: 600; color: #fff; letter-spacing: 1px; width: 100%; max-width: 400px; text-align: center; margin-bottom: 20px; }
+        :root { --matrix-green: #00ff41; --bg-color: #080808; --card-bg: #121212; --border-radius: 16px; }
+        body { background-color: var(--bg-color); color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        h2 { font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; width: 100%; max-width: 400px; }
         
-        /* Vollbild-Scanner ohne sichtbaren Rahmen */
-        #reader { display: none; width: 100%; max-width: 400px; border-radius: var(--border-radius); overflow: hidden; background: #000; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); position: relative; }
+        /* Kamera Container */
+        #reader-container { width: 100%; max-width: 400px; border-radius: var(--border-radius); overflow: hidden; background: #000; display: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); margin-bottom: 20px; }
+        #reader { width: 100%; }
+        /* Unterdrückung fremder UI-Elemente */
+        #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; border-radius: var(--border-radius); }
-        /* Blendet die störende UI der Scanner-Bibliothek aus */
-        #reader img, #reader span, #reader a, #reader div[style*="border"] { display: none !important; }
         
-        #result { margin-top: 20px; padding: 20px; border-radius: var(--border-radius); background: var(--box-bg); width: 100%; max-width: 360px; min-height: 100px; font-size: 14px; text-align: left; word-wrap: break-word; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        /* Resultat Container (Card Style) */
+        #result { width: 100%; max-width: 360px; display: none; flex-direction: column; gap: 15px; }
+        .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #222; }
         
-        button { background: #222; color: #fff; border: 1px solid #444; border-radius: var(--border-radius); padding: 18px; font-weight: 600; margin-top: 20px; font-size: 16px; width: 100%; max-width: 400px; cursor: pointer; transition: 0.2s; }
-        button:active { background: #333; transform: scale(0.98); }
+        /* Produkt Header */
+        .product-header { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; }
+        .product-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; background: #222; border: 1px solid #333; }
+        .product-title { font-size: 18px; font-weight: 700; color: #fff; margin: 0; line-height: 1.2; }
+        .category-badge { display: inline-block; background: #333; color: #aaa; font-size: 10px; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         
-        .alert { color: #ff3b30; font-weight: 600; margin-top: 15px; border-left: 3px solid #ff3b30; padding-left: 12px; background: rgba(255, 59, 48, 0.1); padding-block: 10px; border-radius: 0 4px 4px 0; }
-        .clean { color: #34c759; font-weight: 600; margin-top: 15px; border-left: 3px solid #34c759; padding-left: 12px; background: rgba(52, 199, 89, 0.1); padding-block: 10px; border-radius: 0 4px 4px 0; }
-        .info-text { color: #8e8e93; font-size: 12px; margin-top: 8px; display: block; line-height: 1.5; }
-        .category-badge { display: inline-block; background: #333; font-size: 10px; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Status Banner */
+        .status-banner { padding: 12px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+        .status-alert { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
+        .status-clean { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
+        
+        /* Listen */
+        .section-title { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; border-bottom: 1px solid #222; padding-bottom: 4px; }
+        .toxin-list { color: #ff3b30; font-size: 13px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 15px; }
+        .alt-list { color: #00ff41; font-size: 13px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 15px; }
+        .ingredients-text { color: #8e8e93; font-size: 12px; line-height: 1.5; margin: 0; }
+        
+        /* Haupt-Button */
+        button#startBtn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 18px; font-weight: 700; font-size: 16px; width: 100%; max-width: 400px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; margin-top: auto; }
+        button#startBtn:active { transform: scale(0.97); background: #ccc; }
     </style>
 </head>
 <body>
     <h2>DATA EXTRACTION</h2>
-    <div id="reader"></div>
-    <button id="startBtn">Scanner Aktivieren</button>
-    <div id="result">System initialisiert.<br>Warte auf Input.</div>
+    
+    <div id="reader-container">
+        <div id="reader"></div>
+    </div>
+    
+    <div id="result"></div>
+    
+    <button id="startBtn">Sensor Aktivieren</button>
 
     <script>
         let blacklist = {};
         let html5QrCode;
 
-        // Blacklist laden
+        // Souveräne Alternativen Matrix
+        const alternativeEngine = {
+            "fluorid": "Miswak-Stab (Salvadora persica), naturreine Zahnkreide.",
+            "e250": "Unbehandeltes Bio-Fleisch direkt vom Metzger.",
+            "aspartam": "Roher Honig, reines Wasser.",
+            "sucralose": "Roher Honig, reines Wasser.",
+            "zucker": "Roher Bio-Honig, isolierter Konsum von echten Früchten.",
+            "soja": "Weidefleisch, Eier (Testosteron-Basis).",
+            "e471": "Single-Ingredient Nahrungsmittel (Keine Fabrikware).",
+            "paraben": "Reine Kernseife, Rindertalg (Beef Tallow) für die Haut.",
+            "phthalat": "Naturöle, Glasbehälter statt Plastik.",
+            "aluminium": "Natürliche Alaunsteine, Verzicht auf synthetische Deos."
+        };
+
         fetch('blacklist.json')
             .then(response => response.json())
             .then(data => { blacklist = data; })
-            .catch(() => document.getElementById('result').innerHTML = "Fehler: Blacklist offline.");
+            .catch(() => { document.getElementById('result').innerHTML = "<div class='card'>Fehler: Blacklist offline.</div>"; document.getElementById('result').style.display = "flex"; });
 
         function analyzeProduct(data, category) {
             let p = data.product;
-            // Alle Datenquellen kombinieren, um Verstecktes (wie bei Toffifee) zu finden
             let ingredientsRaw = [
                 p.ingredients_text_de || "",
                 p.ingredients_text_en || "",
@@ -54,72 +87,117 @@
             ].join(" ").toLowerCase();
 
             let productName = p.product_name || "Unbekannte Identität";
+            let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">KEIN BILD</div>`;
             
-            if (ingredientsRaw.trim() === "") {
-                document.getElementById('result').innerHTML = `<span class="category-badge">${category}</span><br><strong style="font-size:16px;">${productName}</strong><br><span class='alert'>Datenbank manipuliert. Keine Inhaltsstoffe extrahierbar. Konsum verweigern.</span>`;
-                return;
-            }
-            
-            let analysis = `<span class="category-badge">${category}</span><br><strong style="font-size:16px;">${productName}</strong><br><span class="info-text">${p.ingredients_text_de || p.ingredients_text || "Zutaten aus Metadaten extrahiert."}</span><br>`;
             let foundToxins = [];
+            let suggestedAlts = new Set();
 
             for (let toxin in blacklist) {
                 if (ingredientsRaw.includes(toxin.toLowerCase())) {
-                    foundToxins.push(`${toxin.toUpperCase()}: ${blacklist[toxin]}`);
+                    foundToxins.push(`<b>${toxin.toUpperCase()}</b>: ${blacklist[toxin]}`);
+                    
+                    // Suche nach passender Alternative
+                    for (let key in alternativeEngine) {
+                        if (toxin.toLowerCase().includes(key)) {
+                            suggestedAlts.add(alternativeEngine[key]);
+                        }
+                    }
                 }
             }
 
-            if (foundToxins.length > 0) {
-                analysis += `<div class="alert">TOXISCHE SIGNATUR ERKANNT:<br><br>- ${foundToxins.join('<br>- ')}</div>`;
+            let resultHtml = `
+                <div class="card">
+                    <div class="product-header">
+                        ${imageHtml}
+                        <div>
+                            <div class="category-badge">${category}</div>
+                            <h3 class="product-title">${productName}</h3>
+                        </div>
+                    </div>
+            `;
+
+            if (ingredientsRaw.trim() === "") {
+                resultHtml += `
+                    <div class="status-banner status-alert">Datenbank manipuliert. Keine Zutaten.</div>
+                </div>`;
+            } else if (foundToxins.length > 0) {
+                resultHtml += `
+                    <div class="status-banner status-alert">BIOLOGISCHER ANGRIFF DETEKTIERT</div>
+                    <div style="margin-top: 15px;">
+                        <div class="section-title">Identifizierte Toxine</div>
+                        <ul class="toxin-list"><li>${foundToxins.join('</li><li>')}</li></ul>
+                    </div>
+                `;
+                
+                if (suggestedAlts.size > 0) {
+                    resultHtml += `
+                        <div style="margin-top: 15px;">
+                            <div class="section-title">Souveräne Alternativen</div>
+                            <ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul>
+                        </div>
+                    `;
+                }
+
+                resultHtml += `
+                    <div style="margin-top: 15px;">
+                        <div class="section-title">Rohdaten (Zutaten)</div>
+                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Aus Metadaten extrahiert."}</p>
+                    </div>
+                </div>`;
             } else {
-                analysis += `<div class="clean">STATUS REIN.<br>Keine programmierten Toxine detektiert.</div>`;
+                resultHtml += `
+                    <div class="status-banner status-clean">STATUS: REIN</div>
+                    <div style="margin-top: 15px;">
+                        <div class="section-title">Rohdaten (Zutaten)</div>
+                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text}</p>
+                    </div>
+                </div>`;
             }
             
-            document.getElementById('result').innerHTML = analysis;
+            document.getElementById('result').innerHTML = resultHtml;
+            document.getElementById('result').style.display = "flex";
         }
 
         function onScanSuccess(decodedText) {
             html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = "none";
-                document.getElementById('startBtn').style.display = "block";
-                document.getElementById('startBtn').innerText = "Neuer Scan";
+                document.getElementById('reader-container').style.display = "none";
+                let startBtn = document.getElementById('startBtn');
+                startBtn.style.display = "block";
+                startBtn.innerText = "Neuen Code Scannen";
                 
-                document.getElementById('result').innerHTML = `Signatur [${decodedText}] erfasst.<br>Frage Food-Sektor ab...`;
+                document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Signatur [${decodedText}] erfasst.<br>Kontaktiere Datenbanken...</div>`;
+                document.getElementById('result').style.display = "flex";
                 
-                // Kaskade 1: Open Food Facts
                 fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
                     .then(res => res.json())
                     .then(data => {
                         if (data.status === 1) {
                             analyzeProduct(data, "Nahrungsmittel");
                         } else {
-                            // Kaskade 2: Open Beauty Facts (Kosmetik)
-                            document.getElementById('result').innerHTML = `Nicht in Food-Sektor gefunden.<br>Wechsle zu Kosmetik-Sektor...`;
                             fetch(`https://world.openbeautyfacts.org/api/v0/product/${decodedText}.json`)
                                 .then(resB => resB.json())
                                 .then(dataB => {
                                     if (dataB.status === 1) {
                                         analyzeProduct(dataB, "Kosmetik / Pflege");
                                     } else {
-                                        document.getElementById('result').innerHTML = `<span class='alert'>Objekt [${decodedText}] in keiner Datenbank katalogisiert. Black-Box Produkt.</span>`;
+                                        document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Objekt in keiner Datenbank katalogisiert. Black-Box Produkt.</div>`;
                                     }
                                 });
                         }
                     })
                     .catch(() => {
-                        document.getElementById('result').innerHTML = "Server-Interferenz. API blockiert.";
+                        document.getElementById('result').innerHTML = `<div class="card">Server-Interferenz. API blockiert.</div>`;
                     });
             });
         }
 
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startBtn').style.display = "none";
-            document.getElementById('reader').style.display = "block";
-            document.getElementById('result').innerHTML = "Optischer Sensor aktiv. Erfasse gesamten Bereich...";
+            document.getElementById('result').style.display = "none";
+            document.getElementById('reader-container').style.display = "block";
             
             html5QrCode = new Html5Qrcode("reader");
             
-            // Konfiguration OHNE qrbox = Vollbild-Erfassung. Kamera kann weiter weg gehalten werden.
             const config = { 
                 fps: 30,
                 formatsToSupport: [
@@ -137,129 +215,10 @@
 
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .catch(() => {
-                document.getElementById('result').innerHTML = "Hardware-Zugriff blockiert.";
+                document.getElementById('result').innerHTML = `<div class="card">Hardware-Zugriff verweigert. Browser-Berechtigungen prüfen.</div>`;
+                document.getElementById('result').style.display = "flex";
                 document.getElementById('startBtn').style.display = "block";
-                document.getElementById('reader').style.display = "none";
-            });
-        });
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Operator Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        :root { --matrix-green: #00ff41; --bg-color: #050505; --box-bg: #111; }
-        body { background-color: var(--bg-color); color: var(--matrix-green); font-family: 'Courier New', Courier, monospace; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        h2 { font-size: 1.4rem; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid var(--matrix-green); padding-bottom: 10px; width: 100%; max-width: 400px; margin-top: 10px; }
-        
-        /* Kamera-Container ist initial unsichtbar */
-        #reader { display: none; width: 100%; max-width: 400px; border: 1px solid var(--matrix-green); background: #000; box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); margin-top: 10px; position: relative; }
-        #reader img, #reader span, #reader a { display: none !important; }
-        
-        #result { margin-top: 20px; padding: 15px; border: 1px solid #333; background: var(--box-bg); width: 100%; max-width: 370px; min-height: 120px; font-size: 14px; text-align: left; word-wrap: break-word; box-shadow: inset 0 0 10px #000; overflow-y: auto; }
-        button { background: var(--matrix-green); color: #000; border: none; padding: 16px; font-weight: bold; margin-top: 20px; font-size: 16px; width: 100%; max-width: 400px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: 0.1s; }
-        button:active { background: #00cc33; transform: scale(0.98); }
-        .alert { color: #ff003c; font-weight: bold; margin-top: 15px; border-left: 3px solid #ff003c; padding-left: 10px; background: rgba(255, 0, 60, 0.1); padding-block: 10px; }
-        .clean { color: var(--matrix-green); font-weight: bold; margin-top: 15px; border-left: 3px solid var(--matrix-green); padding-left: 10px; background: rgba(0, 255, 65, 0.1); padding-block: 10px; }
-        .info-text { color: #777; font-size: 12px; margin-top: 5px; display: block; line-height: 1.4; }
-    </style>
-</head>
-<body>
-    <h2>Operator Interface</h2>
-    <div id="reader"></div>
-    <button id="startBtn">Sensor Aktivieren</button>
-    <div id="result">System initialisiert.<br>Warte auf Input.</div>
-
-    <script>
-        let blacklist = {};
-        let html5QrCode;
-
-        fetch('blacklist.json')
-            .then(response => response.json())
-            .then(data => { blacklist = data; })
-            .catch(() => document.getElementById('result').innerHTML = "Fehler: Blacklist offline.");
-
-        function onScanSuccess(decodedText) {
-            // 1. Kamera sofort stoppen
-            html5QrCode.stop().then(() => {
-                // 2. Kamera-Fenster komplett ausblenden
-                document.getElementById('reader').style.display = "none";
-                
-                // 3. Button für neuen Scan wieder einblenden
-                document.getElementById('startBtn').style.display = "block";
-                document.getElementById('startBtn').innerText = "Neuer Scan";
-                
-                // 4. API-Abfrage starten
-                document.getElementById('result').innerHTML = `Signatur [${decodedText}] erfasst im Speicher.<br>Sensoren offline. Analysiere Daten...`;
-                
-                fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status !== 1) {
-                            document.getElementById('result').innerHTML = "<span class='alert'>Objekt nicht katalogisiert. Konsum verweigern.</span>";
-                            return;
-                        }
-                        
-                        let ingredients = data.product.ingredients_text_de || data.product.ingredients_text || "Keine Zutatenliste verfügbar.";
-                        ingredients = ingredients.toLowerCase();
-                        let productName = data.product.product_name || "Unbekannte Identität";
-                        
-                        let analysis = `<strong style="color:#fff; font-size:15px;">${productName}</strong><br><span class="info-text">${ingredients}</span><br>`;
-                        let foundToxins = [];
-
-                        for (let toxin in blacklist) {
-                            if (ingredients.includes(toxin.toLowerCase())) {
-                                foundToxins.push(`${toxin.toUpperCase()}: ${blacklist[toxin]}`);
-                            }
-                        }
-
-                        if (foundToxins.length > 0) {
-                            analysis += `<div class="alert">TOXISCHE SIGNATUR ERKANNT:<br><br>- ${foundToxins.join('<br>- ')}</div>`;
-                        } else {
-                            analysis += `<div class="clean">STATUS REIN.<br>Keine programmierten Toxine detektiert.</div>`;
-                        }
-                        
-                        document.getElementById('result').innerHTML = analysis;
-                    })
-                    .catch(() => {
-                        document.getElementById('result').innerHTML = "Server-Interferenz. API nicht erreichbar.";
-                    });
-            });
-        }
-
-        document.getElementById('startBtn').addEventListener('click', () => {
-            // UI anpassen
-            document.getElementById('startBtn').style.display = "none";
-            document.getElementById('reader').style.display = "block"; // Kamera-Fenster anzeigen
-            document.getElementById('result').innerHTML = "Sensor aktiv. Fokussiere 1D-Barcode...";
-            
-            html5QrCode = new Html5Qrcode("reader");
-            
-            // Konfiguration für maximale Geschwindigkeit
-            const config = { 
-                fps: 30, // Erhöht von 15 auf 30 für schnellere Erfassung
-                qrbox: { width: 300, height: 100 }, // Schmaler, perfekt für EAN
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8
-                ],
-                videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    advanced: [{ focusMode: "continuous" }]
-                }
-            };
-
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(() => {
-                document.getElementById('result').innerHTML = "Hardware-Zugriff verweigert.";
-                document.getElementById('startBtn').style.display = "block";
-                document.getElementById('reader').style.display = "none";
+                document.getElementById('reader-container').style.display = "none";
             });
         });
     </script>
