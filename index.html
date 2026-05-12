@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { background-color: #000; color: #0f0; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; border: 1px solid #0f0; }
+        #result { margin-top: 20px; padding: 15px; border: 1px solid #333; text-align: left; background: #111; min-height: 100px; }
+        button { background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold; margin-top: 20px; font-size: 16px; width: 100%; max-width: 500px; cursor: pointer; }
+        .alert { color: #f00; font-weight: bold; }
+        .clean { color: #0f0; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>SYSTEM FILTER</h2>
+    <div id="reader"></div>
+    <button id="startBtn">Scanner Aktivieren</button>
+    <div id="result">Warte auf Input...</div>
+
+    <script>
+        let blacklist = {};
+        let html5QrcodeScanner;
+
+        // Blacklist laden
+        fetch('blacklist.json')
+            .then(response => response.json())
+            .then(data => { blacklist = data; })
+            .catch(err => document.getElementById('result').innerHTML = "Fehler beim Laden der Blacklist.");
+
+        function onScanSuccess(decodedText, decodedResult) {
+            html5QrcodeScanner.clear(); // Kamera nach Scan stoppen
+            document.getElementById('result').innerHTML = "Barcode erkannt: " + decodedText + "<br>Analysiere Matrix-Datenbank...";
+            
+            // Open Food Facts API abrufen
+            fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status !== 1) {
+                        document.getElementById('result').innerHTML = "Produkt in der Datenbank nicht existent. Konsum evaluieren.";
+                        return;
+                    }
+                    
+                    let ingredients = data.product.ingredients_text_de || data.product.ingredients_text || "Keine Zutatenliste verfügbar.";
+                    ingredients = ingredients.toLowerCase();
+                    let productName = data.product.product_name || "Unbekanntes Produkt";
+                    let analysis = `<h3>${productName}</h3><p>Zutaten: ${ingredients}</p>`;
+                    let foundToxins = [];
+
+                    // Filter Logik
+                    for (let toxin in blacklist) {
+                        if (ingredients.includes(toxin.toLowerCase())) {
+                            foundToxins.push(`${toxin.toUpperCase()}: ${blacklist[toxin]}`);
+                        }
+                    }
+
+                    if (foundToxins.length > 0) {
+                        analysis += `<div class="alert">WARNUNG. ANGRIFF DETEKTIERT:<br>- ${foundToxins.join('<br>- ')}</div>`;
+                    } else {
+                        analysis += `<div class="clean">STATUS: REIN. Keine Blacklist-Treffer.</div>`;
+                    }
+                    
+                    document.getElementById('result').innerHTML = analysis;
+                })
+                .catch(err => {
+                    document.getElementById('result').innerHTML = "Systemfehler bei der API-Verbindung.";
+                });
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('result').innerHTML = "Kamera initialisiert...";
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess);
+        });
+    </script>
+</body>
+</html>
