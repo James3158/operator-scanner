@@ -7,23 +7,24 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --matrix-green: #00ff41; --bg-color: #050505; --box-bg: #111; }
-        body { background-color: var(--bg-color); color: var(--matrix-green); font-family: 'Courier New', Courier, monospace; text-align: center; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        h2 { font-size: 1.2rem; letter-spacing: 3px; text-transform: uppercase; border-bottom: 1px solid var(--matrix-green); padding-bottom: 5px; width: 100%; max-width: 400px; }
-        #reader { width: 100%; max-width: 400px; border: 1px solid var(--matrix-green); border-radius: 2px; overflow: hidden; background: #000; box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); margin-top: 10px; }
-        #result { margin-top: 20px; padding: 15px; border: 1px solid #222; background: var(--box-bg); width: 100%; max-width: 370px; min-height: 100px; font-size: 13px; text-align: left; word-wrap: break-word; box-shadow: inset 0 0 10px #000; }
-        button { background: var(--matrix-green); color: #000; border: none; padding: 15px; font-weight: bold; margin-top: 20px; font-size: 15px; width: 100%; max-width: 400px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.1s; }
+        body { background-color: var(--bg-color); color: var(--matrix-green); font-family: 'Courier New', Courier, monospace; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        h2 { font-size: 1.4rem; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid var(--matrix-green); padding-bottom: 10px; width: 100%; max-width: 400px; margin-top: 10px; }
+        #reader { width: 100%; max-width: 400px; border: 1px solid var(--matrix-green); background: #000; box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); margin-top: 10px; position: relative; }
+        /* Unterdrückung der Standard-UI der Scanner-Bibliothek */
+        #reader img, #reader span, #reader a { display: none !important; }
+        #result { margin-top: 20px; padding: 15px; border: 1px solid #333; background: var(--box-bg); width: 100%; max-width: 370px; min-height: 120px; font-size: 14px; text-align: left; word-wrap: break-word; box-shadow: inset 0 0 10px #000; overflow-y: auto; }
+        button { background: var(--matrix-green); color: #000; border: none; padding: 16px; font-weight: bold; margin-top: 20px; font-size: 16px; width: 100%; max-width: 400px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: 0.1s; }
         button:active { background: #00cc33; transform: scale(0.98); }
-        .alert { color: #ff003c; font-weight: bold; margin-top: 15px; border-left: 2px solid #ff003c; padding-left: 10px; background: rgba(255, 0, 60, 0.05); padding-block: 5px; }
-        .clean { color: var(--matrix-green); font-weight: bold; margin-top: 15px; border-left: 2px solid var(--matrix-green); padding-left: 10px; background: rgba(0, 255, 65, 0.05); padding-block: 5px; }
-        .info-text { color: #666; font-size: 11px; margin-top: 5px; display: block; }
-        video { object-fit: cover; }
+        .alert { color: #ff003c; font-weight: bold; margin-top: 15px; border-left: 3px solid #ff003c; padding-left: 10px; background: rgba(255, 0, 60, 0.1); padding-block: 10px; }
+        .clean { color: var(--matrix-green); font-weight: bold; margin-top: 15px; border-left: 3px solid var(--matrix-green); padding-left: 10px; background: rgba(0, 255, 65, 0.1); padding-block: 10px; }
+        .info-text { color: #777; font-size: 12px; margin-top: 5px; display: block; line-height: 1.4; }
     </style>
 </head>
 <body>
-    <h2>System Filter</h2>
+    <h2>Operator Interface</h2>
     <div id="reader"></div>
-    <button id="startBtn">Scanner Aktivieren</button>
-    <div id="result">System bereit. Warte auf optischen Input.</div>
+    <button id="startBtn">Sensor Aktivieren</button>
+    <div id="result">System initialisiert.<br>Warte auf physischen Strichcode.</div>
 
     <script>
         let blacklist = {};
@@ -32,18 +33,18 @@
         fetch('blacklist.json')
             .then(response => response.json())
             .then(data => { blacklist = data; })
-            .catch(err => document.getElementById('result').innerHTML = "Kritischer Fehler: Blacklist.json nicht lesbar.");
+            .catch(() => document.getElementById('result').innerHTML = "Kritischer Fehler: Blacklist.json offline.");
 
         function onScanSuccess(decodedText) {
             html5QrCode.stop().then(() => {
                 document.getElementById('startBtn').style.display = "block";
-                document.getElementById('result').innerHTML = `Barcode [${decodedText}] erfasst.<br>Extrahiere API-Daten...`;
+                document.getElementById('result').innerHTML = `Signatur [${decodedText}] erfasst.<br>Kontaktiere Matrix-Datenbank...`;
                 
                 fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
                     .then(res => res.json())
                     .then(data => {
                         if (data.status !== 1) {
-                            document.getElementById('result').innerHTML = "<span class='alert'>Objekt nicht in Datenbank. System empfiehlt Ablehnung.</span>";
+                            document.getElementById('result').innerHTML = "<span class='alert'>Objekt nicht katalogisiert. Konsum verweigern.</span>";
                             return;
                         }
                         
@@ -51,7 +52,7 @@
                         ingredients = ingredients.toLowerCase();
                         let productName = data.product.product_name || "Unbekannte Identität";
                         
-                        let analysis = `<strong style="color:#fff;">${productName}</strong><br><span class="info-text">${ingredients}</span><br>`;
+                        let analysis = `<strong style="color:#fff; font-size:15px;">${productName}</strong><br><span class="info-text">${ingredients}</span><br>`;
                         let foundToxins = [];
 
                         for (let toxin in blacklist) {
@@ -76,15 +77,30 @@
 
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startBtn').style.display = "none";
-            document.getElementById('result').innerHTML = "Optischer Sensor aktiv. Fokussiere Code...";
+            document.getElementById('result').innerHTML = "Sensor aktiv. Fokussiere 1D-Barcode...";
             
             html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 100 } },
-                onScanSuccess
-            ).catch(err => {
-                document.getElementById('result').innerHTML = "Hardware-Zugriff blockiert. Berechtigungen prüfen.";
+            
+            // Konfiguration für maximale Hardware-Auslastung und Barcode-Fokus
+            const config = { 
+                fps: 15, 
+                qrbox: { width: 300, height: 150 },
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A
+                ],
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { min: 1280, ideal: 1920 },
+                    height: { min: 720, ideal: 1080 },
+                    advanced: [{ focusMode: "continuous" }]
+                }
+            };
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(() => {
+                document.getElementById('result').innerHTML = "Hardware-Zugriff verweigert.";
                 document.getElementById('startBtn').style.display = "block";
             });
         });
