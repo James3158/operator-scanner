@@ -6,45 +6,60 @@
     <title>Operator Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --matrix-green: #00ff41; --bg-color: #080808; --card-bg: #121212; --border-radius: 16px; }
-        body { background-color: var(--bg-color); color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        h2 { font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; width: 100%; max-width: 400px; }
+        :root { --matrix-green: #00ff41; --bg-color: #080808; --card-bg: #151515; --border-radius: 16px; }
+        body { background-color: var(--bg-color); color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-size: 16px; }
         
-        /* Kamera Container */
-        #reader-container { width: 100%; max-width: 400px; border-radius: var(--border-radius); overflow: hidden; background: #000; display: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); margin-bottom: 20px; }
+        /* Navigation */
+        .nav-bar { display: flex; width: 100%; max-width: 450px; background: #222; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+        .nav-btn { flex: 1; padding: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #888; cursor: pointer; transition: 0.2s; }
+        .nav-btn.active { background: var(--matrix-green); color: #000; }
+        
+        /* UI Skalierung */
+        h2 { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; text-align: center; width: 100%; }
+        #reader-container { width: 100%; max-width: 450px; border-radius: var(--border-radius); overflow: hidden; background: #000; display: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); margin-bottom: 20px; }
         #reader { width: 100%; }
-        /* Unterdrückung fremder UI-Elemente */
         #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; border-radius: var(--border-radius); }
         
-        /* Resultat Container (Card Style) */
-        #result { width: 100%; max-width: 360px; display: none; flex-direction: column; gap: 15px; }
-        .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #222; }
+        /* Resultat & Historie Container */
+        #result, #history-container { width: 100%; max-width: 450px; display: none; flex-direction: column; gap: 20px; }
+        .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #2a2a2a; }
         
-        /* Produkt Header */
-        .product-header { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; }
-        .product-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; background: #222; border: 1px solid #333; }
-        .product-title { font-size: 18px; font-weight: 700; color: #fff; margin: 0; line-height: 1.2; }
-        .category-badge { display: inline-block; background: #333; color: #aaa; font-size: 10px; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        /* Produkt Header & Score */
+        .product-header { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
+        .product-img { width: 90px; height: 90px; object-fit: cover; border-radius: 12px; background: #222; border: 1px solid #333; }
+        .product-info { flex-grow: 1; }
+        .product-title { font-size: 22px; font-weight: 800; color: #fff; margin: 0 0 8px 0; line-height: 1.2; }
+        .category-badge { display: inline-block; background: #333; color: #bbb; font-size: 11px; padding: 5px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .score-circle { width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; border: 4px solid; flex-shrink: 0; background: #000; }
         
-        /* Status Banner */
-        .status-banner { padding: 12px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-        .status-alert { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
-        .status-clean { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
+        /* Status & Listen */
+        .status-banner { padding: 15px; border-radius: 8px; font-weight: 800; font-size: 16px; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
+        .status-alert { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.4); }
+        .status-clean { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.4); }
         
-        /* Listen */
-        .section-title { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; border-bottom: 1px solid #222; padding-bottom: 4px; }
-        .toxin-list { color: #ff3b30; font-size: 13px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 15px; }
-        .alt-list { color: #00ff41; font-size: 13px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 15px; }
-        .ingredients-text { color: #8e8e93; font-size: 12px; line-height: 1.5; margin: 0; }
+        .section-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; border-bottom: 1px solid #333; padding-bottom: 6px; }
+        .toxin-list { color: #ff3b30; font-size: 16px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
+        .whitelist-list { color: var(--matrix-green); font-size: 16px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
+        .alt-list { color: #fff; font-size: 15px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 20px; }
+        .ingredients-text { color: #999; font-size: 14px; line-height: 1.6; margin: 0; }
         
-        /* Haupt-Button */
-        button#startBtn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 18px; font-weight: 700; font-size: 16px; width: 100%; max-width: 400px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; margin-top: auto; }
-        button#startBtn:active { transform: scale(0.97); background: #ccc; }
+        /* Historie Items */
+        .history-item { background: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; cursor: pointer; }
+        .history-item:active { background: #2a2a2a; }
+        
+        /* Buttons */
+        button.action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 18px; width: 100%; max-width: 450px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px; margin-top: auto; }
+        button.action-btn:active { transform: scale(0.97); background: #ccc; }
     </style>
 </head>
 <body>
-    <h2>DATA EXTRACTION</h2>
+    <h2>Operator Interface</h2>
+    
+    <div class="nav-bar">
+        <div id="tab-scan" class="nav-btn active" onclick="switchTab('scan')">Scanner</div>
+        <div id="tab-history" class="nav-btn" onclick="switchTab('history')">Historie</div>
+    </div>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -52,32 +67,100 @@
     
     <div id="result"></div>
     
-    <button id="startBtn">Sensor Aktivieren</button>
+    <div id="history-container">
+        <div id="history-list"></div>
+    </div>
+    
+    <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
 
     <script>
         let blacklist = {};
+        let whitelist = {};
         let html5QrCode;
 
-        // Souveräne Alternativen Matrix
+        // Alternative Engine
         const alternativeEngine = {
-            "fluorid": "Miswak-Stab (Salvadora persica), naturreine Zahnkreide.",
-            "e250": "Unbehandeltes Bio-Fleisch direkt vom Metzger.",
+            "fluorid": "Miswak-Stab, naturreine Zahnkreide.",
+            "e250": "Unbehandeltes Bio-Fleisch (Metzger).",
             "aspartam": "Roher Honig, reines Wasser.",
             "sucralose": "Roher Honig, reines Wasser.",
-            "zucker": "Roher Bio-Honig, isolierter Konsum von echten Früchten.",
-            "soja": "Weidefleisch, Eier (Testosteron-Basis).",
-            "e471": "Single-Ingredient Nahrungsmittel (Keine Fabrikware).",
-            "paraben": "Reine Kernseife, Rindertalg (Beef Tallow) für die Haut.",
-            "phthalat": "Naturöle, Glasbehälter statt Plastik.",
-            "aluminium": "Natürliche Alaunsteine, Verzicht auf synthetische Deos."
+            "zucker": "Roher Bio-Honig, isolierte Früchte.",
+            "soja": "Weidefleisch, Eier.",
+            "e471": "Single-Ingredient Nahrungsmittel.",
+            "paraben": "Kernseife, Rindertalg.",
+            "phthalat": "Naturöle, Glasbehälter.",
+            "aluminium": "Alaunsteine, Verzicht auf Deos."
         };
 
-        fetch('blacklist.json')
-            .then(response => response.json())
-            .then(data => { blacklist = data; })
-            .catch(() => { document.getElementById('result').innerHTML = "<div class='card'>Fehler: Blacklist offline.</div>"; document.getElementById('result').style.display = "flex"; });
+        // Datenbanken laden
+        Promise.all([
+            fetch('blacklist.json').then(r => r.json()).catch(() => ({})),
+            fetch('whitelist.json').then(r => r.json()).catch(() => ({}))
+        ]).then(data => {
+            blacklist = data[0];
+            whitelist = data[1];
+        });
 
-        function analyzeProduct(data, category) {
+        function switchTab(tab) {
+            if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+            
+            document.getElementById('tab-scan').className = tab === 'scan' ? 'nav-btn active' : 'nav-btn';
+            document.getElementById('tab-history').className = tab === 'history' ? 'nav-btn active' : 'nav-btn';
+            
+            if (tab === 'scan') {
+                document.getElementById('history-container').style.display = 'none';
+                document.getElementById('result').style.display = 'none';
+                document.getElementById('reader-container').style.display = 'none';
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('startBtn').innerText = 'Sensor Aktivieren';
+            } else {
+                document.getElementById('reader-container').style.display = 'none';
+                document.getElementById('result').style.display = 'none';
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('history-container').style.display = 'flex';
+                renderHistory();
+            }
+        }
+
+        function saveToHistory(barcode, name, score) {
+            let history = JSON.parse(localStorage.getItem('op_history')) || [];
+            // Vorhandenen Eintrag entfernen, um ihn nach oben zu setzen
+            history = history.filter(item => item.barcode !== barcode);
+            history.unshift({ barcode, name, score, date: new Date().toLocaleDateString() });
+            if (history.length > 50) history.pop(); // Max 50 Einträge
+            localStorage.setItem('op_history', JSON.stringify(history));
+        }
+
+        function renderHistory() {
+            let history = JSON.parse(localStorage.getItem('op_history')) || [];
+            let html = '';
+            if (history.length === 0) {
+                html = '<div class="card" style="text-align:center;color:#888;">Datenbank ist leer.</div>';
+            } else {
+                history.forEach(item => {
+                    let sColor = item.score >= 80 ? '#34c759' : (item.score >= 40 ? '#ffcc00' : '#ff3b30');
+                    html += `
+                    <div class="history-item" onclick="loadFromArchive('${item.barcode}')">
+                        <div>
+                            <strong style="font-size:16px;color:#fff;">${item.name}</strong><br>
+                            <span style="font-size:12px;color:#777;">Code: ${item.barcode} | ${item.date}</span>
+                        </div>
+                        <div style="font-weight:900; font-size:20px; color:${sColor};">${item.score}</div>
+                    </div>`;
+                });
+            }
+            document.getElementById('history-list').innerHTML = html;
+        }
+
+        function loadFromArchive(barcode) {
+            switchTab('scan');
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Extrahiere aus Matrix-Archiv...</div>`;
+            document.getElementById('result').style.display = 'flex';
+            fetchDataCascade(barcode);
+        }
+
+        function analyzeProduct(data, category, barcode) {
             let p = data.product;
             let ingredientsRaw = [
                 p.ingredients_text_de || "",
@@ -87,51 +170,82 @@
             ].join(" ").toLowerCase();
 
             let productName = p.product_name || "Unbekannte Identität";
-            let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">KEIN BILD</div>`;
+            let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
             
             let foundToxins = [];
+            let foundGood = [];
             let suggestedAlts = new Set();
+            let score = 100;
 
-            for (let toxin in blacklist) {
-                if (ingredientsRaw.includes(toxin.toLowerCase())) {
-                    foundToxins.push(`<b>${toxin.toUpperCase()}</b>: ${blacklist[toxin]}`);
-                    
-                    // Suche nach passender Alternative
-                    for (let key in alternativeEngine) {
-                        if (toxin.toLowerCase().includes(key)) {
-                            suggestedAlts.add(alternativeEngine[key]);
+            if (ingredientsRaw.trim() !== "") {
+                // Blacklist Check
+                for (let toxin in blacklist) {
+                    if (ingredientsRaw.includes(toxin.toLowerCase())) {
+                        foundToxins.push(`<b>${toxin.toUpperCase()}</b>: ${blacklist[toxin]}`);
+                        score -= 25; // -25 Punkte pro Toxin
+                        for (let key in alternativeEngine) {
+                            if (toxin.toLowerCase().includes(key)) suggestedAlts.add(alternativeEngine[key]);
                         }
                     }
                 }
+                
+                // Whitelist Check
+                for (let good in whitelist) {
+                    if (ingredientsRaw.includes(good.toLowerCase())) {
+                        foundGood.push(`<b>${good.toUpperCase()}</b>: ${whitelist[good]}`);
+                        score += 5; // +5 Punkte für gute Stoffe
+                    }
+                }
             }
+
+            if (score < 0) score = 0;
+            if (score > 100) score = 100;
+
+            let scoreColor = score >= 80 ? '#34c759' : (score >= 40 ? '#ffcc00' : '#ff3b30');
+
+            saveToHistory(barcode, productName, score);
 
             let resultHtml = `
                 <div class="card">
                     <div class="product-header">
                         ${imageHtml}
-                        <div>
+                        <div class="product-info">
                             <div class="category-badge">${category}</div>
                             <h3 class="product-title">${productName}</h3>
+                        </div>
+                        <div class="score-circle" style="color: ${scoreColor}; border-color: ${scoreColor};">
+                            ${score}
                         </div>
                     </div>
             `;
 
             if (ingredientsRaw.trim() === "") {
-                resultHtml += `
-                    <div class="status-banner status-alert">Datenbank manipuliert. Keine Zutaten.</div>
-                </div>`;
-            } else if (foundToxins.length > 0) {
-                resultHtml += `
-                    <div class="status-banner status-alert">BIOLOGISCHER ANGRIFF DETEKTIERT</div>
-                    <div style="margin-top: 15px;">
-                        <div class="section-title">Identifizierte Toxine</div>
-                        <ul class="toxin-list"><li>${foundToxins.join('</li><li>')}</li></ul>
-                    </div>
-                `;
-                
+                resultHtml += `<div class="status-banner status-alert">Datenbank manipuliert. Keine Inhaltsstoffe.</div></div>`;
+            } else {
+                if (foundToxins.length > 0) {
+                    resultHtml += `<div class="status-banner status-alert">ANGRIFF DETEKTIERT</div>`;
+                    resultHtml += `
+                        <div style="margin-bottom: 20px;">
+                            <div class="section-title">Kritische Toxine</div>
+                            <ul class="toxin-list"><li>${foundToxins.join('</li><li>')}</li></ul>
+                        </div>
+                    `;
+                } else {
+                    resultHtml += `<div class="status-banner status-clean">STATUS: REIN</div>`;
+                }
+
+                if (foundGood.length > 0) {
+                    resultHtml += `
+                        <div style="margin-bottom: 20px;">
+                            <div class="section-title">Biologische Verstärker</div>
+                            <ul class="whitelist-list"><li>${foundGood.join('</li><li>')}</li></ul>
+                        </div>
+                    `;
+                }
+
                 if (suggestedAlts.size > 0) {
                     resultHtml += `
-                        <div style="margin-top: 15px;">
+                        <div style="margin-bottom: 20px;">
                             <div class="section-title">Souveräne Alternativen</div>
                             <ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul>
                         </div>
@@ -139,55 +253,42 @@
                 }
 
                 resultHtml += `
-                    <div style="margin-top: 15px;">
-                        <div class="section-title">Rohdaten (Zutaten)</div>
-                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Aus Metadaten extrahiert."}</p>
-                    </div>
-                </div>`;
-            } else {
-                resultHtml += `
-                    <div class="status-banner status-clean">STATUS: REIN</div>
-                    <div style="margin-top: 15px;">
-                        <div class="section-title">Rohdaten (Zutaten)</div>
-                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text}</p>
+                    <div>
+                        <div class="section-title">Rohdaten</div>
+                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Aus Metadaten."}</p>
                     </div>
                 </div>`;
             }
             
             document.getElementById('result').innerHTML = resultHtml;
-            document.getElementById('result').style.display = "flex";
+        }
+
+        function fetchDataCascade(barcode) {
+            fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 1) analyzeProduct(data, "Nahrung", barcode);
+                    else {
+                        fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`)
+                            .then(resB => resB.json())
+                            .then(dataB => {
+                                if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
+                                else document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Black-Box Produkt. Nicht katalogisiert.</div>`;
+                            });
+                    }
+                }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Server-Interferenz.</div>`);
         }
 
         function onScanSuccess(decodedText) {
             html5QrCode.stop().then(() => {
                 document.getElementById('reader-container').style.display = "none";
-                let startBtn = document.getElementById('startBtn');
-                startBtn.style.display = "block";
-                startBtn.innerText = "Neuen Code Scannen";
+                document.getElementById('startBtn').style.display = "block";
+                document.getElementById('startBtn').innerText = "Neuen Code Scannen";
                 
-                document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Signatur [${decodedText}] erfasst.<br>Kontaktiere Datenbanken...</div>`;
+                document.getElementById('result').innerHTML = `<div class="card" style="text-align:center; font-weight:bold;">Signatur [${decodedText}] erfasst.<br>Verarbeite Daten...</div>`;
                 document.getElementById('result').style.display = "flex";
                 
-                fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === 1) {
-                            analyzeProduct(data, "Nahrungsmittel");
-                        } else {
-                            fetch(`https://world.openbeautyfacts.org/api/v0/product/${decodedText}.json`)
-                                .then(resB => resB.json())
-                                .then(dataB => {
-                                    if (dataB.status === 1) {
-                                        analyzeProduct(dataB, "Kosmetik / Pflege");
-                                    } else {
-                                        document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Objekt in keiner Datenbank katalogisiert. Black-Box Produkt.</div>`;
-                                    }
-                                });
-                        }
-                    })
-                    .catch(() => {
-                        document.getElementById('result').innerHTML = `<div class="card">Server-Interferenz. API blockiert.</div>`;
-                    });
+                fetchDataCascade(decodedText);
             });
         }
 
@@ -197,25 +298,10 @@
             document.getElementById('reader-container').style.display = "block";
             
             html5QrCode = new Html5Qrcode("reader");
-            
-            const config = { 
-                fps: 30,
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A
-                ],
-                videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    advanced: [{ focusMode: "continuous" }]
-                }
-            };
-
+            const config = { fps: 30, formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A], videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .catch(() => {
-                document.getElementById('result').innerHTML = `<div class="card">Hardware-Zugriff verweigert. Browser-Berechtigungen prüfen.</div>`;
+                document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Hardware-Zugriff verweigert.</div>`;
                 document.getElementById('result').style.display = "flex";
                 document.getElementById('startBtn').style.display = "block";
                 document.getElementById('reader-container').style.display = "none";
