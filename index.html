@@ -2,77 +2,91 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Operator Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background-color: #000; color: #0f0; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; border: 1px solid #0f0; }
-        #result { margin-top: 20px; padding: 15px; border: 1px solid #333; text-align: left; background: #111; min-height: 100px; }
-        button { background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold; margin-top: 20px; font-size: 16px; width: 100%; max-width: 500px; cursor: pointer; }
-        .alert { color: #f00; font-weight: bold; }
-        .clean { color: #0f0; font-weight: bold; }
+        :root { --matrix-green: #00ff41; --bg-color: #050505; --box-bg: #111; }
+        body { background-color: var(--bg-color); color: var(--matrix-green); font-family: 'Courier New', Courier, monospace; text-align: center; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        h2 { font-size: 1.2rem; letter-spacing: 3px; text-transform: uppercase; border-bottom: 1px solid var(--matrix-green); padding-bottom: 5px; width: 100%; max-width: 400px; }
+        #reader { width: 100%; max-width: 400px; border: 1px solid var(--matrix-green); border-radius: 2px; overflow: hidden; background: #000; box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); margin-top: 10px; }
+        #result { margin-top: 20px; padding: 15px; border: 1px solid #222; background: var(--box-bg); width: 100%; max-width: 370px; min-height: 100px; font-size: 13px; text-align: left; word-wrap: break-word; box-shadow: inset 0 0 10px #000; }
+        button { background: var(--matrix-green); color: #000; border: none; padding: 15px; font-weight: bold; margin-top: 20px; font-size: 15px; width: 100%; max-width: 400px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.1s; }
+        button:active { background: #00cc33; transform: scale(0.98); }
+        .alert { color: #ff003c; font-weight: bold; margin-top: 15px; border-left: 2px solid #ff003c; padding-left: 10px; background: rgba(255, 0, 60, 0.05); padding-block: 5px; }
+        .clean { color: var(--matrix-green); font-weight: bold; margin-top: 15px; border-left: 2px solid var(--matrix-green); padding-left: 10px; background: rgba(0, 255, 65, 0.05); padding-block: 5px; }
+        .info-text { color: #666; font-size: 11px; margin-top: 5px; display: block; }
+        video { object-fit: cover; }
     </style>
 </head>
 <body>
-    <h2>SYSTEM FILTER</h2>
+    <h2>System Filter</h2>
     <div id="reader"></div>
     <button id="startBtn">Scanner Aktivieren</button>
-    <div id="result">Warte auf Input...</div>
+    <div id="result">System bereit. Warte auf optischen Input.</div>
 
     <script>
         let blacklist = {};
-        let html5QrcodeScanner;
+        let html5QrCode;
 
-        // Blacklist laden
         fetch('blacklist.json')
             .then(response => response.json())
             .then(data => { blacklist = data; })
-            .catch(err => document.getElementById('result').innerHTML = "Fehler beim Laden der Blacklist.");
+            .catch(err => document.getElementById('result').innerHTML = "Kritischer Fehler: Blacklist.json nicht lesbar.");
 
-        function onScanSuccess(decodedText, decodedResult) {
-            html5QrcodeScanner.clear(); // Kamera nach Scan stoppen
-            document.getElementById('result').innerHTML = "Barcode erkannt: " + decodedText + "<br>Analysiere Matrix-Datenbank...";
-            
-            // Open Food Facts API abrufen
-            fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status !== 1) {
-                        document.getElementById('result').innerHTML = "Produkt in der Datenbank nicht existent. Konsum evaluieren.";
-                        return;
-                    }
-                    
-                    let ingredients = data.product.ingredients_text_de || data.product.ingredients_text || "Keine Zutatenliste verfügbar.";
-                    ingredients = ingredients.toLowerCase();
-                    let productName = data.product.product_name || "Unbekanntes Produkt";
-                    let analysis = `<h3>${productName}</h3><p>Zutaten: ${ingredients}</p>`;
-                    let foundToxins = [];
-
-                    // Filter Logik
-                    for (let toxin in blacklist) {
-                        if (ingredients.includes(toxin.toLowerCase())) {
-                            foundToxins.push(`${toxin.toUpperCase()}: ${blacklist[toxin]}`);
+        function onScanSuccess(decodedText) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('startBtn').style.display = "block";
+                document.getElementById('result').innerHTML = `Barcode [${decodedText}] erfasst.<br>Extrahiere API-Daten...`;
+                
+                fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status !== 1) {
+                            document.getElementById('result').innerHTML = "<span class='alert'>Objekt nicht in Datenbank. System empfiehlt Ablehnung.</span>";
+                            return;
                         }
-                    }
+                        
+                        let ingredients = data.product.ingredients_text_de || data.product.ingredients_text || "Keine Zutatenliste verfügbar.";
+                        ingredients = ingredients.toLowerCase();
+                        let productName = data.product.product_name || "Unbekannte Identität";
+                        
+                        let analysis = `<strong style="color:#fff;">${productName}</strong><br><span class="info-text">${ingredients}</span><br>`;
+                        let foundToxins = [];
 
-                    if (foundToxins.length > 0) {
-                        analysis += `<div class="alert">WARNUNG. ANGRIFF DETEKTIERT:<br>- ${foundToxins.join('<br>- ')}</div>`;
-                    } else {
-                        analysis += `<div class="clean">STATUS: REIN. Keine Blacklist-Treffer.</div>`;
-                    }
-                    
-                    document.getElementById('result').innerHTML = analysis;
-                })
-                .catch(err => {
-                    document.getElementById('result').innerHTML = "Systemfehler bei der API-Verbindung.";
-                });
+                        for (let toxin in blacklist) {
+                            if (ingredients.includes(toxin.toLowerCase())) {
+                                foundToxins.push(`${toxin.toUpperCase()}: ${blacklist[toxin]}`);
+                            }
+                        }
+
+                        if (foundToxins.length > 0) {
+                            analysis += `<div class="alert">TOXISCHE SIGNATUR ERKANNT:<br><br>- ${foundToxins.join('<br>- ')}</div>`;
+                        } else {
+                            analysis += `<div class="clean">STATUS REIN.<br>Keine programmierten Toxine detektiert.</div>`;
+                        }
+                        
+                        document.getElementById('result').innerHTML = analysis;
+                    })
+                    .catch(() => {
+                        document.getElementById('result').innerHTML = "Server-Interferenz. API nicht erreichbar.";
+                    });
+            });
         }
 
         document.getElementById('startBtn').addEventListener('click', () => {
-            document.getElementById('result').innerHTML = "Kamera initialisiert...";
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-            html5QrcodeScanner.render(onScanSuccess);
+            document.getElementById('startBtn').style.display = "none";
+            document.getElementById('result').innerHTML = "Optischer Sensor aktiv. Fokussiere Code...";
+            
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 100 } },
+                onScanSuccess
+            ).catch(err => {
+                document.getElementById('result').innerHTML = "Hardware-Zugriff blockiert. Berechtigungen prüfen.";
+                document.getElementById('startBtn').style.display = "block";
+            });
         });
     </script>
 </body>
