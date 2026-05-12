@@ -1,10 +1,17 @@
 {
   "fluorid": "Zirbeldrüsen-Verkalkung / Neurotoxin",
-  "e250": "Nitritpökelsalz / Krebserregend",
+  "e250": "Nitritpökelsalz / Zell-Toxizität",
   "e471": "Industrieller Emulgator / Darmbarriere-Gefahr",
   "aspartam": "Künstlicher Süßstoff / Neurotoxin",
   "carrageen": "Verdickungsmittel / Entzündungsfördernd",
   "e621": "Glutamat / Nervenzellen-Stimulanz",
   "sucralose": "Chloriertes Kohlenhydrat / Darmflora-Zerstörung",
-  "soja": "Phytoöstrogene / Testosteron-Senker"
+  "soja": "Phytoöstrogene / Testosteron-Senker",
+  "zucker": "Insulin-Spike / Frequenz-Senker / Abhängigkeit",
+  "glukosesirup": "Hochverarbeitetes Kohlenhydrat / Metabolische Blockade",
+  "palmöl": "Endokriner Disruptor / Toxische Verarbeitung",
+  "palmfett": "Endokriner Disruptor / Toxische Verarbeitung",
+  "aroma": "Synthetische Geschmacks-Manipulation",
+  "maltodextrin": "Blutzucker-Schock / Darmflora-Destruktion",
+  "weizenmehl": "System-Nahrung / Opioide Peptide"
 }
