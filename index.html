@@ -5,27 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Operator Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         :root { --matrix-green: #00ff41; --bg-color: #080808; --card-bg: #151515; --border-radius: 16px; }
         body { background-color: var(--bg-color); color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-size: 16px; }
         
-        /* Navigation */
         .nav-bar { display: flex; width: 100%; max-width: 450px; background: #222; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
         .nav-btn { flex: 1; padding: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #888; cursor: pointer; transition: 0.2s; }
         .nav-btn.active { background: var(--matrix-green); color: #000; }
         
-        /* UI Skalierung */
         h2 { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; text-align: center; width: 100%; }
         #reader-container { width: 100%; max-width: 450px; border-radius: var(--border-radius); overflow: hidden; background: #000; display: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); margin-bottom: 20px; }
         #reader { width: 100%; }
         #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; border-radius: var(--border-radius); }
         
-        /* Resultat & Historie Container */
         #result, #history-container { width: 100%; max-width: 450px; display: none; flex-direction: column; gap: 20px; }
         .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #2a2a2a; }
         
-        /* Produkt Header & Score */
         .product-header { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
         .product-img { width: 90px; height: 90px; object-fit: cover; border-radius: 12px; background: #222; border: 1px solid #333; }
         .product-info { flex-grow: 1; }
@@ -33,10 +30,10 @@
         .category-badge { display: inline-block; background: #333; color: #bbb; font-size: 11px; padding: 5px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; }
         .score-circle { width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; border: 4px solid; flex-shrink: 0; background: #000; }
         
-        /* Status & Listen */
         .status-banner { padding: 15px; border-radius: 8px; font-weight: 800; font-size: 16px; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
         .status-alert { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.4); }
         .status-clean { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.4); }
+        .status-ocr { background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.4); }
         
         .section-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; border-bottom: 1px solid #333; padding-bottom: 6px; }
         .toxin-list { color: #ff3b30; font-size: 16px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
@@ -44,13 +41,12 @@
         .alt-list { color: #fff; font-size: 15px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 20px; }
         .ingredients-text { color: #999; font-size: 14px; line-height: 1.6; margin: 0; }
         
-        /* Historie Items */
         .history-item { background: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; cursor: pointer; }
-        .history-item:active { background: #2a2a2a; }
         
-        /* Buttons */
         button.action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 18px; width: 100%; max-width: 450px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px; margin-top: auto; }
         button.action-btn:active { transform: scale(0.97); background: #ccc; }
+        
+        button.ocr-btn { background: #ffcc00; color: #000; padding: 15px; font-size: 15px; text-transform: none; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 10px; border-radius: 8px; font-weight: 700; width: 100%; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -73,12 +69,13 @@
     
     <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
 
+    <input type="file" accept="image/*" capture="environment" id="ocrInput" style="display:none;">
+
     <script>
         let blacklist = {};
         let whitelist = {};
         let html5QrCode;
 
-        // Alternative Engine
         const alternativeEngine = {
             "fluorid": "Miswak-Stab, naturreine Zahnkreide.",
             "e250": "Unbehandeltes Bio-Fleisch (Metzger).",
@@ -92,7 +89,6 @@
             "aluminium": "Alaunsteine, Verzicht auf Deos."
         };
 
-        // Datenbanken laden
         Promise.all([
             fetch('blacklist.json').then(r => r.json()).catch(() => ({})),
             fetch('whitelist.json').then(r => r.json()).catch(() => ({}))
@@ -103,7 +99,6 @@
 
         function switchTab(tab) {
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-            
             document.getElementById('tab-scan').className = tab === 'scan' ? 'nav-btn active' : 'nav-btn';
             document.getElementById('tab-history').className = tab === 'history' ? 'nav-btn active' : 'nav-btn';
             
@@ -124,10 +119,9 @@
 
         function saveToHistory(barcode, name, score) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
-            // Vorhandenen Eintrag entfernen, um ihn nach oben zu setzen
             history = history.filter(item => item.barcode !== barcode);
             history.unshift({ barcode, name, score, date: new Date().toLocaleDateString() });
-            if (history.length > 50) history.pop(); // Max 50 Einträge
+            if (history.length > 50) history.pop();
             localStorage.setItem('op_history', JSON.stringify(history));
         }
 
@@ -135,7 +129,7 @@
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let html = '';
             if (history.length === 0) {
-                html = '<div class="card" style="text-align:center;color:#888;">Datenbank ist leer.</div>';
+                html = '<div class="card" style="text-align:center;color:#888;">Archiv leer.</div>';
             } else {
                 history.forEach(item => {
                     let sColor = item.score >= 80 ? '#34c759' : (item.score >= 40 ? '#ffcc00' : '#ff3b30');
@@ -155,12 +149,13 @@
         function loadFromArchive(barcode) {
             switchTab('scan');
             document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Extrahiere aus Matrix-Archiv...</div>`;
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Extrahiere Archiv-Daten...</div>`;
             document.getElementById('result').style.display = 'flex';
             fetchDataCascade(barcode);
         }
 
-        function analyzeProduct(data, category, barcode) {
+        // Die Haupt-Analyseverarbeitung (mit OCR Support)
+        function analyzeProduct(data, category, barcode, isOcr = false) {
             let p = data.product;
             let ingredientsRaw = [
                 p.ingredients_text_de || "",
@@ -169,31 +164,50 @@
                 p.ingredients_tags ? p.ingredients_tags.join(" ") : ""
             ].join(" ").toLowerCase();
 
-            let productName = p.product_name || "Unbekannte Identität";
+            let productName = p.product_name || "Unbekanntes Objekt";
             let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
             
+            // Wenn keine Zutaten vorhanden und es KEIN OCR-Scan ist -> Optischen Fallback anbieten
+            if (ingredientsRaw.trim() === "" && !isOcr) {
+                let resultHtml = `
+                    <div class="card">
+                        <div class="product-header">
+                            ${imageHtml}
+                            <div class="product-info">
+                                <div class="category-badge">${category}</div>
+                                <h3 class="product-title">${productName}</h3>
+                            </div>
+                        </div>
+                        <div class="status-banner status-alert">Datenbank defekt. Keine Textdaten.</div>
+                        <p style="color:#888; font-size:13px; text-align:center;">Übersteuere das System durch direkte optische Extraktion der Rückseite.</p>
+                        <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren (OCR)</button>
+                    </div>`;
+                document.getElementById('result').innerHTML = resultHtml;
+                document.getElementById('ocrInput').onchange = (e) => {
+                    if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode);
+                };
+                return;
+            }
+
             let foundToxins = [];
             let foundGood = [];
             let suggestedAlts = new Set();
             let score = 100;
 
             if (ingredientsRaw.trim() !== "") {
-                // Blacklist Check
                 for (let toxin in blacklist) {
                     if (ingredientsRaw.includes(toxin.toLowerCase())) {
                         foundToxins.push(`<b>${toxin.toUpperCase()}</b>: ${blacklist[toxin]}`);
-                        score -= 25; // -25 Punkte pro Toxin
+                        score -= 25;
                         for (let key in alternativeEngine) {
                             if (toxin.toLowerCase().includes(key)) suggestedAlts.add(alternativeEngine[key]);
                         }
                     }
                 }
-                
-                // Whitelist Check
                 for (let good in whitelist) {
                     if (ingredientsRaw.includes(good.toLowerCase())) {
                         foundGood.push(`<b>${good.toUpperCase()}</b>: ${whitelist[good]}`);
-                        score += 5; // +5 Punkte für gute Stoffe
+                        score += 5;
                     }
                 }
             }
@@ -202,7 +216,6 @@
             if (score > 100) score = 100;
 
             let scoreColor = score >= 80 ? '#34c759' : (score >= 40 ? '#ffcc00' : '#ff3b30');
-
             saveToHistory(barcode, productName, score);
 
             let resultHtml = `
@@ -219,48 +232,69 @@
                     </div>
             `;
 
-            if (ingredientsRaw.trim() === "") {
-                resultHtml += `<div class="status-banner status-alert">Datenbank manipuliert. Keine Inhaltsstoffe.</div></div>`;
+            if (foundToxins.length > 0) {
+                resultHtml += `<div class="status-banner status-alert">ANGRIFF DETEKTIERT</div>`;
+                resultHtml += `<div style="margin-bottom: 20px;"><div class="section-title">Kritische Toxine</div><ul class="toxin-list"><li>${foundToxins.join('</li><li>')}</li></ul></div>`;
             } else {
-                if (foundToxins.length > 0) {
-                    resultHtml += `<div class="status-banner status-alert">ANGRIFF DETEKTIERT</div>`;
-                    resultHtml += `
-                        <div style="margin-bottom: 20px;">
-                            <div class="section-title">Kritische Toxine</div>
-                            <ul class="toxin-list"><li>${foundToxins.join('</li><li>')}</li></ul>
-                        </div>
-                    `;
-                } else {
-                    resultHtml += `<div class="status-banner status-clean">STATUS: REIN</div>`;
-                }
-
-                if (foundGood.length > 0) {
-                    resultHtml += `
-                        <div style="margin-bottom: 20px;">
-                            <div class="section-title">Biologische Verstärker</div>
-                            <ul class="whitelist-list"><li>${foundGood.join('</li><li>')}</li></ul>
-                        </div>
-                    `;
-                }
-
-                if (suggestedAlts.size > 0) {
-                    resultHtml += `
-                        <div style="margin-bottom: 20px;">
-                            <div class="section-title">Souveräne Alternativen</div>
-                            <ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul>
-                        </div>
-                    `;
-                }
-
-                resultHtml += `
-                    <div>
-                        <div class="section-title">Rohdaten</div>
-                        <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Aus Metadaten."}</p>
-                    </div>
-                </div>`;
+                resultHtml += `<div class="status-banner status-clean">STATUS: REIN</div>`;
             }
+
+            if (foundGood.length > 0) {
+                resultHtml += `<div style="margin-bottom: 20px;"><div class="section-title">Biologische Verstärker</div><ul class="whitelist-list"><li>${foundGood.join('</li><li>')}</li></ul></div>`;
+            }
+
+            if (suggestedAlts.size > 0) {
+                resultHtml += `<div style="margin-bottom: 20px;"><div class="section-title">Souveräne Alternativen</div><ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul></div>`;
+            }
+
+            resultHtml += `
+                <div>
+                    <div class="section-title">Rohdaten ${isOcr ? '(Via OCR Extraktion)' : ''}</div>
+                    <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Unbekannt"}</p>
+                </div>
+            </div>`;
             
             document.getElementById('result').innerHTML = resultHtml;
+        }
+
+        // Tesseract.js OCR Logik
+        function processOCR(file, productName, barcode) {
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;"><div class="status-banner status-ocr">Optische Erkennung läuft</div><p style="color:#888; font-size:14px;">Entschlüssele physische Matrix... Dies dauert einige Sekunden.</p></div>`;
+            
+            Tesseract.recognize(
+                file,
+                'deu+eng',
+                { logger: m => console.log(m) }
+            ).then(({ data: { text } }) => {
+                let fakeData = {
+                    product: {
+                        product_name: productName,
+                        ingredients_text: text,
+                        image_url: ""
+                    }
+                };
+                analyzeProduct(fakeData, "Optischer Scan", barcode, true);
+            }).catch(err => {
+                document.getElementById('result').innerHTML = `
+                    <div class="card">
+                        <div class="status-banner status-alert">OCR gescheitert.</div>
+                        <p style="color:#888; font-size:14px; text-align:center;">Bild zu unscharf oder Reflexionen blockieren die Lesbarkeit.</p>
+                        <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Neuer Versuch</button>
+                    </div>`;
+            });
+        }
+
+        function handleUnknownProduct(barcode) {
+            let resultHtml = `
+                <div class="card">
+                    <div class="status-banner status-alert">Black-Box. Nicht katalogisiert.</div>
+                    <p style="color:#888; font-size:13px; text-align:center;">Objekt [${barcode}] in keiner Datenbank existent. Nutze die Kamera, um die Inhaltsstoffe manuell zu verifizieren.</p>
+                    <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren (OCR)</button>
+                </div>`;
+            document.getElementById('result').innerHTML = resultHtml;
+            document.getElementById('ocrInput').onchange = (e) => {
+                if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode);
+            };
         }
 
         function fetchDataCascade(barcode) {
@@ -273,7 +307,7 @@
                             .then(resB => resB.json())
                             .then(dataB => {
                                 if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
-                                else document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Black-Box Produkt. Nicht katalogisiert.</div>`;
+                                else handleUnknownProduct(barcode);
                             });
                     }
                 }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Server-Interferenz.</div>`);
