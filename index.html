@@ -10,24 +10,27 @@
         :root { --matrix-green: #00ff41; --bg-color: #080808; --card-bg: #151515; --border-radius: 16px; }
         body { background-color: var(--bg-color); color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-size: 16px; }
         
-        /* Navigation */
-        .nav-bar { display: flex; width: 100%; max-width: 450px; background: #222; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+        .nav-bar { display: flex; width: 100%; max-width: 450px; background: #222; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
         .nav-btn { flex: 1; padding: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #888; cursor: pointer; transition: 0.2s; }
         .nav-btn.active { background: var(--matrix-green); color: #000; }
         
-        h2 { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; text-align: center; width: 100%; }
+        h2 { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; text-align: center; width: 100%; }
         
-        /* Scanner Area */
+        /* Suchleiste */
+        #search-container { width: 100%; max-width: 450px; display: flex; gap: 10px; margin-bottom: 20px; }
+        #searchInput { flex-grow: 1; padding: 15px; border-radius: 12px; border: 1px solid #333; background: #111; color: #fff; font-size: 16px; outline: none; }
+        #searchInput:focus { border-color: var(--matrix-green); }
+        #searchBtn { background: #222; color: #fff; border: 1px solid #333; border-radius: 12px; padding: 0 20px; font-weight: bold; cursor: pointer; }
+        #searchBtn:active { background: var(--matrix-green); color: #000; }
+
         #reader-container { width: 100%; max-width: 450px; border-radius: var(--border-radius); overflow: hidden; background: #000; display: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); margin-bottom: 20px; }
         #reader { width: 100%; }
         #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; border-radius: var(--border-radius); }
         
-        /* Layouts */
         #result, #history-container { width: 100%; max-width: 450px; display: none; flex-direction: column; gap: 15px; }
         .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #2a2a2a; }
         
-        /* History Filter */
         .history-filters { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
         .filter-btn { background: #222; color: #aaa; border: 1px solid #333; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
         .filter-btn.active { background: #444; color: #fff; border-color: #666; }
@@ -54,18 +57,28 @@
         
         button.action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 18px; width: 100%; max-width: 450px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px; margin-top: auto; }
         button.action-btn:active { transform: scale(0.97); background: #ccc; }
-        
         button.ocr-btn { background: #ffcc00; color: #000; padding: 15px; font-size: 15px; text-transform: none; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 10px; border-radius: 8px; font-weight: 700; width: 100%; border: none; cursor: pointer; }
+        
+        #db-status { width: 100%; max-width: 450px; margin-bottom: 10px; display: none; }
     </style>
 </head>
 <body>
     <h2>Operator Interface</h2>
     
+    <div id="db-status" class="status-banner status-alert">
+        SYSTEMFEHLER: Blacklist/Whitelist beschädigt.<br><span style="font-size:12px;">Syntax-Fehler in den JSON-Dateien. Filter ist inaktiv!</span>
+    </div>
+
     <div class="nav-bar">
         <div id="tab-scan" class="nav-btn active" onclick="switchTab('scan')">Scanner</div>
         <div id="tab-history" class="nav-btn" onclick="switchTab('history')">Archiv</div>
     </div>
     
+    <div id="search-container">
+        <input type="text" id="searchInput" placeholder="Produkt manuell suchen...">
+        <button id="searchBtn">SUCHE</button>
+    </div>
+
     <div id="reader-container">
         <div id="reader"></div>
     </div>
@@ -78,12 +91,12 @@
             <button class="filter-btn" onclick="filterHistory('Nahrung', this)">Nahrung</button>
             <button class="filter-btn" onclick="filterHistory('Kosmetik', this)">Kosmetik</button>
             <button class="filter-btn" onclick="filterHistory('Optischer Scan', this)">OCR Scan</button>
+            <button class="filter-btn" onclick="filterHistory('Manuelle Suche', this)">Manuell</button>
         </div>
         <div id="history-list"></div>
     </div>
     
     <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
-
     <input type="file" accept="image/*" capture="environment" id="ocrInput" style="display:none;">
 
     <script>
@@ -91,8 +104,8 @@
         let whitelist = {};
         let html5QrCode;
         let currentHistoryFilter = 'Alle';
+        let dbActive = false;
 
-        // Erweiterte Souveränitäts-Alternativen
         const alternativeEngine = {
             "fluorid": "Miswak-Stab, naturreine Zahnkreide, Kokosöl-Ziehen.",
             "e250": "Unbehandeltes Bio-Fleisch direkt vom Metzger.",
@@ -111,12 +124,19 @@
             "peg-": "Pflanzliche Basisöle. Verzicht auf Emulgatoren."
         };
 
+        // Cache-Buster: ?v= erzwingt den Download der neuesten Version
+        let timestamp = new Date().getTime();
         Promise.all([
-            fetch('blacklist.json').then(r => r.json()).catch(() => ({})),
-            fetch('whitelist.json').then(r => r.json()).catch(() => ({}))
+            fetch('blacklist.json?v=' + timestamp).then(r => r.json()),
+            fetch('whitelist.json?v=' + timestamp).then(r => r.json())
         ]).then(data => {
             blacklist = data[0];
             whitelist = data[1];
+            dbActive = true;
+        }).catch(err => {
+            // Zeigt Fehler an, wenn die JSON Datei kaputt kopiert wurde
+            document.getElementById('db-status').style.display = 'block';
+            console.error("JSON Syntax Error:", err);
         });
 
         function switchTab(tab) {
@@ -128,18 +148,19 @@
                 document.getElementById('history-container').style.display = 'none';
                 document.getElementById('result').style.display = 'none';
                 document.getElementById('reader-container').style.display = 'none';
+                document.getElementById('search-container').style.display = 'flex';
                 document.getElementById('startBtn').style.display = 'block';
                 document.getElementById('startBtn').innerText = 'Sensor Aktivieren';
             } else {
                 document.getElementById('reader-container').style.display = 'none';
                 document.getElementById('result').style.display = 'none';
                 document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('search-container').style.display = 'none';
                 document.getElementById('history-container').style.display = 'flex';
                 renderHistory();
             }
         }
 
-        // Speichert nun auch die Kategorie und die extrahierten OCR-Texte
         function saveToHistory(barcode, name, score, category, rawIngredients = null) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
@@ -158,14 +179,10 @@
         function renderHistory() {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let html = '';
-            
-            let filtered = history;
-            if (currentHistoryFilter !== 'Alle') {
-                filtered = history.filter(item => item.category === currentHistoryFilter);
-            }
+            let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category.includes(currentHistoryFilter));
 
             if (filtered.length === 0) {
-                html = '<div class="card" style="text-align:center;color:#888;">Keine Einträge für diese Sektion.</div>';
+                html = '<div class="card" style="text-align:center;color:#888;">Keine Einträge.</div>';
             } else {
                 filtered.forEach(item => {
                     let sColor = item.score >= 80 ? '#34c759' : (item.score >= 40 ? '#ffcc00' : '#ff3b30');
@@ -186,23 +203,27 @@
         function loadFromArchive(barcode) {
             switchTab('scan');
             document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Lade Matrix-Archiv...</div>`;
+            document.getElementById('search-container').style.display = 'none';
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Lade Archiv...</div>`;
             document.getElementById('result').style.display = 'flex';
             
-            // Prüfung, ob OCR Text im lokalen Speicher liegt
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let archivedItem = history.find(i => i.barcode === barcode);
             
-            if (archivedItem && archivedItem.category === 'Optischer Scan' && archivedItem.rawIngredients) {
-                // Direkte Analyse aus dem Speicher, kein neues Foto nötig
+            if (archivedItem && archivedItem.rawIngredients) {
                 let fakeData = { product: { product_name: archivedItem.name, ingredients_text: archivedItem.rawIngredients, image_url: "" } };
-                analyzeProduct(fakeData, "Optischer Scan", barcode, true);
+                analyzeProduct(fakeData, archivedItem.category, barcode, true);
             } else {
                 fetchDataCascade(barcode);
             }
         }
 
         function analyzeProduct(data, category, barcode, isOcr = false) {
+            if(!dbActive) {
+                alert("Kann nicht scannen: Die Datenbank (JSON) ist beschädigt. Bitte Code prüfen.");
+                return;
+            }
+
             let p = data.product;
             let ingredientsRaw = [
                 p.ingredients_text_de || "",
@@ -214,7 +235,7 @@
             let productName = p.product_name || "Unbekanntes Objekt";
             let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;text-align:center;">NO<br>IMG</div>`;
             
-            if (ingredientsRaw.trim() === "" && !isOcr) {
+            if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Manuell")) {
                 let resultHtml = `
                     <div class="card">
                         <div class="product-header">
@@ -224,7 +245,7 @@
                                 <h3 class="product-title">${productName}</h3>
                             </div>
                         </div>
-                        <div class="status-banner status-alert">Datenbank defekt. Keine Textdaten.</div>
+                        <div class="status-banner status-alert">Keine Textdaten in API.</div>
                         <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren (OCR)</button>
                     </div>`;
                 document.getElementById('result').innerHTML = resultHtml;
@@ -261,9 +282,7 @@
             if (score > 100) score = 100;
 
             let scoreColor = score >= 80 ? '#34c759' : (score >= 40 ? '#ffcc00' : '#ff3b30');
-            
-            // Speichern mit Kategorie und (falls OCR) mit dem extrahierten Text
-            saveToHistory(barcode, productName, score, category, isOcr ? ingredientsRaw : null);
+            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Manuell")) ? ingredientsRaw : null);
 
             let resultHtml = `
                 <div class="card">
@@ -296,51 +315,53 @@
 
             resultHtml += `
                 <div>
-                    <div class="section-title">Rohdaten ${isOcr ? '(Aus Foto-Extraktion)' : ''}</div>
-                    <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler OCR Speicher"}</p>
+                    <div class="section-title">Rohdaten</div>
+                    <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API"}</p>
                 </div>
             </div>`;
             
             document.getElementById('result').innerHTML = resultHtml;
         }
 
-        function processOCR(file, productName, barcode) {
-            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;"><div class="status-banner status-ocr">Optische Erkennung läuft</div><p style="color:#888; font-size:14px;">Entschlüssele physische Matrix... Dies dauert einige Sekunden.</p></div>`;
+        // Manuelle Suche Logik
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            let term = document.getElementById('searchInput').value.trim();
+            if(!term) return;
             
-            Tesseract.recognize(
-                file,
-                'deu+eng',
-                { logger: m => console.log(m) }
-            ).then(({ data: { text } }) => {
-                let fakeData = {
-                    product: {
-                        product_name: productName,
-                        ingredients_text: text,
-                        image_url: ""
-                    }
-                };
+            document.getElementById('reader-container').style.display = "none";
+            document.getElementById('result').style.display = 'flex';
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Suche nach [${term}] in Nahrungs-API...</div>`;
+            
+            fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1`)
+            .then(r => r.json())
+            .then(data => {
+                if(data.products && data.products.length > 0) {
+                    analyzeProduct({status: 1, product: data.products[0]}, "Manuelle Suche (Nahrung)", data.products[0].code || term);
+                } else {
+                    document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Suche im Kosmetik-Sektor...</div>`;
+                    fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1`)
+                    .then(rb => rb.json())
+                    .then(dataB => {
+                        if(dataB.products && dataB.products.length > 0) {
+                            analyzeProduct({status: 1, product: dataB.products[0]}, "Manuelle Suche (Kosmetik)", dataB.products[0].code || term);
+                        } else {
+                            document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Kein Eintrag in Matrix-Datenbanken gefunden.</div>`;
+                        }
+                    });
+                }
+            }).catch(() => {
+                document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Such-Interferenz.</div>`;
+            });
+        });
+
+        function processOCR(file, productName, barcode) {
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;"><div class="status-banner status-ocr">Erkennung läuft...</div></div>`;
+            Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
+                let fakeData = { product: { product_name: productName, ingredients_text: text, image_url: "" } };
                 analyzeProduct(fakeData, "Optischer Scan", barcode, true);
             }).catch(err => {
-                document.getElementById('result').innerHTML = `
-                    <div class="card">
-                        <div class="status-banner status-alert">OCR gescheitert.</div>
-                        <p style="color:#888; font-size:14px; text-align:center;">Bild zu unscharf oder Reflexionen blockieren die Lesbarkeit.</p>
-                        <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Neuer Versuch</button>
-                    </div>`;
+                document.getElementById('result').innerHTML = `<div class="card"><div class="status-banner status-alert">OCR gescheitert.</div><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Neuer Versuch</button></div>`;
             });
-        }
-
-        function handleUnknownProduct(barcode) {
-            let resultHtml = `
-                <div class="card">
-                    <div class="status-banner status-alert">Black-Box. Nicht katalogisiert.</div>
-                    <p style="color:#888; font-size:13px; text-align:center;">Objekt [${barcode}] in keiner Datenbank existent.</p>
-                    <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren (OCR)</button>
-                </div>`;
-            document.getElementById('result').innerHTML = resultHtml;
-            document.getElementById('ocrInput').onchange = (e) => {
-                if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode);
-            };
         }
 
         function fetchDataCascade(barcode) {
@@ -353,7 +374,14 @@
                             .then(resB => resB.json())
                             .then(dataB => {
                                 if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
-                                else handleUnknownProduct(barcode);
+                                else {
+                                    document.getElementById('result').innerHTML = `
+                                    <div class="card"><div class="status-banner status-alert">Nicht katalogisiert.</div>
+                                    <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren</button></div>`;
+                                    document.getElementById('ocrInput').onchange = (e) => {
+                                        if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode);
+                                    };
+                                }
                             });
                     }
                 }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Server-Interferenz.</div>`);
@@ -364,8 +392,9 @@
                 document.getElementById('reader-container').style.display = "none";
                 document.getElementById('startBtn').style.display = "block";
                 document.getElementById('startBtn').innerText = "Neuen Code Scannen";
+                document.getElementById('search-container').style.display = 'none';
                 
-                document.getElementById('result').innerHTML = `<div class="card" style="text-align:center; font-weight:bold;">Signatur [${decodedText}] erfasst.<br>Verarbeite Daten...</div>`;
+                document.getElementById('result').innerHTML = `<div class="card" style="text-align:center; font-weight:bold;">Signatur [${decodedText}] erfasst...</div>`;
                 document.getElementById('result').style.display = "flex";
                 
                 fetchDataCascade(decodedText);
@@ -375,33 +404,17 @@
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startBtn').style.display = "none";
             document.getElementById('result').style.display = "none";
+            document.getElementById('search-container').style.display = 'none';
             document.getElementById('reader-container').style.display = "block";
             
             html5QrCode = new Html5Qrcode("reader");
-            
-            // Konfiguration für omnidirektionales Hardware-Scanning (iOS native)
-            const config = { 
-                fps: 30, 
-                useBarCodeDetectorIfSupported: true, // Zwingt Safari, den nativen iOS-Scanner zu nutzen (jeder Winkel)
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13, 
-                    Html5QrcodeSupportedFormats.EAN_8, 
-                    Html5QrcodeSupportedFormats.UPC_A
-                ], 
-                videoConstraints: { 
-                    facingMode: "environment", 
-                    width: { ideal: 1920 }, 
-                    height: { ideal: 1080 }, 
-                    advanced: [{ focusMode: "continuous" }] 
-                } 
-            };
-            
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(() => {
+            const config = { fps: 30, useBarCodeDetectorIfSupported: true, formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A], videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(() => {
                 document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Hardware-Zugriff verweigert.</div>`;
                 document.getElementById('result').style.display = "flex";
                 document.getElementById('startBtn').style.display = "block";
                 document.getElementById('reader-container').style.display = "none";
+                document.getElementById('search-container').style.display = 'flex';
             });
         });
     </script>
