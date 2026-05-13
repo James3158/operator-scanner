@@ -45,4 +45,23 @@
   "triclosan": "Mikrobiom-Zerstörung / Hormon-Gefahr",
   "acrylates": "Flüssiges Mikroplastik / Gewebe-Akkumulation",
   "polyquaternium": "Synthetisches Polymer / Mikroplastik"
+  "sonnenblumenöl": "Samenöl / Entzündungsfördernd / Hormondrossel",
+  "sunflower oil": "Samenöl / Entzündungsfördernd / Hormondrossel",
+  "rapsöl": "Industriefett / Zelltoxizität",
+  "rapeseed oil": "Industriefett / Zelltoxizität",
+  "canola oil": "Industriefett / Zelltoxizität",
+  "sojaöl": "Phytoöstrogene / Testosteron-Senker",
+  "soybean oil": "Phytoöstrogene / Testosteron-Senker",
+  "agavendicksaft": "Isolierte Fruktose / Leberschaden / Insulin-Spike",
+  "agave syrup": "Isolierte Fruktose / Leberschaden / Insulin-Spike",
+  "e211": "Natriumbenzoat / Mitochondriales Toxin",
+  "sodium benzoate": "Mitochondriales Toxin / Zellstress",
+  "e950": "Acesulfam-K / Künstliches Neurotoxin",
+  "acesulfame": "Acesulfam-K / Künstliches Neurotoxin",
+  "hefeextrakt": "Getarntes Glutamat / Neuro-Stimulanz",
+  "yeast extract": "Getarntes Glutamat / Neuro-Stimulanz",
+  "mikrokristalline cellulose": "Holzfasern / Darmsystem-Blockade",
+  "microcrystalline cellulose": "Holzfasern / Darmsystem-Blockade",
+  "polysorbat": "Emulgator / Überwindung der Blut-Hirn-Schranke für Toxine",
+  "polysorbate": "Emulgator / Toxischer Transport"
 }
