@@ -31,21 +31,21 @@
         #result, #history-container { width: 100%; max-width: 450px; display: none; flex-direction: column; gap: 15px; }
         .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #2a2a2a; }
         
-        .history-filters { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .filter-btn { background: #222; color: #aaa; border: 1px solid #333; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
-        .filter-btn.active { background: #444; color: #fff; border-color: #666; }
+        .history-filters { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .history-filters::-webkit-scrollbar { display: none; }
+        .filter-btn { background: #222; color: #aaa; border: 1px solid #333; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .filter-btn.active { background: var(--matrix-green); color: #000; border-color: var(--matrix-green); }
         
         .product-header { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
         .product-img { width: 90px; height: 90px; object-fit: cover; border-radius: 12px; background: #222; border: 1px solid #333; }
         .product-info { flex-grow: 1; }
         .product-title { font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 8px 0; line-height: 1.2; }
-        .category-badge { display: inline-block; background: #333; color: #bbb; font-size: 11px; padding: 5px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .category-badge { display: inline-block; background: #333; color: #bbb; font-size: 11px; padding: 5px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;}
         .score-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; border: 4px solid; flex-shrink: 0; background: #000; }
         
         .status-banner { padding: 15px; border-radius: 8px; font-weight: 800; font-size: 16px; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
         .status-alert { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.4); }
         .status-clean { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.4); }
-        .status-ocr { background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.4); }
         
         .section-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; border-bottom: 1px solid #333; padding-bottom: 6px; }
         .toxin-list { color: #ff3b30; font-size: 15px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
@@ -53,7 +53,8 @@
         .alt-list { color: #fff; font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 20px; }
         .ingredients-text { color: #999; font-size: 13px; line-height: 1.6; margin: 0; }
         
-        .history-item { background: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; cursor: pointer; }
+        .history-item { background: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; cursor: pointer; transition: 0.1s; }
+        .history-item:active { background: #2a2a2a; }
         
         button.action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 18px; width: 100%; max-width: 450px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px; margin-top: auto; }
         button.action-btn:active { transform: scale(0.97); background: #ccc; }
@@ -87,11 +88,10 @@
     
     <div id="history-container">
         <div class="history-filters">
-            <button class="filter-btn active" onclick="filterHistory('Alle', this)">Alle</button>
-            <button class="filter-btn" onclick="filterHistory('Nahrung', this)">Nahrung</button>
-            <button class="filter-btn" onclick="filterHistory('Kosmetik', this)">Kosmetik</button>
-            <button class="filter-btn" onclick="filterHistory('Optischer Scan', this)">OCR Scan</button>
-            <button class="filter-btn" onclick="filterHistory('Manuelle Suche', this)">Manuell</button>
+            <button id="flt-alle" class="filter-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
+            <button id="flt-nahrung" class="filter-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
+            <button id="flt-kosmetik" class="filter-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
+            <button id="flt-ocr" class="filter-btn" onclick="filterHistory('Optisch', 'flt-ocr')">Optisch / OCR</button>
         </div>
         <div id="history-list"></div>
     </div>
@@ -124,7 +124,6 @@
             "peg-": "Pflanzliche Basisöle. Verzicht auf Emulgatoren."
         };
 
-        // Cache-Buster: ?v= erzwingt den Download der neuesten Version
         let timestamp = new Date().getTime();
         Promise.all([
             fetch('blacklist.json?v=' + timestamp).then(r => r.json()),
@@ -134,7 +133,6 @@
             whitelist = data[1];
             dbActive = true;
         }).catch(err => {
-            // Zeigt Fehler an, wenn die JSON Datei kaputt kopiert wurde
             document.getElementById('db-status').style.display = 'block';
             console.error("JSON Syntax Error:", err);
         });
@@ -161,25 +159,36 @@
             }
         }
 
+        // --- HISTORIE & FILTER LOGIK FIX ---
         function saveToHistory(barcode, name, score, category, rawIngredients = null) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
-            history.unshift({ barcode, name, score, category, rawIngredients, date: new Date().toLocaleDateString() });
+            
+            // Standardisierung der Kategorie für den Filter
+            let mainCategory = "Nahrung";
+            if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
+            if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
+
+            history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             localStorage.setItem('op_history', JSON.stringify(history));
         }
 
-        function filterHistory(category, btnElement) {
+        function filterHistory(category, btnId) {
             currentHistoryFilter = category;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
+            document.getElementById(btnId).classList.add('active');
             renderHistory();
         }
 
         function renderHistory() {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let html = '';
-            let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category.includes(currentHistoryFilter));
+            
+            let filtered = history;
+            if (currentHistoryFilter !== 'Alle') {
+                filtered = history.filter(item => item.category && item.category === currentHistoryFilter);
+            }
 
             if (filtered.length === 0) {
                 html = '<div class="card" style="text-align:center;color:#888;">Keine Einträge.</div>';
@@ -188,9 +197,9 @@
                     let sColor = item.score >= 80 ? '#34c759' : (item.score >= 40 ? '#ffcc00' : '#ff3b30');
                     html += `
                     <div class="history-item" onclick="loadFromArchive('${item.barcode}')">
-                        <div style="flex-grow:1; padding-right:10px;">
-                            <span class="category-badge" style="margin-bottom:3px; display:inline-block; font-size:9px;">${item.category}</span><br>
-                            <strong style="font-size:15px;color:#fff; word-break: break-word;">${item.name}</strong><br>
+                        <div style="flex-grow:1; padding-right:10px; overflow:hidden;">
+                            <span class="category-badge">${item.category}</span><br>
+                            <strong style="font-size:15px;color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">${item.name}</strong>
                             <span style="font-size:11px;color:#777;">ID: ${item.barcode} | ${item.date}</span>
                         </div>
                         <div style="font-weight:900; font-size:20px; color:${sColor};">${item.score}</div>
@@ -218,9 +227,70 @@
             }
         }
 
+        // --- NEUE SUCH-LOGIK (Listen-Auswahl) ---
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            let term = document.getElementById('searchInput').value.trim();
+            if(!term) return;
+            
+            document.getElementById('reader-container').style.display = "none";
+            document.getElementById('result').style.display = 'flex';
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Analysiere Datenbanken nach [${term}]...</div>`;
+            
+            // Suche Nahrung
+            fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
+            .then(r => r.json())
+            .then(data => {
+                if(data.products && data.products.length > 0) {
+                    renderSearchResults(data.products, "Nahrung (Manuelle Suche)");
+                } else {
+                    // Suche Kosmetik als Fallback
+                    fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
+                    .then(rb => rb.json())
+                    .then(dataB => {
+                        if(dataB.products && dataB.products.length > 0) {
+                            renderSearchResults(dataB.products, "Kosmetik (Manuelle Suche)");
+                        } else {
+                            document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Kein Matrix-Eintrag gefunden.</div>`;
+                        }
+                    });
+                }
+            }).catch(() => {
+                document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Such-Interferenz.</div>`;
+            });
+        });
+
+        function renderSearchResults(products, categoryStr) {
+            let html = `<div class="card" style="padding:15px;"><div class="section-title">Ergebnisse: ${categoryStr}</div>`;
+            products.forEach(p => {
+                let name = p.product_name || "Unbekannte Deklaration";
+                let brand = p.brands || "Unbekannte Marke";
+                let img = p.image_front_small_url || p.image_url || "";
+                let imgHtml = img ? `<img src="${img}" style="width:45px;height:45px;border-radius:6px;object-fit:cover;border:1px solid #333;">` : `<div style="width:45px;height:45px;background:#222;border-radius:6px;border:1px solid #333;"></div>`;
+                
+                let safeData = encodeURIComponent(JSON.stringify(p));
+                html += `
+                <div onclick="selectSearchResult('${p.code || name}', '${categoryStr}', '${safeData}')" style="display:flex;gap:15px;align-items:center;background:#1a1a1a;padding:12px;border-radius:8px;margin-bottom:10px;cursor:pointer;border:1px solid #2a2a2a;transition:0.2s;">
+                    ${imgHtml}
+                    <div style="flex-grow:1; overflow:hidden;">
+                        <strong style="color:#fff;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${name}</strong>
+                        <span style="font-size:11px;color:#888;">${brand}</span>
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+            document.getElementById('result').innerHTML = html;
+        }
+
+        function selectSearchResult(barcode, category, dataStr) {
+            let p = JSON.parse(decodeURIComponent(dataStr));
+            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Extrahiere Rohdaten...</div>`;
+            analyzeProduct({status: 1, product: p}, category, barcode);
+        }
+
+        // --- ANALYSE ---
         function analyzeProduct(data, category, barcode, isOcr = false) {
             if(!dbActive) {
-                alert("Kann nicht scannen: Die Datenbank (JSON) ist beschädigt. Bitte Code prüfen.");
+                alert("Datenbank-Fehler. Filter inaktiv.");
                 return;
             }
 
@@ -235,7 +305,7 @@
             let productName = p.product_name || "Unbekanntes Objekt";
             let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;text-align:center;">NO<br>IMG</div>`;
             
-            if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Manuell")) {
+            if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Manuelle Suche")) {
                 let resultHtml = `
                     <div class="card">
                         <div class="product-header">
@@ -282,7 +352,7 @@
             if (score > 100) score = 100;
 
             let scoreColor = score >= 80 ? '#34c759' : (score >= 40 ? '#ffcc00' : '#ff3b30');
-            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Manuell")) ? ingredientsRaw : null);
+            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Manuelle Suche")) ? ingredientsRaw : null);
 
             let resultHtml = `
                 <div class="card">
@@ -322,37 +392,6 @@
             
             document.getElementById('result').innerHTML = resultHtml;
         }
-
-        // Manuelle Suche Logik
-        document.getElementById('searchBtn').addEventListener('click', () => {
-            let term = document.getElementById('searchInput').value.trim();
-            if(!term) return;
-            
-            document.getElementById('reader-container').style.display = "none";
-            document.getElementById('result').style.display = 'flex';
-            document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Suche nach [${term}] in Nahrungs-API...</div>`;
-            
-            fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1`)
-            .then(r => r.json())
-            .then(data => {
-                if(data.products && data.products.length > 0) {
-                    analyzeProduct({status: 1, product: data.products[0]}, "Manuelle Suche (Nahrung)", data.products[0].code || term);
-                } else {
-                    document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Suche im Kosmetik-Sektor...</div>`;
-                    fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1`)
-                    .then(rb => rb.json())
-                    .then(dataB => {
-                        if(dataB.products && dataB.products.length > 0) {
-                            analyzeProduct({status: 1, product: dataB.products[0]}, "Manuelle Suche (Kosmetik)", dataB.products[0].code || term);
-                        } else {
-                            document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Kein Eintrag in Matrix-Datenbanken gefunden.</div>`;
-                        }
-                    });
-                }
-            }).catch(() => {
-                document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Such-Interferenz.</div>`;
-            });
-        });
 
         function processOCR(file, productName, barcode) {
             document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;"><div class="status-banner status-ocr">Erkennung läuft...</div></div>`;
@@ -401,6 +440,7 @@
             });
         }
 
+        // --- SCANNER OPTIMIERUNG ---
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startBtn').style.display = "none";
             document.getElementById('result').style.display = "none";
@@ -408,7 +448,19 @@
             document.getElementById('reader-container').style.display = "block";
             
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 30, useBarCodeDetectorIfSupported: true, formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A], videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } };
+            
+            // Limitierung der Web-API: Format-Restriktionen entfernt, um Heuristik-Modus (Mustererkennung für Rotation) zu erzwingen.
+            const config = { 
+                fps: 20, // Reduziert, damit die Heuristik mehr Zeit pro Bild hat
+                useBarCodeDetectorIfSupported: true, 
+                videoConstraints: { 
+                    facingMode: "environment", 
+                    width: { ideal: 1920 }, 
+                    height: { ideal: 1080 }, 
+                    advanced: [{ focusMode: "continuous" }] 
+                } 
+            };
+            
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(() => {
                 document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Hardware-Zugriff verweigert.</div>`;
                 document.getElementById('result').style.display = "flex";
