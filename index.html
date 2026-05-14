@@ -16,7 +16,6 @@
         
         h2 { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; text-align: center; width: 100%; }
         
-        /* Suchleiste */
         #search-container { width: 100%; max-width: 450px; display: flex; gap: 10px; margin-bottom: 20px; }
         #searchInput { flex-grow: 1; padding: 15px; border-radius: 12px; border: 1px solid #333; background: #111; color: #fff; font-size: 16px; outline: none; }
         #searchInput:focus { border-color: var(--matrix-green); }
@@ -50,7 +49,7 @@
         .section-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; border-bottom: 1px solid #333; padding-bottom: 6px; }
         .toxin-list { color: #ff3b30; font-size: 15px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
         .whitelist-list { color: var(--matrix-green); font-size: 15px; font-weight: 600; line-height: 1.6; margin: 0; padding-left: 20px; }
-        .alt-list { color: #fff; font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 20px; }
+        .alt-list { color: #fff; font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; padding-left: 20px; list-style-type: square; }
         .ingredients-text { color: #999; font-size: 13px; line-height: 1.6; margin: 0; }
         
         .history-item { background: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; cursor: pointer; transition: 0.1s; }
@@ -67,7 +66,7 @@
     <h2>Operator Interface</h2>
     
     <div id="db-status" class="status-banner status-alert">
-        SYSTEMFEHLER: Blacklist/Whitelist beschädigt.<br><span style="font-size:12px;">Syntax-Fehler in den JSON-Dateien. Filter ist inaktiv!</span>
+        SYSTEMFEHLER: JSON Datenbank beschädigt.
     </div>
 
     <div class="nav-bar">
@@ -106,22 +105,26 @@
         let currentHistoryFilter = 'Alle';
         let dbActive = false;
 
-        const alternativeEngine = {
-            "fluorid": "Miswak-Stab, naturreine Zahnkreide, Kokosöl-Ziehen.",
-            "e250": "Unbehandeltes Bio-Fleisch direkt vom Metzger.",
-            "aspartam": "Roher Honig, reines Wasser.",
-            "sucralose": "Roher Honig, reines Wasser.",
-            "zucker": "Roher Bio-Honig, isolierte Früchte.",
-            "soja": "Weidefleisch, Eier (Testosteron-Basis).",
-            "e471": "Single-Ingredient Nahrungsmittel.",
-            "paraben": "Rindertalg (Face/Body), reines Jojobaöl, Sheabutter.",
-            "phthalat": "Naturöle, Lagerung in Glasbehältern.",
-            "aluminium": "Natürliche Alaunsteine, Verzicht auf synthetische Deos.",
-            "sls": "Traditionelle Aleppo-Seife (Oliven/Lorbeeröl), Kernseife.",
-            "sles": "Aleppo-Seife, Wascherde (Rhassoul) für Haut und Haare.",
-            "dimethicone": "Arganöl für die Haare. Verzicht auf Silikon-Versiegelungen.",
-            "parfum": "Reine ätherische Öle, Eigengeruch des Körpers zulassen.",
-            "peg-": "Pflanzliche Basisöle. Verzicht auf Emulgatoren."
+        // Contextual Alternative Matrix (CAM)
+        // Feuert basierend auf Produktkategorien/Namen statt nur auf Einzeltoxine
+        const contextualAlternatives = {
+            "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
+            "chips|snack|crisps": "Luftgetrocknetes Beef Jerky (nur Rind + Salz), gebackene Rinderleber-Crisps, rohe Macadamia-Nüsse.",
+            "energy|drink|cola|soda": "Gefiltertes Eiswasser mit keltischem Meersalz (Elektrolyte), reines Kokoswasser, Rohmilch.",
+            "brot|bread|toast": "Echtes Sauerteigbrot (nur Wasser, Salz, Urgetreide-Mehl), Keimbrot (Essener Brot).",
+            "shampoo|hair|haar": "Lavaerde (Rhassoul), Roggenmehl-Wäsche, traditionelle Aleppo-Seife (Lorbeer/Olive).",
+            "creme|lotion|skin|pflege": "Reiner Rindertalg (Tallow), unraffinierte Sheabutter, kaltgepresstes Jojobaöl.",
+            "seife|soap|wash|dusch": "100% Kernseife (ohne EDTA/Parfum), afrikanische schwarze Seife.",
+            "deo|deodorant": "Natürlicher Alaunstein, verdünnter Apfelessig, Kokosöl mit Natron.",
+            "wurst|salami|fleisch": "Unverarbeitetes Weidefleisch, Knochenmark, Bio-Innereien frisch vom Metzger.",
+            "protein|riegel|shake": "Rohe Eier, Kefir, rohe Milch, Rindersteak. Finger weg von Industrie-Isolaten."
+        };
+
+        // Fallback für Einzeltoxine, falls keine Kategorie matched
+        const fallbackAlternatives = {
+            "fluorid": "Miswak-Stab, naturreine Zahnkreide.",
+            "aspartam": "Roher Honig.",
+            "soja": "Weidefleisch, Eier (Testosteron-Basis)."
         };
 
         let timestamp = new Date().getTime();
@@ -134,7 +137,6 @@
             dbActive = true;
         }).catch(err => {
             document.getElementById('db-status').style.display = 'block';
-            console.error("JSON Syntax Error:", err);
         });
 
         function switchTab(tab) {
@@ -159,16 +161,12 @@
             }
         }
 
-        // --- HISTORIE & FILTER LOGIK FIX ---
         function saveToHistory(barcode, name, score, category, rawIngredients = null) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
-            
-            // Standardisierung der Kategorie für den Filter
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
             if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
-
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             localStorage.setItem('op_history', JSON.stringify(history));
@@ -184,11 +182,7 @@
         function renderHistory() {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let html = '';
-            
-            let filtered = history;
-            if (currentHistoryFilter !== 'Alle') {
-                filtered = history.filter(item => item.category && item.category === currentHistoryFilter);
-            }
+            let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category && item.category === currentHistoryFilter);
 
             if (filtered.length === 0) {
                 html = '<div class="card" style="text-align:center;color:#888;">Keine Einträge.</div>';
@@ -227,36 +221,26 @@
             }
         }
 
-        // --- NEUE SUCH-LOGIK (Listen-Auswahl) ---
         document.getElementById('searchBtn').addEventListener('click', () => {
             let term = document.getElementById('searchInput').value.trim();
             if(!term) return;
-            
             document.getElementById('reader-container').style.display = "none";
             document.getElementById('result').style.display = 'flex';
             document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;">Analysiere Datenbanken nach [${term}]...</div>`;
             
-            // Suche Nahrung
             fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
             .then(r => r.json())
             .then(data => {
-                if(data.products && data.products.length > 0) {
-                    renderSearchResults(data.products, "Nahrung (Manuelle Suche)");
-                } else {
-                    // Suche Kosmetik als Fallback
+                if(data.products && data.products.length > 0) renderSearchResults(data.products, "Nahrung (Manuelle Suche)");
+                else {
                     fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
                     .then(rb => rb.json())
                     .then(dataB => {
-                        if(dataB.products && dataB.products.length > 0) {
-                            renderSearchResults(dataB.products, "Kosmetik (Manuelle Suche)");
-                        } else {
-                            document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Kein Matrix-Eintrag gefunden.</div>`;
-                        }
+                        if(dataB.products && dataB.products.length > 0) renderSearchResults(dataB.products, "Kosmetik (Manuelle Suche)");
+                        else document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Kein Matrix-Eintrag gefunden.</div>`;
                     });
                 }
-            }).catch(() => {
-                document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Such-Interferenz.</div>`;
-            });
+            }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Such-Interferenz.</div>`);
         });
 
         function renderSearchResults(products, categoryStr) {
@@ -266,7 +250,6 @@
                 let brand = p.brands || "Unbekannte Marke";
                 let img = p.image_front_small_url || p.image_url || "";
                 let imgHtml = img ? `<img src="${img}" style="width:45px;height:45px;border-radius:6px;object-fit:cover;border:1px solid #333;">` : `<div style="width:45px;height:45px;background:#222;border-radius:6px;border:1px solid #333;"></div>`;
-                
                 let safeData = encodeURIComponent(JSON.stringify(p));
                 html += `
                 <div onclick="selectSearchResult('${p.code || name}', '${categoryStr}', '${safeData}')" style="display:flex;gap:15px;align-items:center;background:#1a1a1a;padding:12px;border-radius:8px;margin-bottom:10px;cursor:pointer;border:1px solid #2a2a2a;transition:0.2s;">
@@ -287,41 +270,27 @@
             analyzeProduct({status: 1, product: p}, category, barcode);
         }
 
-        // --- ANALYSE ---
         function analyzeProduct(data, category, barcode, isOcr = false) {
-            if(!dbActive) {
-                alert("Datenbank-Fehler. Filter inaktiv.");
-                return;
-            }
+            if(!dbActive) { alert("Datenbank-Fehler."); return; }
 
             let p = data.product;
             let ingredientsRaw = [
-                p.ingredients_text_de || "",
-                p.ingredients_text_en || "",
-                p.ingredients_text || "",
-                p.ingredients_tags ? p.ingredients_tags.join(" ") : ""
+                p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""
             ].join(" ").toLowerCase();
 
             let productName = p.product_name || "Unbekanntes Objekt";
+            let productContext = (productName + " " + (p.categories || "")).toLowerCase();
             let imageHtml = p.image_url ? `<img src="${p.image_url}" class="product-img">` : `<div class="product-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;text-align:center;">NO<br>IMG</div>`;
             
             if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Manuelle Suche")) {
                 let resultHtml = `
                     <div class="card">
-                        <div class="product-header">
-                            ${imageHtml}
-                            <div class="product-info">
-                                <div class="category-badge">${category}</div>
-                                <h3 class="product-title">${productName}</h3>
-                            </div>
-                        </div>
+                        <div class="product-header">${imageHtml}<div class="product-info"><div class="category-badge">${category}</div><h3 class="product-title">${productName}</h3></div></div>
                         <div class="status-banner status-alert">Keine Textdaten in API.</div>
                         <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren (OCR)</button>
                     </div>`;
                 document.getElementById('result').innerHTML = resultHtml;
-                document.getElementById('ocrInput').onchange = (e) => {
-                    if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode);
-                };
+                document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode); };
                 return;
             }
 
@@ -329,21 +298,40 @@
             let foundGood = [];
             let suggestedAlts = new Set();
             let score = 100;
+            let contextMatch = false;
 
             if (ingredientsRaw.trim() !== "") {
                 for (let toxin in blacklist) {
                     if (ingredientsRaw.includes(toxin.toLowerCase())) {
                         foundToxins.push(`<b>${toxin.toUpperCase()}</b>: ${blacklist[toxin]}`);
                         score -= 25;
-                        for (let key in alternativeEngine) {
-                            if (toxin.toLowerCase().includes(key)) suggestedAlts.add(alternativeEngine[key]);
-                        }
                     }
                 }
                 for (let good in whitelist) {
                     if (ingredientsRaw.includes(good.toLowerCase())) {
                         foundGood.push(`<b>${good.toUpperCase()}</b>: ${whitelist[good]}`);
                         score += 5;
+                    }
+                }
+
+                // Generierung kontextbasierter Alternativen (CAM)
+                if (foundToxins.length > 0) {
+                    for (let key in contextualAlternatives) {
+                        let keywords = key.split('|');
+                        if (keywords.some(kw => productContext.includes(kw))) {
+                            suggestedAlts.add(contextualAlternatives[key]);
+                            contextMatch = true;
+                        }
+                    }
+                    // Fallback, wenn keine spezifische Produktkategorie erkannt wurde
+                    if (!contextMatch) {
+                        for (let toxin in blacklist) {
+                            if (ingredientsRaw.includes(toxin.toLowerCase())) {
+                                for (let key in fallbackAlternatives) {
+                                    if (toxin.toLowerCase().includes(key)) suggestedAlts.add(fallbackAlternatives[key]);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -354,19 +342,7 @@
             let scoreColor = score >= 80 ? '#34c759' : (score >= 40 ? '#ffcc00' : '#ff3b30');
             saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Manuelle Suche")) ? ingredientsRaw : null);
 
-            let resultHtml = `
-                <div class="card">
-                    <div class="product-header">
-                        ${imageHtml}
-                        <div class="product-info">
-                            <div class="category-badge">${category}</div>
-                            <h3 class="product-title">${productName}</h3>
-                        </div>
-                        <div class="score-circle" style="color: ${scoreColor}; border-color: ${scoreColor};">
-                            ${score}
-                        </div>
-                    </div>
-            `;
+            let resultHtml = `<div class="card"><div class="product-header">${imageHtml}<div class="product-info"><div class="category-badge">${category}</div><h3 class="product-title">${productName}</h3></div><div class="score-circle" style="color: ${scoreColor}; border-color: ${scoreColor};">${score}</div></div>`;
 
             if (foundToxins.length > 0) {
                 resultHtml += `<div class="status-banner status-alert">ANGRIFF DETEKTIERT</div>`;
@@ -380,50 +356,35 @@
             }
 
             if (suggestedAlts.size > 0) {
-                resultHtml += `<div style="margin-bottom: 20px;"><div class="section-title">Souveräne Alternativen</div><ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul></div>`;
+                resultHtml += `<div style="margin-bottom: 20px;"><div class="section-title">Spezifische Souveränitäts-Alternativen</div><ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul></div>`;
             }
 
-            resultHtml += `
-                <div>
-                    <div class="section-title">Rohdaten</div>
-                    <p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API"}</p>
-                </div>
-            </div>`;
-            
+            resultHtml += `<div><div class="section-title">Rohdaten</div><p class="ingredients-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API"}</p></div></div>`;
             document.getElementById('result').innerHTML = resultHtml;
         }
 
         function processOCR(file, productName, barcode) {
             document.getElementById('result').innerHTML = `<div class="card" style="text-align:center;"><div class="status-banner status-ocr">Erkennung läuft...</div></div>`;
             Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
-                let fakeData = { product: { product_name: productName, ingredients_text: text, image_url: "" } };
-                analyzeProduct(fakeData, "Optischer Scan", barcode, true);
+                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: "" } }, "Optischer Scan", barcode, true);
             }).catch(err => {
                 document.getElementById('result').innerHTML = `<div class="card"><div class="status-banner status-alert">OCR gescheitert.</div><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Neuer Versuch</button></div>`;
             });
         }
 
         function fetchDataCascade(barcode) {
-            fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 1) analyzeProduct(data, "Nahrung", barcode);
-                    else {
-                        fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`)
-                            .then(resB => resB.json())
-                            .then(dataB => {
-                                if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
-                                else {
-                                    document.getElementById('result').innerHTML = `
-                                    <div class="card"><div class="status-banner status-alert">Nicht katalogisiert.</div>
-                                    <button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren</button></div>`;
-                                    document.getElementById('ocrInput').onchange = (e) => {
-                                        if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode);
-                                    };
-                                }
-                            });
-                    }
-                }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Server-Interferenz.</div>`);
+            fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`).then(res => res.json()).then(data => {
+                if (data.status === 1) analyzeProduct(data, "Nahrung", barcode);
+                else {
+                    fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`).then(resB => resB.json()).then(dataB => {
+                        if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
+                        else {
+                            document.getElementById('result').innerHTML = `<div class="card"><div class="status-banner status-alert">Nicht katalogisiert.</div><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Zutaten fotografieren</button></div>`;
+                            document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode); };
+                        }
+                    });
+                }
+            }).catch(() => document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Server-Interferenz.</div>`);
         }
 
         function onScanSuccess(decodedText) {
@@ -432,35 +393,19 @@
                 document.getElementById('startBtn').style.display = "block";
                 document.getElementById('startBtn').innerText = "Neuen Code Scannen";
                 document.getElementById('search-container').style.display = 'none';
-                
                 document.getElementById('result').innerHTML = `<div class="card" style="text-align:center; font-weight:bold;">Signatur [${decodedText}] erfasst...</div>`;
                 document.getElementById('result').style.display = "flex";
-                
                 fetchDataCascade(decodedText);
             });
         }
 
-        // --- SCANNER OPTIMIERUNG ---
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startBtn').style.display = "none";
             document.getElementById('result').style.display = "none";
             document.getElementById('search-container').style.display = 'none';
             document.getElementById('reader-container').style.display = "block";
-            
             html5QrCode = new Html5Qrcode("reader");
-            
-            // Limitierung der Web-API: Format-Restriktionen entfernt, um Heuristik-Modus (Mustererkennung für Rotation) zu erzwingen.
-            const config = { 
-                fps: 20, // Reduziert, damit die Heuristik mehr Zeit pro Bild hat
-                useBarCodeDetectorIfSupported: true, 
-                videoConstraints: { 
-                    facingMode: "environment", 
-                    width: { ideal: 1920 }, 
-                    height: { ideal: 1080 }, 
-                    advanced: [{ focusMode: "continuous" }] 
-                } 
-            };
-            
+            const config = { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(() => {
                 document.getElementById('result').innerHTML = `<div class="card status-banner status-alert">Hardware-Zugriff verweigert.</div>`;
                 document.getElementById('result').style.display = "flex";
