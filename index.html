@@ -2,25 +2,34 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Operator Terminal</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
-        :root { --matrix-green: #00ff41; --bg-color: #050505; --panel-bg: #111; --border-color: #222; --text-main: #e0e0e0; --text-muted: #777; --alert: #ff003c; --radius: 12px; }
-        * { box-sizing: border-box; }
-        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        :root { --matrix-green: #00ff41; --bg-color: #050505; --panel-bg: #111; --border-color: #222; --text-main: #e0e0e0; --text-muted: #777; --alert: #ff003c; --radius: 16px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        /* Padding Bottom verhindert, dass Content hinter der schwebenden Navigationsleiste verschwindet */
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
         .header-title { font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; text-align: center; border-bottom: 1px solid var(--matrix-green); padding-bottom: 10px; width: 100%; max-width: 450px; }
         
+        /* Liquid Glass Navigation (iOS 26 Style) */
+        .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: rgba(15, 15, 15, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9999; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; padding: 8px 12px; border-radius: 16px; }
+        .nav-item.active { color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
+        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+
         /* View Management */
-        .view { display: none; width: 100%; max-width: 450px; flex-direction: column; gap: 15px; }
+        .view { display: none; width: 100%; max-width: 450px; flex-direction: column; gap: 15px; animation: fadeIn 0.3s ease; }
         .view.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Dashboard (Home) */
         .dash-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 20px; }
         .dash-card:active { transform: scale(0.98); border-color: var(--matrix-green); }
-        .dash-icon { font-size: 30px; background: #000; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #333; }
+        .dash-icon-lg { font-size: 30px; background: #000; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #333; flex-shrink: 0;}
         .dash-text h3 { margin: 0 0 5px 0; color: #fff; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
         .dash-text p { margin: 0; color: var(--text-muted); font-size: 13px; }
 
@@ -28,23 +37,28 @@
         #reader { width: 100%; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--matrix-green); background: #000; box-shadow: 0 0 20px rgba(0,255,65,0.1); }
         #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; }
+        .action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 16px; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
+        .action-btn:active { transform: scale(0.98); background: #ccc; }
         
         /* Search View */
         .search-box { display: flex; gap: 10px; }
-        #searchInput { flex-grow: 1; padding: 16px; border-radius: var(--radius); border: 1px solid var(--border-color); background: #0a0a0a; color: #fff; font-size: 16px; outline: none; transition: 0.2s; }
+        #searchInput { flex-grow: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: #0a0a0a; color: #fff; font-size: 16px; outline: none; transition: 0.2s; }
         #searchInput:focus { border-color: var(--matrix-green); }
-        .btn-search { background: var(--matrix-green); color: #000; border: none; border-radius: var(--radius); padding: 0 20px; font-weight: 800; cursor: pointer; }
+        .btn-search { background: var(--matrix-green); color: #000; border: none; border-radius: 12px; padding: 0 20px; font-weight: 800; cursor: pointer; }
         
         /* History View */
         .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
         .filter-row::-webkit-scrollbar { display: none; }
         .flt-btn { background: var(--panel-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
         .flt-btn.active { background: #fff; color: #000; border-color: #fff; }
-        .hist-item { background: var(--panel-bg); padding: 15px; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); cursor: pointer; }
-        .hist-item:active { background: #1a1a1a; }
-        .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; }
+        
+        .hist-item { background: var(--panel-bg); padding: 12px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); cursor: pointer; }
+        .hist-item:active { background: #1a1a1a; border-color: #444; }
+        .hist-img { width: 55px; height: 55px; border-radius: 10px; object-fit: cover; border: 1px solid #333; background: #000; flex-shrink: 0; }
+        .hist-info { flex-grow: 1; overflow: hidden; }
+        .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; flex-shrink: 0;}
 
-        /* Result View (ToxScan Style) */
+        /* Result View */
         .res-card { background: var(--panel-bg); border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; }
         .res-header { display: flex; gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); align-items: flex-start; }
         .res-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; background: #000; border: 1px solid #333; flex-shrink: 0; }
@@ -67,34 +81,50 @@
         .list-alt { color: #fff; font-family: 'Courier New', Courier, monospace; }
         .raw-text { color: #888; font-size: 12px; line-height: 1.6; font-family: 'Courier New', Courier, monospace; }
 
-        /* General UI */
-        .btn-back { background: transparent; color: #888; border: 1px solid #333; border-radius: var(--radius); padding: 15px; font-weight: 800; width: 100%; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; margin-top: 10px; }
-        .btn-back:active { background: #222; }
-        .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: var(--radius); font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
-        #db-status { display: none; background: var(--alert); color: #fff; padding: 10px; text-align: center; font-weight: bold; border-radius: var(--radius); margin-bottom: 15px; width: 100%; max-width: 450px; font-size: 12px;}
+        .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        #db-status { display: none; background: var(--alert); color: #fff; padding: 10px; text-align: center; font-weight: bold; border-radius: 12px; margin-bottom: 15px; width: 100%; max-width: 450px; font-size: 12px;}
     </style>
 </head>
 <body>
     <div class="header-title">Operator Interface</div>
     <div id="db-status">SYSTEMFEHLER: JSON Datenbank beschädigt.</div>
 
+    <div class="glass-nav">
+        <div class="nav-item active" id="nav-home" onclick="openView('home')">
+            <div class="nav-icon">🌐</div>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" id="nav-scan" onclick="openView('scan')">
+            <div class="nav-icon">👁️</div>
+            <span>Sensor</span>
+        </div>
+        <div class="nav-item" id="nav-search" onclick="openView('search')">
+            <div class="nav-icon">⌨️</div>
+            <span>Suche</span>
+        </div>
+        <div class="nav-item" id="nav-history" onclick="openView('history')">
+            <div class="nav-icon">🗄️</div>
+            <span>Archiv</span>
+        </div>
+    </div>
+
     <div id="view-home" class="view active">
         <div class="dash-card" onclick="openView('scan')">
-            <div class="dash-icon" style="color:var(--matrix-green);">👁️</div>
+            <div class="dash-icon-lg" style="color:var(--matrix-green);">👁️</div>
             <div class="dash-text">
                 <h3>Optischer Sensor</h3>
                 <p>Physische Barcodes & OCR Extraktion</p>
             </div>
         </div>
         <div class="dash-card" onclick="openView('search')">
-            <div class="dash-icon" style="color:#fff;">⌨️</div>
+            <div class="dash-icon-lg" style="color:#fff;">⌨️</div>
             <div class="dash-text">
                 <h3>Terminal Suche</h3>
                 <p>Manuelle Datenbank-Abfrage</p>
             </div>
         </div>
         <div class="dash-card" onclick="openView('history')">
-            <div class="dash-icon" style="color:#ffcc00;">🗄️</div>
+            <div class="dash-icon-lg" style="color:#ffcc00;">🗄️</div>
             <div class="dash-text">
                 <h3>Lokal-Archiv</h3>
                 <p>Offline Historie & Matrix-Daten</p>
@@ -104,7 +134,7 @@
 
     <div id="view-scan" class="view">
         <div id="reader"></div>
-        <button class="btn-back" onclick="openView('home')">ABBRUCH</button>
+        <button id="startBtn" class="action-btn" onclick="startScanner()">Sensor Aktivieren</button>
     </div>
 
     <div id="view-search" class="view">
@@ -113,7 +143,6 @@
             <button id="searchBtn" class="btn-search">GO</button>
         </div>
         <div id="search-results"></div>
-        <button class="btn-back" onclick="openView('home')">ZURÜCK ZUM MAIN-TERMINAL</button>
     </div>
 
     <div id="view-history" class="view">
@@ -124,22 +153,16 @@
             <button id="flt-ocr" class="flt-btn" onclick="filterHistory('Optisch', 'flt-ocr')">Optisch</button>
         </div>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-        <button class="btn-back" onclick="openView('home')">ZURÜCK ZUM MAIN-TERMINAL</button>
     </div>
 
     <div id="view-result" class="view">
         <div id="result-content"></div>
-        <button class="btn-back" onclick="openView('home')">ZURÜCK ZUM MAIN-TERMINAL</button>
     </div>
 
     <input type="file" accept="image/*" capture="environment" id="ocrInput" style="display:none;">
 
     <script>
-        let blacklist = {};
-        let whitelist = {};
-        let html5QrCode;
-        let dbActive = false;
-        let currentHistoryFilter = 'Alle';
+        let blacklist = {}; let whitelist = {}; let html5QrCode; let dbActive = false; let currentHistoryFilter = 'Alle';
 
         const contextualAlternatives = {
             "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
@@ -168,21 +191,35 @@
             blacklist = data[0]; whitelist = data[1]; dbActive = true;
         }).catch(() => { document.getElementById('db-status').style.display = 'block'; });
 
-        // View Controller
+        // --- NAVIGATION CONTROLLER ---
         function openView(viewName) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            // Stop Scanner if running
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-            document.getElementById('search-results').innerHTML = '';
-            document.getElementById('searchInput').value = '';
             
+            // UI Resets
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('search-results').innerHTML = '';
+            
+            // Activate target view
             document.getElementById('view-' + viewName).classList.add('active');
+            
+            // Highlight Glass Nav (Result view has no specific nav tab, so keep previous or none)
+            if(document.getElementById('nav-' + viewName)) {
+                document.getElementById('nav-' + viewName).classList.add('active');
+            }
 
-            if(viewName === 'scan') startScanner();
+            if(viewName === 'scan') {
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('reader').style.display = 'none';
+            }
             if(viewName === 'history') renderHistory();
         }
 
-        // Scanner Logic
+        // --- SCANNER LOGIC ---
         function startScanner() {
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('reader').style.display = 'block';
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(() => {
@@ -198,14 +235,15 @@
             });
         }
 
-        // History Logic
-        function saveToHistory(barcode, name, score, category, rawIngredients = null) {
+        // --- HISTORY LOGIC (WITH IMAGES) ---
+        function saveToHistory(barcode, name, score, category, rawIngredients = null, imgUrl = null) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
             if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
-            history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, date: new Date().toLocaleDateString() });
+            
+            history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             localStorage.setItem('op_history', JSON.stringify(history));
         }
@@ -227,9 +265,12 @@
             } else {
                 filtered.forEach(item => {
                     let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
+                    let imgHtml = item.imageUrl ? `<img src="${item.imageUrl}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
+                    
                     html += `
                     <div class="hist-item" onclick="loadFromArchive('${item.barcode}')">
-                        <div style="flex-grow:1; overflow:hidden; padding-right:10px;">
+                        ${imgHtml}
+                        <div class="hist-info">
                             <span class="res-badge" style="margin-bottom:5px;">${item.category}</span>
                             <div style="font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
                             <div style="font-size:11px; color:var(--text-muted);">${item.date}</div>
@@ -246,11 +287,11 @@
             document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Lade Archiv...</div></div>`;
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let item = history.find(i => i.barcode === barcode);
-            if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: "" } }, item.category, barcode, true);
+            if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
             else fetchDataCascade(barcode);
         }
 
-        // Search Logic
+        // --- SEARCH LOGIC ---
         document.getElementById('searchBtn').addEventListener('click', () => {
             let term = document.getElementById('searchInput').value.trim();
             if(!term) return;
@@ -275,14 +316,14 @@
             products.forEach(p => {
                 let name = p.product_name || "Unbekannt";
                 let img = p.image_front_small_url || p.image_url || "";
-                let imgHtml = img ? `<img src="${img}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;border:1px solid #333;">` : `<div style="width:50px;height:50px;background:#222;border-radius:8px;border:1px solid #333;"></div>`;
+                let imgHtml = img ? `<img src="${img}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
                 let safeData = encodeURIComponent(JSON.stringify(p));
                 html += `
                 <div class="hist-item" style="margin-bottom:10px;" onclick="selectSearchResult('${p.code || name}', '${categoryStr}', '${safeData}')">
                     ${imgHtml}
-                    <div style="flex-grow:1; margin-left:15px; overflow:hidden;">
+                    <div class="hist-info">
                         <div style="font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
-                        <div style="font-size:11px; color:#666;">${p.brands || 'Keine Marke'}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${p.brands || 'Keine Marke'}</div>
                     </div>
                 </div>`;
             });
@@ -294,14 +335,15 @@
             analyzeProduct({status: 1, product: JSON.parse(decodeURIComponent(dataStr))}, category, barcode);
         }
 
-        // Core Analysis
+        // --- CORE ANALYSIS ---
         function analyzeProduct(data, category, barcode, isOcr = false) {
             if(!dbActive) { alert("Datenbank inaktiv."); return; }
             let p = data.product;
+            let imgUrlFinal = p.image_url || p.image_front_small_url || "";
             let ingredientsRaw = [p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""].join(" ").toLowerCase();
             let productName = p.product_name || "Unbekanntes Objekt";
             let productContext = (productName + " " + (p.categories || "")).toLowerCase();
-            let imageHtml = p.image_url ? `<img src="${p.image_url}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
+            let imageHtml = imgUrlFinal ? `<img src="${imgUrlFinal}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
             
             if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Manuelle Suche")) {
                 document.getElementById('result-content').innerHTML = `
@@ -310,7 +352,7 @@
                         <div class="status-bar st-alert">Keine Textdaten.</div>
                         <div class="res-body" style="text-align:center;"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 OCR Scanner</button></div>
                     </div>`;
-                document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode); };
+                document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode, imgUrlFinal); };
                 return;
             }
 
@@ -343,7 +385,9 @@
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
-            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Suche")) ? ingredientsRaw : null);
+            
+            // Speichere die Bild-URL im LocalStorage ab jetzt mit
+            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Suche")) ? ingredientsRaw : null, imgUrlFinal);
 
             let resultHtml = `
                 <div class="res-card">
@@ -363,10 +407,10 @@
             document.getElementById('result-content').innerHTML = resultHtml;
         }
 
-        function processOCR(file, productName, barcode) {
+        function processOCR(file, productName, barcode, imgUrlFinal) {
             document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">OCR Decodierung läuft...</div></div>`;
             Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
-                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: "" } }, "Optisch", barcode, true);
+                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: imgUrlFinal } }, "Optisch", barcode, true);
             }).catch(() => {
                 document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">OCR GESCHEITERT</div><div class="res-body"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Retry</button></div></div>`;
             });
@@ -384,7 +428,7 @@
                                 <div class="status-bar st-alert">Black-Box. Nicht katalogisiert.</div>
                                 <div class="res-body"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Manuelle Erfassung</button></div>
                             </div>`;
-                            document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode); };
+                            document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode, ""); };
                         }
                     });
                 }
