@@ -119,7 +119,7 @@
 
     <div id="view-settings" class="view">
         <div class="res-card">
-            <div class="status-bar st-gemini">KI Fallback Modul (Gemini)</div>
+            <div class="status-bar st-gemini">KI Fallback Modul (Gemini 3.1 Flash)</div>
             <div class="res-body">
                 <p style="font-size:13px; color:#aaa; margin-top:0;">Der Schlüssel wird lokal verschlüsselt. Kein Daten-Leak an Dritte.</p>
                 <input type="password" id="geminiApiKey" class="std-input" placeholder="API Key eingeben..." style="margin-bottom:15px;">
@@ -350,7 +350,7 @@
             if(checkApiCounter() >= 1500) { alert("Tägliches API-Limit erreicht."); return null; }
 
             incrementApiCounter();
-            let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+            let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=${key}`;
             
             let contents = [];
             if(base64Image) {
@@ -382,7 +382,7 @@
             
             let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
             openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Greife auf Gemini 1.5 Flash zu...</div></div>`;
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Greife auf Gemini 3.1 Flash zu...</div></div>`;
             
             let promptText = `Du bist eine toxikologische Datenbank. Suche nach den genauen Inhaltsstoffen für folgendes Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ..."}. Gib keine anderen Texte aus.`;
             
@@ -395,7 +395,7 @@
         }
 
         function processGeminiVision(file, barcode) {
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Vision Analyse läuft...</div><div class="res-body" style="text-align:center; color:#888;">Bild wird von Gemini 1.5 Flash verarbeitet...</div></div>`;
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Vision Analyse läuft...</div><div class="res-body" style="text-align:center; color:#888;">Bild wird von Gemini 3.1 Flash verarbeitet...</div></div>`;
             
             let reader = new FileReader();
             reader.readAsDataURL(file);
