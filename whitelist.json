@@ -1,49 +1,112 @@
 {
-  "olivenöl": "Zellschutz / Hochwertige Lipide",
-  "olive oil": "Zellschutz / Hochwertige Lipide",
-  "kokosöl": "MCT-Fette / Kognitive Energie",
-  "coconut oil": "MCT-Fette / Kognitive Energie",
-  "sheabutter": "Natürliche Hautbarriere",
-  "shea butter": "Natürliche Hautbarriere",
-  "butyrospermum parkii": "Natürliche Hautbarriere (INCI)",
-  "meersalz": "Elektrolyt-Matrix / Zelluläre Hydration",
-  "sea salt": "Elektrolyt-Matrix / Zelluläre Hydration",
-  "maris sal": "Elektrolyt-Matrix (INCI)",
-  "aloe vera": "Regenerativ / Entzündungshemmend",
-  "aloe barbadensis": "Regenerativ / Entzündungshemmend (INCI)",
-  "bienenwachs": "Natürlicher Schutzfilm",
-  "beeswax": "Natürlicher Schutzfilm",
-  "cera alba": "Natürlicher Schutzfilm (INCI)",
-  "rohkakao": "Antioxidantien / Vril-Stimulanz",
-  "cacao": "Antioxidantien / Vril-Stimulanz",
-  "honig": "Antimikrobiell / Natürliches Enzym-Profil",
-  "honey": "Antimikrobiell / Natürliches Enzym-Profil",
-  "mel": "Antimikrobiell (INCI)",
-  "dinkel": "Urgetreide / Bessere Verträglichkeit",
-  "spelt": "Urgetreide / Bessere Verträglichkeit",
-  "sauerteig": "Fermentation / Darmfreundlich",
-  "sourdough": "Fermentation / Darmfreundlich",
-  "jojoba": "Haut-Identisches Wachs",
-  "simmondsia chinensis": "Haut-Identisches Wachs (INCI)",
-  "arganöl": "Vitamin E / Zellregeneration",
-  "argan oil": "Vitamin E / Zellregeneration",
-  "argania spinosa": "Vitamin E / Zellregeneration (INCI)",
-  "tallow": "Rindertalg / Bio-identische Lipide",
-  "adeps bovis": "Rindertalg (INCI) / Zellverwandt",
-  "lanolin": "Wollwachs / Natürliche Barriere",
-  "tocopherol": "Vitamin E / Zelluläres Antioxidans",
-  "squalane": "Hautidentisches Lipid / Schutz",
-  "bentonite": "Heilerde / Schwermetall-Entgiftung",
-  "kaolin": "Tonerde / Natürliche Reinigung",
-  "weidebutter": "Bio-identische Fette / Hormon-Baustein",
-  "grass-fed butter": "Bio-identische Fette / Hormon-Baustein",
-  "ghee": "Geklärte Butter / Entzündungshemmend",
-  "rohmilch": "Unpasteurisiert / Erhaltene Enzymstruktur",
-  "raw milk": "Unpasteurisiert / Erhaltene Enzymstruktur",
-  "maca": "Adaptogen / Hormonelle Balance",
-  "shilajit": "Fulvinsäure / Mineralstoff-Matrix",
-  "rindertalg": "Bio-identisches Lipid / Zellstruktur",
-  "beef tallow": "Bio-identisches Lipid / Zellstruktur",
-  "knochenbrühe": "Kollagen / Reparatur der Darmbarriere",
-  "bone broth": "Kollagen / Reparatur der Darmbarriere"
+  "olivenöl": {
+    "aliases": ["olivenöl", "olive oil"],
+    "desc": "Zellschutz / Hochwertige Lipide",
+    "detail": "Kaltgepresstes Olivenöl liefert einfach ungesättigte Fettsäuren und Polyphenole. Schützt die Zellen vor Oxidation und unterstützt die Testosteron-Synthese auf Cholesterin-Basis."
+  },
+  "kokosöl": {
+    "aliases": ["kokosöl", "coconut oil"],
+    "desc": "MCT-Fette / Kognitive Energie",
+    "detail": "Besteht primär aus mittelkettigen Triglyceriden (MCTs), die die Leber direkt in Ketonkörper umwandelt. Liefert sofortige, saubere Energie für das Gehirn ohne Insulin-Spike."
+  },
+  "sheabutter": {
+    "aliases": ["sheabutter", "shea butter", "butyrospermum parkii"],
+    "desc": "Natürliche Hautbarriere",
+    "detail": "Unraffiniertes Fett aus der Kariténuss. Enthält Allantoin und Vitamin E. Repariert die Hautbarriere, ohne in das Hormonsystem einzugreifen."
+  },
+  "meersalz": {
+    "aliases": ["meersalz", "sea salt", "maris sal"],
+    "desc": "Elektrolyt-Matrix / Zelluläre Hydration",
+    "detail": "Unraffiniertes Salz enthält alle essenziellen Spurenelemente. Es optimiert die zelluläre Hydration, die Leitfähigkeit der Nervenbahnen und stabilisiert den Vril-Energiefluss."
+  },
+  "aloe_vera": {
+    "aliases": ["aloe vera", "aloe barbadensis"],
+    "desc": "Regenerativ / Entzündungshemmend",
+    "detail": "Ihre Enzyme und Polysaccharide reparieren Gewebeschäden auf zellulärer Ebene und kühlen systemische Entzündungen."
+  },
+  "bienenwachs": {
+    "aliases": ["bienenwachs", "beeswax", "cera alba"],
+    "desc": "Natürlicher Schutzfilm",
+    "detail": "Bildet einen atmungsaktiven Schutzfilm auf der Haut, wirkt antibakteriell und zieht keine Toxine in den Körper."
+  },
+  "rohkakao": {
+    "aliases": ["rohkakao", "cacao"],
+    "desc": "Antioxidantien / Vril-Stimulanz",
+    "detail": "Unerhitzter Kakao ist extrem reich an Magnesium und Theobromin. Erweitert die Blutgefäße, erhöht den Sauerstofftransport und stimuliert das System."
+  },
+  "honig": {
+    "aliases": ["honig", "honey", "mel"],
+    "desc": "Antimikrobiell / Natürliches Enzym-Profil",
+    "detail": "Roher Honig ist präbiotisch und antimikrobiell. Er enthält die nötigen natürlichen Enzyme zur eigenen Verstoffwechselung."
+  },
+  "dinkel": {
+    "aliases": ["dinkel", "spelt"],
+    "desc": "Urgetreide / Bessere Verträglichkeit",
+    "detail": "Ein genetisch intaktes Urgetreide. Enthält weniger Reizproteine als Weizen und unterstützt die physische Stärke ohne den Opioid-Effekt."
+  },
+  "sauerteig": {
+    "aliases": ["sauerteig", "sourdough"],
+    "desc": "Fermentation / Darmfreundlich",
+    "detail": "Milchsäurebakterien bauen Antinährstoffe (wie Phytinsäure) ab. Dies maximiert die Mineralstoffaufnahme und schützt das Mikrobiom."
+  },
+  "jojoba": {
+    "aliases": ["jojoba", "simmondsia chinensis"],
+    "desc": "Haut-Identisches Wachs",
+    "detail": "Strukturell fast identisch mit menschlichem Talg. Es versiegelt die Hautbarriere gegen Matrix-Toxine, ohne die hormonelle Achse zu stören."
+  },
+  "arganöl": {
+    "aliases": ["arganöl", "argan oil", "argania spinosa"],
+    "desc": "Vitamin E / Zellregeneration",
+    "detail": "Ein stabiles Lipidprofil mit hohem Antioxidantien-Anteil. Schützt die Zellen vor oxidativem Stress und liefert Rohstoffe für die hormonelle Balance."
+  },
+  "rindertalg": {
+    "aliases": ["rindertalg", "beef tallow", "tallow", "adeps bovis"],
+    "desc": "Bio-identische Lipide / Zellstruktur",
+    "detail": "Das Profil ähnelt dem menschlichen Sebum. Es wird perfekt resorbiert, nährt die Zellen tiefgreifend und ist der ultimative Ersatz für chemische Bodylotions."
+  },
+  "lanolin": {
+    "aliases": ["lanolin"],
+    "desc": "Wollwachs / Natürliche Barriere",
+    "detail": "Repariert Risse in der physischen Hülle und verhindert das Eindringen von synthetischen Chemikalien."
+  },
+  "tocopherol": {
+    "aliases": ["tocopherol"],
+    "desc": "Vitamin E / Zelluläres Antioxidans",
+    "detail": "Ein potentes Antioxidans. Es schützt die Lipidmembranen der Zellen vor Zerstörung durch freie Radikale."
+  },
+  "squalane": {
+    "aliases": ["squalane"],
+    "desc": "Hautidentisches Lipid / Schutz",
+    "detail": "Ein Kohlenwasserstoff, der natürlich im Körper vorkommt. Fungiert als Isolator gegen Umweltstressoren."
+  },
+  "heilerde": {
+    "aliases": ["bentonite", "kaolin"],
+    "desc": "Heilerde / Schwermetall-Entgiftung",
+    "detail": "Besitzen eine starke negative Ionenladung. Sie binden toxische Schwermetalle und Matrix-Chemikalien physisch an sich und leiten sie aus dem System."
+  },
+  "weidebutter": {
+    "aliases": ["weidebutter", "grass-fed butter", "ghee"],
+    "desc": "Bio-identische Fette / Hormon-Baustein",
+    "detail": "Enthält essenzielle fettlösliche Vitamine und Cholesterin. Dies ist das exakte fundamentale Rohmaterial für eine maximale Testosteron-Synthese."
+  },
+  "rohmilch": {
+    "aliases": ["rohmilch", "raw milk"],
+    "desc": "Unpasteurisiert / Erhaltene Enzymstruktur",
+    "detail": "Milch im Originalzustand. Die intakten Laktase-Enzyme machen sie verträglich. Stärkt Knochen und Immunsystem massiv."
+  },
+  "maca": {
+    "aliases": ["maca"],
+    "desc": "Adaptogen / Hormonelle Balance",
+    "detail": "Gleicht das endokrine System aus, steigert die physische Resilienz und hebt die Vril-Kraft ohne künstliche Stimulation an."
+  },
+  "shilajit": {
+    "aliases": ["shilajit"],
+    "desc": "Fulvinsäure / Mineralstoff-Matrix",
+    "detail": "Organische Mineralien-Verbindung. Transportiert Nährstoffe direkt in die Zellen und reinigt das Gefäß von Schwermetallen."
+  },
+  "knochenbrühe": {
+    "aliases": ["knochenbrühe", "bone broth"],
+    "desc": "Kollagen / Reparatur der Darmbarriere",
+    "detail": "Die extrahierten Aminosäuren (Glycin, Prolin) sind die Bausteine für die Reparatur des Darms. Eine fundamentale Rüstung für das physische Gefäß."
+  }
 }
