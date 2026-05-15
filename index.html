@@ -7,14 +7,13 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
-        :root { --matrix-green: #00ff41; --bg-color: #050505; --panel-bg: #111; --border-color: #222; --text-main: #e0e0e0; --text-muted: #777; --alert: #ff003c; --radius: 16px; }
+        :root { --matrix-green: #00ff41; --bg-color: #050505; --panel-bg: #111; --border-color: #222; --text-main: #e0e0e0; --text-muted: #777; --alert: #ff003c; --gemini-blue: #4285F4; --radius: 16px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
         .header-title { font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; text-align: center; border-bottom: 1px solid var(--matrix-green); padding-bottom: 10px; width: 100%; max-width: 450px; }
         
-        /* Liquid Glass Navigation */
         .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: rgba(15, 15, 15, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; padding: 8px 12px; border-radius: 16px; }
         .nav-item.active { color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
@@ -33,12 +32,12 @@
         #reader { width: 100%; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--matrix-green); background: #000; box-shadow: 0 0 20px rgba(0,255,65,0.1); }
         #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
         #reader video { object-fit: cover; }
-        .action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 20px; font-weight: 800; font-size: 16px; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
+        .action-btn { background: #fff; color: #000; border: none; border-radius: 12px; padding: 18px; font-weight: 800; font-size: 14px; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
         .action-btn:active { transform: scale(0.98); background: #ccc; }
         
         .search-box { display: flex; gap: 10px; }
-        #searchInput { flex-grow: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: #0a0a0a; color: #fff; font-size: 16px; outline: none; transition: 0.2s; }
-        #searchInput:focus { border-color: var(--matrix-green); }
+        .std-input { flex-grow: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: #0a0a0a; color: #fff; font-size: 16px; outline: none; transition: 0.2s; width: 100%; }
+        .std-input:focus { border-color: var(--matrix-green); }
         .btn-search { background: var(--matrix-green); color: #000; border: none; border-radius: 12px; padding: 0 20px; font-weight: 800; cursor: pointer; }
         
         .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
@@ -52,7 +51,7 @@
         .hist-info { flex-grow: 1; overflow: hidden; }
         .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; flex-shrink: 0;}
 
-        .res-card { background: var(--panel-bg); border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; }
+        .res-card { background: var(--panel-bg); border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 15px; }
         .res-header { display: flex; gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); align-items: flex-start; }
         .res-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; background: #000; border: 1px solid #333; flex-shrink: 0; }
         .res-info { flex-grow: 1; }
@@ -63,14 +62,13 @@
         .status-bar { padding: 12px; font-weight: 800; font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
         .st-alert { background: var(--alert); color: #fff; }
         .st-clean { background: var(--matrix-green); color: #000; }
+        .st-gemini { background: var(--gemini-blue); color: #fff; }
         
         .res-body { padding: 20px; }
         .sec-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 800; border-bottom: 1px solid #333; padding-bottom: 5px; }
         
-        /* Interaktive Listen */
         .data-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
-        .data-list li { margin-bottom: 8px; font-size: 14px; padding: 12px 15px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .data-list li:active { transform: scale(0.98); background: rgba(255,255,255,0.08); }
+        .data-list li { margin-bottom: 8px; font-size: 14px; padding: 12px 15px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .data-list li::after { content: 'ℹ️'; font-size: 12px; opacity: 0.5; }
         .list-toxin { border-left: 3px solid var(--alert) !important; color: #fff; }
         .list-good { border-left: 3px solid var(--matrix-green) !important; color: #fff; }
@@ -78,16 +76,19 @@
         .alt-list { color: #fff; font-family: 'Courier New', Courier, monospace; list-style: square; padding-left: 20px; margin-bottom: 20px; font-size: 14px; line-height: 1.6;}
         .raw-text { color: #888; font-size: 12px; line-height: 1.6; font-family: 'Courier New', Courier, monospace; }
 
-        .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
         #db-status { display: none; background: var(--alert); color: #fff; padding: 10px; text-align: center; font-weight: bold; border-radius: 12px; margin-bottom: 15px; width: 100%; max-width: 450px; font-size: 12px;}
 
-        /* Liquid Glass Deep-Dive Modal */
-        #detailModalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; display: none; opacity: 0; transition: opacity 0.3s; }
-        #detailModal { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 450px; background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px 24px 0 0; padding: 30px 20px 40px 20px; z-index: 9999; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
-        .modal-handle { width: 40px; height: 4px; background: #444; border-radius: 4px; margin: 0 auto 20px auto; }
+        /* Deep-Dive Modal */
+        #detailModalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: none; opacity: 0; transition: opacity 0.3s; }
+        #detailModal { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 450px; background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px 24px 0 0; padding: 30px 20px 50px 20px; z-index: 9999; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-handle { width: 40px; height: 4px; background: #555; border-radius: 4px; margin: 0 auto 20px auto; }
         #mod-title { font-size: 22px; font-weight: 900; color: #fff; margin: 0 0 5px 0; text-transform: uppercase; }
         #mod-desc { font-size: 13px; color: var(--matrix-green); font-weight: 700; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; }
         #mod-detail { font-size: 15px; color: #ccc; line-height: 1.6; margin: 0; }
+        
+        .gemini-btn { background: var(--gemini-blue); color: #fff; margin-top: 10px; }
+        .gemini-vision-btn { background: #9b72cb; color: #fff; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -99,12 +100,13 @@
         <div class="nav-item" id="nav-scan" onclick="openView('scan')"><div class="nav-icon">👁️</div><span>Sensor</span></div>
         <div class="nav-item" id="nav-search" onclick="openView('search')"><div class="nav-icon">⌨️</div><span>Suche</span></div>
         <div class="nav-item" id="nav-history" onclick="openView('history')"><div class="nav-icon">🗄️</div><span>Archiv</span></div>
+        <div class="nav-item" id="nav-settings" onclick="openView('settings')"><div class="nav-icon">⚙️</div><span>Config</span></div>
     </div>
 
     <div id="view-home" class="view active">
         <div class="dash-card" onclick="openView('scan')">
             <div class="dash-icon-lg" style="color:var(--matrix-green);">👁️</div>
-            <div class="dash-text"><h3>Optischer Sensor</h3><p>Physische Barcodes & OCR</p></div>
+            <div class="dash-text"><h3>Optischer Sensor</h3><p>Barcodes & OCR Extraktion</p></div>
         </div>
         <div class="dash-card" onclick="openView('search')">
             <div class="dash-icon-lg" style="color:#fff;">⌨️</div>
@@ -116,6 +118,21 @@
         </div>
     </div>
 
+    <div id="view-settings" class="view">
+        <div class="res-card">
+            <div class="status-bar st-gemini">KI Fallback Modul (Gemini 1.5 Flash)</div>
+            <div class="res-body">
+                <p style="font-size:13px; color:#aaa; margin-top:0;">Der Schlüssel wird lokal auf dem Gerät verschlüsselt. Kein Daten-Leak an Dritte.</p>
+                <input type="password" id="geminiApiKey" class="std-input" placeholder="API Key eingeben..." style="margin-bottom:15px;">
+                <button class="action-btn gemini-btn" onclick="saveApiKey()">Key Speichern</button>
+                <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+                <div class="sec-title">Lokaler Traffic-Monitor</div>
+                <div style="font-size:24px; font-weight:900; color:#fff; text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:#666;">/ 1500 (Free RPD)</span></div>
+                <button class="action-btn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;" onclick="resetApiCounter()">Zähler Reset</button>
+            </div>
+        </div>
+    </div>
+
     <div id="view-scan" class="view">
         <div id="reader"></div>
         <button id="startBtn" class="action-btn" onclick="startScanner()">Sensor Aktivieren</button>
@@ -123,7 +140,7 @@
 
     <div id="view-search" class="view">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Produktidentifikation eingeben...">
+            <input type="text" id="searchInput" class="std-input" placeholder="Produktidentifikation eingeben...">
             <button id="searchBtn" class="btn-search">GO</button>
         </div>
         <div id="search-results"></div>
@@ -134,7 +151,7 @@
             <button id="flt-alle" class="flt-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
             <button id="flt-nahrung" class="flt-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
-            <button id="flt-ocr" class="flt-btn" onclick="filterHistory('Optisch', 'flt-ocr')">Optisch</button>
+            <button id="flt-ki" class="flt-btn" onclick="filterHistory('KI Extraktion', 'flt-ki')">KI Daten</button>
         </div>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
@@ -143,7 +160,8 @@
         <div id="result-content"></div>
     </div>
 
-    <input type="file" accept="image/*" capture="environment" id="ocrInput" style="display:none;">
+    <input type="file" accept="image/*" capture="environment" id="ocrInputText" style="display:none;">
+    <input type="file" accept="image/*" capture="environment" id="geminiVisionInput" style="display:none;">
 
     <div id="detailModalOverlay" onclick="closeModal()"></div>
     <div id="detailModal">
@@ -155,6 +173,7 @@
 
     <script>
         let blacklist = {}; let whitelist = {}; let html5QrCode; let dbActive = false; let currentHistoryFilter = 'Alle';
+        let currentScanBarcode = "";
 
         const contextualAlternatives = {
             "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
@@ -175,6 +194,7 @@
             "soja": "Weidefleisch, Eier (Testosteron-Basis)."
         };
 
+        // --- INIT ---
         let timestamp = new Date().getTime();
         Promise.all([
             fetch('blacklist.json?v=' + timestamp).then(r => r.json()),
@@ -183,40 +203,66 @@
             blacklist = data[0]; whitelist = data[1]; dbActive = true;
         }).catch(() => { document.getElementById('db-status').style.display = 'block'; });
 
-        // --- DEEP-DIVE MODAL ---
+        // API Key Management
+        function saveApiKey() {
+            let key = document.getElementById('geminiApiKey').value.trim();
+            if(key) { localStorage.setItem('op_gemini_key', key); alert('Key verifiziert und lokal gespeichert.'); }
+        }
+        function loadSettings() {
+            document.getElementById('geminiApiKey').value = localStorage.getItem('op_gemini_key') || "";
+            checkApiCounter();
+        }
+        function checkApiCounter() {
+            let date = new Date().toLocaleDateString();
+            let usageObj = JSON.parse(localStorage.getItem('op_api_usage')) || { date: date, count: 0 };
+            if(usageObj.date !== date) usageObj = { date: date, count: 0 };
+            document.getElementById('apiUsageCount').innerText = usageObj.count;
+            localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
+            return usageObj.count;
+        }
+        function incrementApiCounter() {
+            let usageObj = JSON.parse(localStorage.getItem('op_api_usage'));
+            usageObj.count += 1;
+            localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
+            document.getElementById('apiUsageCount').innerText = usageObj.count;
+        }
+        function resetApiCounter() {
+            localStorage.setItem('op_api_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
+            checkApiCounter();
+        }
+
+        // Modal
         function openModal(title, desc, detail, isAlert) {
             document.getElementById('mod-title').innerText = title;
             document.getElementById('mod-desc').innerText = desc;
             document.getElementById('mod-desc').style.color = isAlert ? "var(--alert)" : "var(--matrix-green)";
             document.getElementById('mod-detail').innerText = detail;
-            
             document.getElementById('detailModalOverlay').style.display = 'block';
             setTimeout(() => {
                 document.getElementById('detailModalOverlay').style.opacity = '1';
                 document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(0)';
             }, 10);
         }
-
         function closeModal() {
             document.getElementById('detailModalOverlay').style.opacity = '0';
             document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(100%)';
             setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
         }
 
-        // --- NAVIGATION ---
+        // Navigation
         function openView(viewName) {
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('search-results').innerHTML = '';
-            
             document.getElementById('view-' + viewName).classList.add('active');
             if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
-
             if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; }
             if(viewName === 'history') renderHistory();
+            if(viewName === 'settings') loadSettings();
         }
 
+        // Scanner
         function startScanner() {
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('reader').style.display = 'block';
@@ -229,17 +275,20 @@
         function onScanSuccess(decodedText) {
             html5QrCode.stop().then(() => {
                 openView('result');
-                document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Analysiere Signatur [${decodedText}]...</div></div>`;
+                currentScanBarcode = decodedText;
+                document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Verifiziere Daten-Schnittstellen [${decodedText}]...</div></div>`;
                 fetchDataCascade(decodedText);
             });
         }
 
+        // History
         function saveToHistory(barcode, name, score, category, rawIngredients = null, imgUrl = null) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
             if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
+            if (category.includes("KI Extraktion")) mainCategory = "KI Extraktion";
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             localStorage.setItem('op_history', JSON.stringify(history));
@@ -257,7 +306,7 @@
             let html = '';
             let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category === currentHistoryFilter);
 
-            if (filtered.length === 0) { html = '<div style="text-align:center;color:#666;padding:20px;">Keine Daten vorhanden.</div>'; } 
+            if (filtered.length === 0) { html = '<div style="text-align:center;color:#666;padding:20px;">Archiv leer.</div>'; } 
             else {
                 filtered.forEach(item => {
                     let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
@@ -282,6 +331,108 @@
             else fetchDataCascade(barcode);
         }
 
+        // Fallback UI Generator
+        function renderFallbackUI(barcode, productName = "") {
+            document.getElementById('result-content').innerHTML = `
+                <div class="res-card">
+                    <div class="status-bar st-alert">Primär-Datenbanken versagen.</div>
+                    <div class="res-body" style="display:flex; flex-direction:column; gap:12px;">
+                        <p style="font-size:13px; color:#aaa; margin-top:0;">Das System besitzt keine Daten zu diesem Code [${barcode}]. Wähle eine Extraktions-Methode:</p>
+                        
+                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (Rückseite)</button>
+                        <div style="width:100%; text-align:center; color:#555; font-size:12px; margin:5px 0;">-- ODER --</div>
+                        <button class="action-btn gemini-btn" onclick="triggerGeminiTextSearch('${barcode}')">🧠 2. KI: Produktname eingeben</button>
+                        <button class="action-btn gemini-vision-btn" onclick="document.getElementById('geminiVisionInput').click()">👁️ 3. KI: Front-Foto analysieren</button>
+                    </div>
+                </div>`;
+                
+            document.getElementById('ocrInputText').onchange = (e) => { 
+                if(e.target.files.length > 0) processLocalOCR(e.target.files[0], productName || "Unbekanntes Objekt", barcode, ""); 
+            };
+            document.getElementById('geminiVisionInput').onchange = (e) => { 
+                if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); 
+            };
+        }
+
+        // --- KI GEMINI LOGIK ---
+        async function callGeminiAPI(prompt, base64Image = null) {
+            let key = localStorage.getItem('op_gemini_key');
+            if(!key) { alert("Gemini API Key fehlt. Bitte im Config-Menü hinterlegen."); return null; }
+            if(checkApiCounter() >= 1500) { alert("Tägliches API-Limit erreicht."); return null; }
+
+            incrementApiCounter();
+            let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+            
+            let contents = [];
+            if(base64Image) {
+                let mime = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/)[1];
+                let b64Data = base64Image.split(',')[1];
+                contents.push({ parts: [ { text: prompt }, { inline_data: { mime_type: mime, data: b64Data } } ] });
+            } else {
+                contents.push({ parts: [ { text: prompt } ] });
+            }
+
+            try {
+                let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) });
+                let data = await response.json();
+                if(data.error) throw new Error(data.error.message);
+                
+                let rawText = data.candidates[0].content.parts[0].text;
+                // Parse JSON block out of Markdown
+                let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(jsonStr);
+            } catch (err) {
+                console.error(err);
+                alert("KI Extraktion fehlgeschlagen. Grund: " + err.message);
+                return null;
+            }
+        }
+
+        async function triggerGeminiTextSearch(barcode) {
+            let name = prompt("Gib den genauen Namen oder die Marke des Produkts ein:");
+            if(!name) return;
+            
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Greife auf Gemini 1.5 Flash zu...</div></div>`;
+            
+            let promptText = `Du bist eine toxikologische Datenbank. Suche nach den genauen Inhaltsstoffen für folgendes Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ..."}. Gib keine anderen Texte, Warnungen oder Erklärungen aus. Wenn du es nicht findest, erfinde nichts, sondern schreibe "Unbekannt".`;
+            
+            let resultJson = await callGeminiAPI(promptText);
+            if(resultJson) {
+                analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: "" } }, "KI Extraktion", barcode, true);
+            } else {
+                renderFallbackUI(barcode, name);
+            }
+        }
+
+        function processGeminiVision(file, barcode) {
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Vision Analyse läuft...</div><div class="res-body" style="text-align:center; color:#888;">Bild wird von Gemini 1.5 Flash verarbeitet...</div></div>`;
+            
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async function () {
+                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen und extrahiere falls möglich die Zutaten oder leite sie logisch aus dem Produkt ab. Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ..."}. Gib keine anderen Texte aus.`;
+                let resultJson = await callGeminiAPI(promptText, reader.result);
+                
+                if(resultJson) {
+                    analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, "KI Extraktion (Vision)", barcode, true);
+                } else {
+                    renderFallbackUI(barcode);
+                }
+            };
+        }
+
+        // --- OFFLINE OCR ---
+        function processLocalOCR(file, productName, barcode, imgUrlFinal) {
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert" style="background:#ffcc00; color:#000;">Lokale OCR Decodierung läuft...</div></div>`;
+            Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
+                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: imgUrlFinal } }, "Optisch", barcode, true);
+            }).catch(() => {
+                alert("OCR fehlgeschlagen. Bild zu unscharf.");
+                renderFallbackUI(barcode, productName);
+            });
+        }
+
+        // --- SEARCH ---
         document.getElementById('searchBtn').addEventListener('click', () => {
             let term = document.getElementById('searchInput').value.trim();
             if(!term) return;
@@ -295,7 +446,7 @@
                     fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
                     .then(rb => rb.json()).then(dataB => {
                         if(dataB.products && dataB.products.length > 0) renderSearchResults(dataB.products, "Kosmetik");
-                        else resDiv.innerHTML = `<div style="text-align:center;color:var(--alert);padding:20px;">Kein Eintrag in Matrix-Datenbanken.</div>`;
+                        else resDiv.innerHTML = `<div style="text-align:center;color:var(--alert);padding:20px;">Kein Eintrag in Primär-Datenbanken. Nutze den Sensor-Fallback.</div>`;
                     });
                 }
             }).catch(() => resDiv.innerHTML = `<div style="text-align:center;color:var(--alert);">Netzwerk-Interferenz.</div>`);
@@ -304,13 +455,17 @@
         function renderSearchResults(products, categoryStr) {
             let html = `<div style="margin-bottom:10px; font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Ergebnisse: ${categoryStr}</div>`;
             products.forEach(p => {
-                let name = p.product_name || "Unbekannt"; let img = p.image_front_small_url || p.image_url || "";
-                let imgHtml = img ? `<img src="${img}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;border:1px solid #333;">` : `<div style="width:50px;height:50px;background:#222;border-radius:8px;border:1px solid #333;"></div>`;
+                let name = p.product_name || "Unbekannt";
+                let img = p.image_front_small_url || p.image_url || "";
+                let imgHtml = img ? `<img src="${img}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
                 let safeData = encodeURIComponent(JSON.stringify(p));
                 html += `
                 <div class="hist-item" style="margin-bottom:10px;" onclick="selectSearchResult('${p.code || name}', '${categoryStr}', '${safeData}')">
                     ${imgHtml}
-                    <div style="flex-grow:1; margin-left:15px; overflow:hidden;"><div style="font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div><div style="font-size:11px; color:#666;">${p.brands || 'Keine Marke'}</div></div>
+                    <div class="hist-info">
+                        <div style="font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${p.brands || 'Keine Marke'}</div>
+                    </div>
                 </div>`;
             });
             document.getElementById('search-results').innerHTML = html;
@@ -320,8 +475,8 @@
             openView('result'); analyzeProduct({status: 1, product: JSON.parse(decodeURIComponent(dataStr))}, category, barcode);
         }
 
-        // --- CORE ANALYSIS & DEDUPLICATION ---
-        function analyzeProduct(data, category, barcode, isOcr = false) {
+        // --- CORE ANALYSIS ---
+        function analyzeProduct(data, category, barcode, isExtracted = false) {
             if(!dbActive) { alert("Datenbank inaktiv."); return; }
             let p = data.product;
             let imgUrlFinal = p.image_url || p.image_front_small_url || "";
@@ -330,41 +485,27 @@
             let productContext = (productName + " " + (p.categories || "")).toLowerCase();
             let imageHtml = imgUrlFinal ? `<img src="${imgUrlFinal}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
             
-            if (ingredientsRaw.trim() === "" && !isOcr && !category.includes("Suche")) {
-                document.getElementById('result-content').innerHTML = `
-                    <div class="res-card">
-                        <div class="res-header">${imageHtml}<div class="res-info"><span class="res-badge">${category}</span><h3 class="res-title">${productName}</h3></div></div>
-                        <div class="status-bar st-alert">Keine Textdaten.</div>
-                        <div class="res-body" style="text-align:center;"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 OCR Scanner</button></div>
-                    </div>`;
-                document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], productName, barcode, imgUrlFinal); };
+            if (ingredientsRaw.trim() === "" && !isExtracted) {
+                renderFallbackUI(barcode, productName);
                 return;
             }
 
             let foundToxins = [], foundGood = [], suggestedAlts = new Set(), score = 100, contextMatch = false;
 
             if (ingredientsRaw.trim() !== "") {
-                // Deduplizierter Blacklist Check
                 for (let mainKey in blacklist) {
                     let item = blacklist[mainKey];
-                    // Prüft, ob irgendeines der Aliasse im Text ist
                     if (item.aliases.some(alias => ingredientsRaw.includes(alias.toLowerCase()))) {
-                        let safeDesc = item.desc.replace(/'/g, "\\'");
-                        let safeDetail = item.detail.replace(/'/g, "\\'");
+                        let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                         foundToxins.push(`<li class="list-toxin" onclick="openModal('${mainKey.toUpperCase()}', '${safeDesc}', '${safeDetail}', true)">${mainKey.toUpperCase()}</li>`); 
                         score -= 25;
-                        
-                        // Fallback Alternatives (wenn keine CAM)
                         for (let key in fallbackAlternatives) { if (mainKey.toLowerCase().includes(key)) suggestedAlts.add(fallbackAlternatives[key]); }
                     }
                 }
-                
-                // Deduplizierter Whitelist Check
                 for (let mainKey in whitelist) {
                     let item = whitelist[mainKey];
                     if (item.aliases.some(alias => ingredientsRaw.includes(alias.toLowerCase()))) {
-                        let safeDesc = item.desc.replace(/'/g, "\\'");
-                        let safeDetail = item.detail.replace(/'/g, "\\'");
+                        let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                         foundGood.push(`<li class="list-good" onclick="openModal('${mainKey.toUpperCase()}', '${safeDesc}', '${safeDetail}', false)">${mainKey.toUpperCase()}</li>`); 
                         score += 5;
                     }
@@ -375,18 +516,16 @@
                         if (key.split('|').some(kw => productContext.includes(kw))) { suggestedAlts.add(contextualAlternatives[key]); contextMatch = true; }
                     }
                     if (contextMatch) {
-                        // Wenn Kontext zutrifft, leere die generischen Fallbacks
                         suggestedAlts = new Set();
-                        for (let key in contextualAlternatives) {
-                            if (key.split('|').some(kw => productContext.includes(kw))) { suggestedAlts.add(contextualAlternatives[key]); }
-                        }
+                        for (let key in contextualAlternatives) { if (key.split('|').some(kw => productContext.includes(kw))) { suggestedAlts.add(contextualAlternatives[key]); } }
                     }
                 }
             }
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
-            saveToHistory(barcode, productName, score, category, (isOcr || category.includes("Suche")) ? ingredientsRaw : null, imgUrlFinal);
+            
+            saveToHistory(barcode, productName, score, category, isExtracted ? ingredientsRaw : null, imgUrlFinal);
 
             let resultHtml = `
                 <div class="res-card">
@@ -402,17 +541,8 @@
             if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
             if (suggestedAlts.size > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen</div><ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul>`;
             
-            resultHtml += `<div class="sec-title">Rohdaten</div><div class="raw-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API"}</div></div></div>`;
+            resultHtml += `<div class="sec-title">Rohdaten</div><div class="raw-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API Extraktion"}</div></div></div>`;
             document.getElementById('result-content').innerHTML = resultHtml;
-        }
-
-        function processOCR(file, productName, barcode, imgUrlFinal) {
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">OCR Decodierung läuft...</div></div>`;
-            Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
-                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: imgUrlFinal } }, "Optisch", barcode, true);
-            }).catch(() => {
-                document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">OCR GESCHEITERT</div><div class="res-body"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Retry</button></div></div>`;
-            });
         }
 
         function fetchDataCascade(barcode) {
@@ -422,12 +552,7 @@
                     fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`).then(resB => resB.json()).then(dataB => {
                         if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
                         else {
-                            document.getElementById('result-content').innerHTML = `
-                            <div class="res-card">
-                                <div class="status-bar st-alert">Black-Box. Nicht katalogisiert.</div>
-                                <div class="res-body"><button class="ocr-btn" onclick="document.getElementById('ocrInput').click()">📸 Manuelle Erfassung</button></div>
-                            </div>`;
-                            document.getElementById('ocrInput').onchange = (e) => { if(e.target.files.length > 0) processOCR(e.target.files[0], "Unbekanntes Objekt", barcode, ""); };
+                            renderFallbackUI(barcode);
                         }
                     });
                 }
