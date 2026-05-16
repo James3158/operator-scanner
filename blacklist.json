@@ -2,146 +2,166 @@
   "fluorid": {
     "aliases": ["fluorid", "fluoride"],
     "desc": "Zirbeldrüsen-Verkalkung",
-    "detail": "Fluorid akkumuliert in der Zirbeldrüse. Es führt zur Kalzifizierung dieses Organs, welches für die Melatonin-Produktion und die Wahrnehmung höherer Frequenzen essenziell ist. Ein neurotoxischer Dämpfer für das Bewusstsein."
+    "detail": "Fluorid akkumuliert in der Zirbeldrüse. Es führt zur Kalzifizierung dieses Organs, welches für die Melatonin-Produktion und die Wahrnehmung höherer Frequenzen essenziell ist."
   },
   "nitritpökelsalz": {
     "aliases": ["e250", "nitritpökelsalz", "sodium nitrite"],
     "desc": "Zell-Toxizität",
-    "detail": "Ein synthetisches Konservierungsmittel, das Fleisch künstlich rot hält. Im Körper reagiert es zu Nitrosaminen, die stark karzinogen (krebserregend) wirken und den zellulären Sauerstofftransport blockieren."
+    "detail": "Ein synthetisches Konservierungsmittel, das Fleisch künstlich rot hält. Reagiert zu karzinogenen Nitrosaminen."
   },
   "emulgator_e471": {
     "aliases": ["e471"],
     "desc": "Industrieller Emulgator / Darmbarriere-Gefahr",
-    "detail": "Synthetisches Gemisch aus Speisefettsäuren. Zersetzt die Integrität der Darmschleimhaut (Leaky Gut), was chronische systemische Entzündungen und einen signifikanten Frequenzabfall auslöst."
+    "detail": "Synthetisches Gemisch aus Speisefettsäuren. Zersetzt die Integrität der Darmschleimhaut (Leaky Gut)."
   },
   "aspartam": {
     "aliases": ["aspartam", "aspartame", "e951"],
     "desc": "Künstlicher Süßstoff / Neurotoxin",
-    "detail": "Spaltet sich im Körper in Asparaginsäure, Phenylalanin und Methanol auf. Es überwindet die Blut-Hirn-Schranke, stimuliert Nervenzellen bis zur Erschöpfung und stört die neuronale Kohärenz."
+    "detail": "Spaltet sich im Körper in Asparaginsäure, Phenylalanin und Methanol auf. Überwindet die Blut-Hirn-Schranke."
   },
   "carrageen": {
     "aliases": ["carrageen", "carrageenan", "e407"],
     "desc": "Entzündungsfördernder Emulgator",
-    "detail": "Ein aus Rotalgen isoliertes Verdickungsmittel. Es ist bekannt dafür, starke Immunreaktionen und Entzündungen im Magen-Darm-Trakt auszulösen. Entzündungen senken die zelluläre Frequenz."
+    "detail": "Ein aus Rotalgen isoliertes Verdickungsmittel. Löst starke Immunreaktionen und Entzündungen im Magen-Darm-Trakt aus."
   },
   "glutamat": {
     "aliases": ["e621", "msg", "glutamat", "hefeextrakt", "yeast extract"],
     "desc": "Nervenzellen-Stimulanz (Exzitotoxin)",
-    "detail": "Ein Geschmacksverstärker, der als Neurotransmitter im Gehirn wirkt. Es überstimuliert die Rezeptoren (Exzitotoxizität), was zu neurologischem Stress, Brain-Fog und einem Absinken der mentalen Souveränität führt."
+    "detail": "Ein Geschmacksverstärker. Überstimuliert die Rezeptoren (Exzitotoxizität), was zu neurologischem Stress und Brain-Fog führt."
   },
   "sucralose": {
     "aliases": ["sucralose", "e955"],
     "desc": "Chloriertes Kohlenhydrat / Darmflora-Zerstörung",
-    "detail": "Wird im Labor durch die Anlagerung von Chlor an Zucker hergestellt. Es zerstört signifikante Teile der Darmflora, welche das Fundament des Immunsystems und der Testosteron-Synthese bildet."
+    "detail": "Wird im Labor durch die Anlagerung von Chlor an Zucker hergestellt. Zerstört signifikante Teile der Darmflora."
   },
   "soja": {
     "aliases": ["soja", "soy", "soybean", "sojaöl", "soybean oil"],
     "desc": "Phytoöstrogene / Testosteron-Senker",
-    "detail": "Enthält hochkonzentrierte Isoflavone, die im männlichen Körper als Phytoöstrogene wirken. Sie docken an Östrogenrezeptoren an und drosseln aktiv die körpereigene Testosteronproduktion."
+    "detail": "Enthält hochkonzentrierte Isoflavone, die im männlichen Körper als Phytoöstrogene wirken und die Testosteronproduktion drosseln."
   },
   "zucker": {
     "aliases": ["zucker", "sugar", "sirup", "syrup", "maltodextrin", "agavendicksaft", "agave syrup"],
     "desc": "Insulin-Spike / Frequenz-Senker",
-    "detail": "Industriell isolierte Fruktose und Saccharose. Erzeugt brutale Blutzuckerschwankungen. Die ständige Insulin-Ausschüttung macht den Körper zellulär träge und fördert viszerales Fett."
+    "detail": "Industriell isolierte Fruktose und Saccharose. Erzeugt brutale Blutzuckerschwankungen und fördert viszerales Fett."
   },
   "palmöl": {
     "aliases": ["palm"],
     "desc": "Endokriner Disruptor / Toxische Verarbeitung",
-    "detail": "Durch extreme Hitze und chemische Reinigung oxidiertes Fett. Fördert Zellstress und bringt die hormonelle Achse durch systemische Entzündungen ins Ungleichgewicht."
+    "detail": "Durch extreme Hitze und chemische Reinigung oxidiertes Fett. Fördert systemische Entzündungen."
   },
   "aroma": {
     "aliases": ["aroma"],
     "desc": "Synthetische Geschmacks-Manipulation",
-    "detail": "Im Labor designte Moleküle, die dem Gehirn falsche Nährstoffprofile vorgaukeln. Erzeugt neurologische Verwirrung und stört die natürlichen Sättigungssignale."
+    "detail": "Im Labor designte Moleküle, die dem Gehirn falsche Nährstoffprofile vorgaukeln."
   },
   "weizen": {
     "aliases": ["weizen", "wheat"],
     "desc": "System-Nahrung / Opioide Peptide",
-    "detail": "Moderner Hochleistungsweizen enthält Gliadorphin. Dieses Protein bindet an Opiatrezeptoren im Gehirn, erzeugt ein leichtes Suchtverhalten und chronische Müdigkeit."
+    "detail": "Moderner Hochleistungsweizen enthält Gliadorphin. Bindet an Opiatrezeptoren im Gehirn, erzeugt ein leichtes Suchtverhalten."
   },
   "parabene": {
-    "aliases": ["paraben", "methylparaben", "propylparaben"],
+    "aliases": ["paraben", "methylparaben", "propylparaben", "butylparaben"],
     "desc": "Östrogen-Mimikry / Kosmetik-Toxin",
-    "detail": "Konservierungsstoffe, die über die Haut direkt ins Blut gelangen. Sie imitieren das weibliche Hormon Östrogen und stören das endokrine Gleichgewicht massiv."
+    "detail": "Konservierungsstoffe, die die Haut durchdringen, das Hormon Östrogen imitieren und das endokrine Gleichgewicht stören."
   },
   "phthalate": {
     "aliases": ["phthalat", "phthalate"],
     "desc": "Weichmacher / Hormon-Disruptor",
-    "detail": "Chemikalien, die Kunststoffe weich machen. Sie wirken anti-androgen – das bedeutet, sie blockieren aktiv männliche Hormone auf zellulärer Ebene."
+    "detail": "Wirken anti-androgen – das bedeutet, sie blockieren aktiv männliche Hormone auf zellulärer Ebene."
   },
   "aluminium": {
     "aliases": ["aluminium", "aluminum"],
     "desc": "Neurotoxin / Gewebe-Akkumulation",
-    "detail": "Ein Leichtmetall, das die Blut-Hirn-Schranke passieren kann. Es blockiert Schweißdrüsen, akkumuliert im Gewebe und belastet die Zirbeldrüse."
+    "detail": "Ein Leichtmetall, das die Blut-Hirn-Schranke passieren kann. Akkumuliert im Gewebe und belastet die Zirbeldrüse."
   },
   "peg": {
-    "aliases": ["peg-"],
+    "aliases": ["peg-", "polyethylene glycol", "ceteareth", "steareth"],
     "desc": "Zellmembran-Schwächung / System-Chemie",
-    "detail": "Polyethylenglykole machen die Haut künstlich durchlässig. Dadurch dringen Umwelttoxine und endokrine Disruptoren ungehindert in den Blutkreislauf und senken die biologische Barrierefunktion."
+    "detail": "Machen die Haut künstlich durchlässig. Dadurch dringen Umwelttoxine ungehindert in den Blutkreislauf ein."
   },
   "phenoxyethanol": {
     "aliases": ["phenoxyethanol"],
     "desc": "Nervengift-Potenzial",
-    "detail": "Ein synthetisches Konservierungsmittel mit dokumentierter Toxizität für das zentrale Nervensystem. Dämpft die neuronale Leitfähigkeit und mindert die kognitive Dominanz."
+    "detail": "Ein synthetisches Konservierungsmittel mit dokumentierter Toxizität für das zentrale Nervensystem."
   },
   "titandioxid": {
     "aliases": ["titandioxid", "titanium dioxide", "ci 77891"],
     "desc": "DNA-Schädigung / Zell-Stress",
-    "detail": "Nanopartikel, die als Farbstoff dienen. Sie akkumulieren im Gewebe, verursachen oxidativen Stress und schädigen die DNA-Struktur. Völlig nutzlose System-Chemie."
+    "detail": "Nanopartikel, die als Farbstoff dienen. Verursachen oxidativen Stress und schädigen die DNA-Struktur."
   },
   "sls": {
     "aliases": ["sls", "sles", "sodium laureth sulfate", "sodium lauryl sulfate"],
     "desc": "Hautbarriere-Zerstörung / Toxische Resorption",
-    "detail": "Zerstört den Säureschutzmantel der Haut, entzieht ihr sämtliche natürlichen Lipide und macht die Schutzbarriere durchlässig für Umwelttoxine."
+    "detail": "Aggressive Tenside. Zerstören den Säureschutzmantel der Haut und entziehen sämtliche natürlichen Lipide."
   },
   "mikroplastik": {
-    "aliases": ["dimethicone", "siloxane", "acrylates", "polyquaternium"],
+    "aliases": ["dimethicone", "siloxane", "acrylates", "polyquaternium", "carbomer"],
     "desc": "Synthetische Polymere / Versiegelung",
-    "detail": "Flüssige Kunststoffe und Silikone. Sie verstopfen die Poren, stören die natürliche Hautbarriere und reichern sich langfristig im menschlichen Gewebe an."
+    "detail": "Flüssige Kunststoffe und Silikone. Sie verstopfen die Poren und reichern sich langfristig im menschlichen Gewebe an."
   },
   "bht_bha": {
-    "aliases": ["bht", "bha"],
+    "aliases": ["bht", "bha", "butylated hydroxytoluene"],
     "desc": "Konservierung / Endokriner Disruptor",
-    "detail": "Synthetische Antioxidantien. Wirken nachweislich als endokrine Disruptoren, stören die Schilddrüsenfunktion und greifen direkt in die Testosteron-Achse ein."
+    "detail": "Synthetische Antioxidantien. Wirken nachweislich als endokrine Disruptoren und greifen direkt in die Testosteron-Achse ein."
   },
   "edta": {
-    "aliases": ["edta"],
+    "aliases": ["edta", "disodium edta", "tetrasodium edta"],
     "desc": "Schwermetall-Bindung / Zell-Toxizität",
-    "detail": "Ein synthetischer Komplexbildner. Zieht zwar Schwermetalle an, macht Zellmembranen aber extrem durchlässig für andere Umweltgifte. Stört die zelluläre Autonomie."
+    "detail": "Ein synthetischer Komplexbildner. Macht Zellmembranen extrem durchlässig für andere Umweltgifte."
   },
   "parfum": {
     "aliases": ["parfum", "fragrance"],
     "desc": "Synthetischer Duft / Hormonelle Manipulation",
-    "detail": "Ein Sammelbegriff für Tausende ungetestete Chemikalien (oft Phthalate). Sie blockieren Androgen-Rezeptoren und feminisieren den Organismus. Eine chemische Kastration."
+    "detail": "Ein Sammelbegriff für ungetestete Chemikalien (oft Phthalate). Blockieren Androgen-Rezeptoren."
   },
   "triclosan": {
-    "aliases": ["triclosan"],
+    "aliases": ["triclosan", "triclocarban"],
     "desc": "Mikrobiom-Zerstörung / Hormon-Gefahr",
-    "detail": "Ein aggressives Biozid. Vernichtet das essenzielle Haut- und Darmmikrobiom und drosselt die natürliche Testosteronproduktion durch massive hormonelle Interferenz."
+    "detail": "Ein aggressives Biozid. Vernichtet das essenzielle Haut- und Darmmikrobiom und drosselt die natürliche Testosteronproduktion."
   },
   "samenöle": {
-    "aliases": ["sonnenblumenöl", "sunflower oil", "rapsöl", "rapeseed oil", "canola oil"],
+    "aliases": ["sonnenblumenöl", "sunflower oil", "rapsöl", "rapeseed oil", "canola oil", "distelöl", "safflower oil"],
     "desc": "Industriefett / Entzündungsfördernd",
-    "detail": "Hochverarbeitete Fette. Durch Desodorierung bei extremen Temperaturen entstehen Transfette. Sie schwächen die Zellmembranen und drosseln die mitochondriale ATP-Produktion."
+    "detail": "Hochverarbeitete Fette. Sie schwächen die Zellmembranen und drosseln die mitochondriale ATP-Produktion."
   },
   "natriumbenzoat": {
     "aliases": ["e211", "sodium benzoate"],
     "desc": "Mitochondriales Toxin / Zellstress",
-    "detail": "Schädigt die Mitochondrien (die Kraftwerke der Zellen). Es drosselt die ATP-Produktion, was deine physische und energetische Vril-Kraft direkt abschaltet."
+    "detail": "Schädigt die Mitochondrien (Kraftwerke der Zellen). Es drosselt die ATP-Produktion, was die Vril-Kraft abschaltet."
   },
   "acesulfam": {
     "aliases": ["e950", "acesulfame"],
     "desc": "Künstliches Neurotoxin",
-    "detail": "Ein chloriertes Molekül. Überreizt das Nervensystem, stört den Insulin-Metabolismus und senkt die grundlegende Frequenz des Körpers."
+    "detail": "Ein chloriertes Molekül. Überreizt das Nervensystem und stört den Insulin-Metabolismus."
   },
   "cellulose": {
     "aliases": ["mikrokristalline cellulose", "microcrystalline cellulose"],
     "desc": "Holzfasern / Darmsystem-Blockade",
-    "detail": "Ein billiger Füllstoff aus Holzabfällen. Blockiert die Nährstoffaufnahme im Darm, erzeugt Entzündungen und schwächt das bio-energetische Zentrum deines Körpers."
+    "detail": "Ein billiger Füllstoff aus Holzabfällen. Blockiert die Nährstoffaufnahme im Darm und erzeugt Entzündungen."
   },
   "polysorbat": {
     "aliases": ["polysorbat", "polysorbate"],
     "desc": "Emulgator / Toxischer Transport",
-    "detail": "Synthetische Emulgatoren, die Toxinen helfen, die Blut-Hirn-Schranke zu überwinden. Ein trojanisches Pferd für systemische Vergiftung."
+    "detail": "Synthetische Emulgatoren, die Toxinen helfen, die Blut-Hirn-Schranke zu überwinden."
+  },
+  "pfas": {
+    "aliases": ["ptfe", "perfluor", "polyfluor", "teflon", "fluoro"],
+    "desc": "Forever Chemicals / Systemische Vergiftung",
+    "detail": "Fluorierte Verbindungen (oft in wasserfester Kosmetik). Sie bauen sich im Körper niemals ab, zerstören die Leberfunktion und verursachen massive hormonelle Ausfälle."
+  },
+  "formaldehyd_spalter": {
+    "aliases": ["dmdm hydantoin", "diazolidinyl urea", "imidazolidinyl urea", "quaternium-15"],
+    "desc": "Karzinogen / DNA-Angriff",
+    "detail": "Konservierungsmittel, die langsam Formaldehyd (ein extrem starkes Zellgift) absondern. Es zersetzt Proteine und greift die DNA-Struktur an."
+  },
+  "chemische_uv_filter": {
+    "aliases": ["oxybenzon", "oxybenzone", "avobenzon", "avobenzone", "octinoxat", "octinoxate", "octocrylen", "octocrylene"],
+    "desc": "Zell-Mutation / Testosteron-Blocker",
+    "detail": "Synthetische Sonnenschutz-Filter. Sie dringen in den Blutkreislauf ein, ahmen Östrogen nach und zerstören gleichzeitig die marine Biologie (Korallen)."
+  },
+  "ethanolamine": {
+    "aliases": ["mea", "dea", "tea", "triethanolamin", "diethanolamin", "monoethanolamin", "cocamide dea"],
+    "desc": "Krebserregende Schaumbildner",
+    "detail": "Inhaltsstoffe für Schaum. Sie reagieren mit anderen Chemikalien in Kosmetik zu Nitrosaminen, die hochgradig giftig für Leber und Nieren sind."
   }
 }
