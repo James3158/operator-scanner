@@ -69,6 +69,7 @@
         
         .data-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
         .data-list li { margin-bottom: 8px; font-size: 14px; padding: 12px 15px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .data-list li::after { content: 'ℹ️'; font-size: 12px; opacity: 0.5; }
         .list-toxin { border-left: 3px solid var(--alert) !important; color: #fff; }
         .list-good { border-left: 3px solid var(--matrix-green) !important; color: #fff; }
         
@@ -317,11 +318,11 @@
             document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Lade Archiv...</div></div>`;
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let item = history.find(i => i.barcode === barcode);
-            // 100% Offline Laden - keine Fetch Aufrufe mehr!
+            
             if (item && item.rawIngredients) {
                 analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
             } else {
-                document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">Fehler: Daten im Archiv korrupt.</div></div>`;
+                fetchDataCascade(barcode);
             }
         }
 
@@ -407,7 +408,6 @@
                 let resultJson = await callGeminiAPI(promptText, reader.result);
                 
                 if(resultJson) {
-                    // Verwende das Bild (reader.result) für das UI und das Archiv
                     analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, "KI Extraktion (Vision)", barcode, true);
                 } else {
                     renderFallbackUI(barcode);
@@ -526,8 +526,6 @@
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
-            
-            // IMMER in die Historie speichern, damit Archiv 100% offline läuft
             saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
 
             let resultHtml = `
