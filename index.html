@@ -12,8 +12,12 @@
         
         body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        .header-title { font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; text-align: center; border-bottom: 1px solid var(--matrix-green); padding-bottom: 10px; width: 100%; max-width: 450px; }
-        
+        /* Header & Dynamic Back Button */
+        .header-container { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 450px; position: relative; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 10px; }
+        .header-title { font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 3px; text-transform: uppercase; margin: 0; }
+        #backBtn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--matrix-green); font-size: 12px; font-weight: 800; cursor: pointer; display: none; padding: 8px 12px; background: #111; border-radius: 8px; border: 1px solid #333; text-transform: uppercase; letter-spacing: 1px;}
+        #backBtn:active { background: #222; }
+
         .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: rgba(15, 15, 15, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; padding: 8px 12px; border-radius: 16px; }
         .nav-item.active { color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
@@ -45,11 +49,15 @@
         .flt-btn { background: var(--panel-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
         .flt-btn.active { background: #fff; color: #000; border-color: #fff; }
         
-        .hist-item { background: var(--panel-bg); padding: 12px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); cursor: pointer; }
+        .hist-item { position: relative; background: var(--panel-bg); padding: 12px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); cursor: pointer; }
         .hist-item:active { background: #1a1a1a; border-color: #444; }
         .hist-img { width: 55px; height: 55px; border-radius: 10px; object-fit: cover; border: 1px solid #333; background: #000; flex-shrink: 0; }
         .hist-info { flex-grow: 1; overflow: hidden; }
         .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; flex-shrink: 0;}
+        
+        /* History Delete Button */
+        .hist-delete { position: absolute; right: 10px; bottom: 10px; background: rgba(255, 0, 60, 0.1); color: var(--alert); border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px; padding: 4px 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .hist-clear-all { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; padding: 10px; font-weight: bold; width: 100%; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; cursor: pointer;}
 
         .res-card { background: var(--panel-bg); border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 15px; }
         .res-header { display: flex; gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); align-items: flex-start; }
@@ -91,7 +99,11 @@
     </style>
 </head>
 <body>
-    <div class="header-title">Operator Interface</div>
+    <div class="header-container">
+        <button id="backBtn" onclick="goBack()">&#10094; ZURÜCK</button>
+        <div class="header-title">Operator Interface</div>
+    </div>
+    
     <div id="db-status">SYSTEMFEHLER: JSON Datenbank beschädigt.</div>
 
     <div class="glass-nav">
@@ -121,7 +133,7 @@
         <div class="res-card">
             <div class="status-bar st-gemini">KI Fallback Modul (Gemini 3.1 Flash-Lite)</div>
             <div class="res-body">
-                <p style="font-size:13px; color:#aaa; margin-top:0;">Der Schlüssel wird lokal verschlüsselt. Kein Daten-Leak an Dritte.</p>
+                <p style="font-size:13px; color:#aaa; margin-top:0;">Der Schlüssel wird lokal verschlüsselt. Das Modell nutzt <b style="color:#fff;">Google Search Grounding</b> für Live-Recherche.</p>
                 <input type="password" id="geminiApiKey" class="std-input" placeholder="API Key eingeben..." style="margin-bottom:15px;">
                 <button class="gemini-btn" onclick="saveApiKey()">Key Speichern</button>
                 <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
@@ -150,8 +162,9 @@
             <button id="flt-alle" class="flt-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
             <button id="flt-nahrung" class="flt-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
-            <button id="flt-optisch" class="flt-btn" onclick="filterHistory('Optisch', 'flt-optisch')">Optisch</button>
+            <button id="flt-ki" class="flt-btn" onclick="filterHistory('KI Extraktion', 'flt-ki')">KI Daten</button>
         </div>
+        <button class="hist-clear-all" onclick="clearHistory()">Gesamtes Archiv Leeren</button>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
@@ -160,7 +173,9 @@
     </div>
 
     <input type="file" accept="image/*" capture="environment" id="ocrInputText" style="display:none;">
-    <input type="file" accept="image/*" capture="environment" id="geminiVisionInput" style="display:none;">
+    
+    <input type="file" accept="image/*" capture="environment" id="geminiVisionCamera" style="display:none;">
+    <input type="file" accept="image/*" id="geminiVisionGallery" style="display:none;">
 
     <div id="detailModalOverlay" onclick="closeModal()"></div>
     <div id="detailModal">
@@ -172,6 +187,7 @@
 
     <script>
         let blacklist = {}; let whitelist = {}; let html5QrCode; let dbActive = false; let currentHistoryFilter = 'Alle';
+        let viewStack = ['home'];
 
         const contextualAlternatives = {
             "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
@@ -244,11 +260,24 @@
             setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
         }
 
-        function openView(viewName) {
+        // --- NAVIGATION STACK LOGIC ---
+        function openView(viewName, isBackAction = false) {
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('search-results').innerHTML = '';
+            
+            if (!isBackAction) {
+                if (viewStack[viewStack.length - 1] !== viewName) {
+                    viewStack.push(viewName);
+                }
+            }
+            
+            if(viewStack.length > 1) {
+                document.getElementById('backBtn').style.display = 'block';
+            } else {
+                document.getElementById('backBtn').style.display = 'none';
+            }
+
             document.getElementById('view-' + viewName).classList.add('active');
             if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
             if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; }
@@ -256,12 +285,20 @@
             if(viewName === 'settings') loadSettings();
         }
 
+        function goBack() {
+            if (viewStack.length > 1) {
+                viewStack.pop(); 
+                let previousView = viewStack[viewStack.length - 1];
+                openView(previousView, true);
+            }
+        }
+
         function startScanner() {
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('reader').style.display = 'block';
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start({ facingMode: "environment" }, { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: "continuous" }] } }, onScanSuccess).catch(() => {
-                alert("Hardware-Zugriff verweigert."); openView('home');
+                alert("Hardware-Zugriff verweigert."); goBack();
             });
         }
 
@@ -273,14 +310,14 @@
             });
         }
 
+        // --- HISTORY MANAGEMENT ---
         function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
-            
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
             if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
-
+            if (category.includes("KI Extraktion")) mainCategory = "KI Extraktion";
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) { console.error("LocalStorage voll."); }
@@ -291,6 +328,21 @@
             document.querySelectorAll('.flt-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(btnId).classList.add('active');
             renderHistory();
+        }
+
+        function deleteHistoryItem(event, barcode) {
+            event.stopPropagation(); // Verhindert, dass das Item beim Löschen geöffnet wird
+            let history = JSON.parse(localStorage.getItem('op_history')) || [];
+            history = history.filter(item => item.barcode !== barcode);
+            localStorage.setItem('op_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if(confirm("ACHTUNG: Willst du das gesamte Archiv unwiderruflich löschen?")) {
+                localStorage.removeItem('op_history');
+                renderHistory();
+            }
         }
 
         function renderHistory() {
@@ -306,8 +358,13 @@
                     html += `
                     <div class="hist-item" onclick="loadFromArchive('${item.barcode}')">
                         ${imgHtml}
-                        <div class="hist-info"><span class="res-badge" style="margin-bottom:5px;">${item.category}</span><div style="font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div><div style="font-size:11px; color:var(--text-muted);">${item.date}</div></div>
-                        <div class="hist-score" style="color:${sColor};">${item.score}</div>
+                        <div class="hist-info">
+                            <span class="res-badge" style="margin-bottom:5px;">${item.category}</span>
+                            <div style="font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${item.date}</div>
+                        </div>
+                        <div class="hist-score" style="color:${sColor}; margin-right:30px;">${item.score}</div>
+                        <button class="hist-delete" onclick="deleteHistoryItem(event, '${item.barcode}')">LÖSCHEN</button>
                     </div>`;
                 });
             }
@@ -323,7 +380,6 @@
             if (item && item.rawIngredients) {
                 analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
             } else {
-                // Hybrid-Fallback: Falls keine Offline-Daten vorhanden sind (alte Scans), triggere die API-Cascade
                 fetchDataCascade(barcode);
             }
         }
@@ -333,19 +389,25 @@
                 <div class="res-card">
                     <div class="status-bar st-alert">Primär-Datenbanken versagen.</div>
                     <div class="res-body" style="display:flex; flex-direction:column; gap:12px;">
-                        <p style="font-size:13px; color:#aaa; margin-top:0;">Das System besitzt keine Daten zu diesem Objekt. Wähle eine Extraktions-Methode:</p>
+                        <p style="font-size:13px; color:#aaa; margin-top:0;">Wähle eine Extraktions-Methode:</p>
                         
-                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (Rückseite)</button>
-                        <div style="width:100%; text-align:center; color:#555; font-size:12px; margin:5px 0;">-- ODER --</div>
+                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Text-Scan (Rückseite)</button>
+                        <div style="width:100%; text-align:center; color:#555; font-size:12px; margin:5px 0;">-- KI GROUNDING --</div>
                         <button class="gemini-btn" onclick="triggerGeminiTextSearch('${barcode}', '${searchTerm}')">🧠 2. KI: Name eingeben</button>
-                        <button class="gemini-vision-btn" onclick="document.getElementById('geminiVisionInput').click()">👁️ 3. KI: Front-Foto analysieren</button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="gemini-vision-btn" style="flex:1; padding:12px;" onclick="document.getElementById('geminiVisionCamera').click()">👁️ Kamera</button>
+                            <button class="gemini-vision-btn" style="flex:1; padding:12px; background:#444;" onclick="document.getElementById('geminiVisionGallery').click()">🖼️ Galerie</button>
+                        </div>
                     </div>
                 </div>`;
                 
             document.getElementById('ocrInputText').onchange = (e) => { 
                 if(e.target.files.length > 0) processLocalOCR(e.target.files[0], productName || searchTerm || "Unbekanntes Objekt", barcode, ""); 
             };
-            document.getElementById('geminiVisionInput').onchange = (e) => { 
+            document.getElementById('geminiVisionCamera').onchange = (e) => { 
+                if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); 
+            };
+            document.getElementById('geminiVisionGallery').onchange = (e) => { 
                 if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); 
             };
         }
@@ -367,8 +429,14 @@
                 contents.push({ parts: [ { text: prompt } ] });
             }
 
+            // payload with Google Search Tool enabled
+            let payload = {
+                contents: contents,
+                tools: [{ "googleSearch": {} }]
+            };
+
             try {
-                let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) });
+                let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 let data = await response.json();
                 if(data.error) throw new Error(data.error.message);
                 
@@ -388,9 +456,9 @@
             
             let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
             openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Greife auf Gemini 3.1 Flash-Lite zu...</div></div>`;
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Nutze Google Search Grounding um Fakten zu prüfen...</div></div>`;
             
-            let promptText = `Du bist eine toxikologische Datenbank. Suche nach den genauen Inhaltsstoffen für folgendes Produkt: "${name}". Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ...", "category": "Nahrung"}. Gib keine anderen Texte aus.`;
+            let promptText = `Du bist eine toxikologische Datenbank. Nutze die Google Suche, um die GENAUEN und WAHREN Inhaltsstoffe für folgendes Produkt zu verifizieren: "${name}". Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ...", "category": "Nahrung"}. Erfinde keine Zutaten.`;
             
             let resultJson = await callGeminiAPI(promptText);
             if(resultJson) {
@@ -402,12 +470,12 @@
         }
 
         function processGeminiVision(file, barcode) {
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Vision Analyse läuft...</div><div class="res-body" style="text-align:center; color:#888;">Bild wird von Gemini 3.1 Flash-Lite verarbeitet...</div></div>`;
+            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Vision Analyse läuft...</div><div class="res-body" style="text-align:center; color:#888;">Nutze Bild und Google Search Grounding...</div></div>`;
             
             let reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = async function () {
-                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, extrahiere falls möglich die Zutaten und bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}.`;
+                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, nutze die Google Suche, um die GENAUEN Zutaten zu recherchieren, falls sie auf dem Bild nicht lesbar sind. Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}.`;
                 let resultJson = await callGeminiAPI(promptText, reader.result);
                 
                 if(resultJson) {
