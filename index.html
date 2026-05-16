@@ -150,7 +150,7 @@
             <button id="flt-alle" class="flt-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
             <button id="flt-nahrung" class="flt-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
-            <button id="flt-ki" class="flt-btn" onclick="filterHistory('KI Extraktion', 'flt-ki')">KI Daten</button>
+            <button id="flt-optisch" class="flt-btn" onclick="filterHistory('Optisch', 'flt-optisch')">Optisch</button>
         </div>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
@@ -276,10 +276,11 @@
         function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
+            
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
             if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
-            if (category.includes("KI Extraktion")) mainCategory = "KI Extraktion";
+
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) { console.error("LocalStorage voll."); }
@@ -322,6 +323,7 @@
             if (item && item.rawIngredients) {
                 analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
             } else {
+                // Hybrid-Fallback: Falls keine Offline-Daten vorhanden sind (alte Scans), triggere die API-Cascade
                 fetchDataCascade(barcode);
             }
         }
@@ -388,11 +390,12 @@
             openView('result');
             document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">KI Extraktion läuft...</div><div class="res-body" style="text-align:center; color:#888;">Greife auf Gemini 3.1 Flash-Lite zu...</div></div>`;
             
-            let promptText = `Du bist eine toxikologische Datenbank. Suche nach den genauen Inhaltsstoffen für folgendes Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ..."}. Gib keine anderen Texte aus.`;
+            let promptText = `Du bist eine toxikologische Datenbank. Suche nach den genauen Inhaltsstoffen für folgendes Produkt: "${name}". Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Gefundener Name", "ingredients_text": "Zutat 1, Zutat 2, ...", "category": "Nahrung"}. Gib keine anderen Texte aus.`;
             
             let resultJson = await callGeminiAPI(promptText);
             if(resultJson) {
-                analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: "" } }, "KI Extraktion", actualBarcode, true);
+                let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
+                analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: "" } }, cat, actualBarcode, true);
             } else {
                 renderFallbackUI(actualBarcode, name, name);
             }
@@ -404,11 +407,12 @@
             let reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = async function () {
-                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen und extrahiere falls möglich die Zutaten. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2..."}.`;
+                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, extrahiere falls möglich die Zutaten und bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}.`;
                 let resultJson = await callGeminiAPI(promptText, reader.result);
                 
                 if(resultJson) {
-                    analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, "KI Extraktion (Vision)", barcode, true);
+                    let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
+                    analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, cat, barcode, true);
                 } else {
                     renderFallbackUI(barcode);
                 }
@@ -526,6 +530,7 @@
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
+            
             saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
 
             let resultHtml = `
@@ -546,20 +551,24 @@
             document.getElementById('result-content').innerHTML = resultHtml;
         }
 
-        function fetchDataCascade(barcode) {
-            fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
-            .then(res => { if(!res.ok) throw new Error("HTTP Fehler"); return res.json(); })
-            .then(data => {
-                if (data.status === 1) analyzeProduct(data, "Nahrung", barcode);
-                else {
-                    fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`)
-                    .then(resB => { if(!resB.ok) throw new Error("HTTP Fehler"); return resB.json(); })
-                    .then(dataB => {
-                        if (dataB.status === 1) analyzeProduct(dataB, "Kosmetik", barcode);
-                        else renderFallbackUI(barcode);
-                    }).catch(() => renderFallbackUI(barcode));
+        async function fetchDataCascade(barcode) {
+            try {
+                let resOFF = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+                if(resOFF.ok) {
+                    let dataOFF = await resOFF.json();
+                    if(dataOFF.status === 1) { analyzeProduct(dataOFF, "Nahrung", barcode); return; }
                 }
-            }).catch(() => renderFallbackUI(barcode));
+            } catch(e) {}
+            
+            try {
+                let resOBF = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`);
+                if(resOBF.ok) {
+                    let dataOBF = await resOBF.json();
+                    if(dataOBF.status === 1) { analyzeProduct(dataOBF, "Kosmetik", barcode); return; }
+                }
+            } catch(e) {}
+            
+            renderFallbackUI(barcode);
         }
     </script>
 </body>
