@@ -69,12 +69,11 @@
         
         .data-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
         .data-list li { margin-bottom: 8px; font-size: 14px; padding: 12px 15px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .data-list li::after { content: 'ℹ️'; font-size: 12px; opacity: 0.5; }
         .list-toxin { border-left: 3px solid var(--alert) !important; color: #fff; }
         .list-good { border-left: 3px solid var(--matrix-green) !important; color: #fff; }
         
         .alt-list { color: #fff; font-family: 'Courier New', Courier, monospace; list-style: square; padding-left: 20px; margin-bottom: 20px; font-size: 14px; line-height: 1.6;}
-        .raw-text { color: #888; font-size: 12px; line-height: 1.6; font-family: 'Courier New', Courier, monospace; }
+        .raw-text { color: #888; font-size: 12px; line-height: 1.6; font-family: 'Courier New', Courier, monospace; word-break: break-word;}
 
         .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
         #db-status { display: none; background: var(--alert); color: #fff; padding: 10px; text-align: center; font-weight: bold; border-radius: 12px; margin-bottom: 15px; width: 100%; max-width: 450px; font-size: 12px;}
@@ -273,7 +272,7 @@
             });
         }
 
-        function saveToHistory(barcode, name, score, category, rawIngredients = null, imgUrl = null) {
+        function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
             let mainCategory = "Nahrung";
@@ -282,7 +281,7 @@
             if (category.includes("KI Extraktion")) mainCategory = "KI Extraktion";
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
-            localStorage.setItem('op_history', JSON.stringify(history));
+            try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) { console.error("LocalStorage voll."); }
         }
 
         function filterHistory(category, btnId) {
@@ -318,8 +317,12 @@
             document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Lade Archiv...</div></div>`;
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             let item = history.find(i => i.barcode === barcode);
-            if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
-            else fetchDataCascade(barcode);
+            // 100% Offline Laden - keine Fetch Aufrufe mehr!
+            if (item && item.rawIngredients) {
+                analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
+            } else {
+                document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">Fehler: Daten im Archiv korrupt.</div></div>`;
+            }
         }
 
         function renderFallbackUI(barcode, productName = "", searchTerm = "") {
@@ -404,6 +407,7 @@
                 let resultJson = await callGeminiAPI(promptText, reader.result);
                 
                 if(resultJson) {
+                    // Verwende das Bild (reader.result) für das UI und das Archiv
                     analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, "KI Extraktion (Vision)", barcode, true);
                 } else {
                     renderFallbackUI(barcode);
@@ -522,7 +526,9 @@
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
-            saveToHistory(barcode, productName, score, category, isExtracted ? ingredientsRaw : null, imgUrlFinal);
+            
+            // IMMER in die Historie speichern, damit Archiv 100% offline läuft
+            saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
 
             let resultHtml = `
                 <div class="res-card">
@@ -538,7 +544,7 @@
             if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
             if (suggestedAlts.size > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen</div><ul class="alt-list"><li>${Array.from(suggestedAlts).join('</li><li>')}</li></ul>`;
             
-            resultHtml += `<div class="sec-title">Rohdaten</div><div class="raw-text">${p.ingredients_text_de || p.ingredients_text || "Lokaler Speicher / API Extraktion"}</div></div></div>`;
+            resultHtml += `<div class="sec-title">Rohdaten</div><div class="raw-text">${p.ingredients_text_de || p.ingredients_text || ingredientsRaw}</div></div></div>`;
             document.getElementById('result-content').innerHTML = resultHtml;
         }
 
