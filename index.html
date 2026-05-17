@@ -12,10 +12,10 @@
         
         body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        /* Header & Dynamic Back Button */
-        .header-container { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 450px; position: relative; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 10px; }
-        .header-title { font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 3px; text-transform: uppercase; margin: 0; }
-        #backBtn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--matrix-green); font-size: 12px; font-weight: 800; cursor: pointer; display: none; padding: 8px 12px; background: #111; border-radius: 8px; border: 1px solid #333; text-transform: uppercase; letter-spacing: 1px;}
+        /* Header & Dynamic Back Button Fix */
+        .header-container { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 450px; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; min-height: 50px; }
+        .header-title { font-size: 1.1rem; font-weight: 900; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin: 0; text-align: right; flex-grow: 1; }
+        #backBtn { color: var(--matrix-green); font-size: 11px; font-weight: 800; cursor: pointer; display: none; padding: 10px 14px; background: #111; border-radius: 8px; border: 1px solid #333; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; margin-right: 15px; }
         #backBtn:active { background: #222; }
 
         .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: rgba(15, 15, 15, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
@@ -55,7 +55,6 @@
         .hist-info { flex-grow: 1; overflow: hidden; }
         .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; flex-shrink: 0;}
         
-        /* History Delete Button */
         .hist-delete { position: absolute; right: 10px; bottom: 10px; background: rgba(255, 0, 60, 0.1); color: var(--alert); border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px; padding: 4px 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
         .hist-clear-all { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; padding: 10px; font-weight: bold; width: 100%; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; cursor: pointer;}
 
@@ -162,7 +161,7 @@
             <button id="flt-alle" class="flt-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
             <button id="flt-nahrung" class="flt-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
-            <button id="flt-ki" class="flt-btn" onclick="filterHistory('KI Extraktion', 'flt-ki')">KI Daten</button>
+            <button id="flt-optisch" class="flt-btn" onclick="filterHistory('Optisch', 'flt-optisch')">Optisch</button>
         </div>
         <button class="hist-clear-all" onclick="clearHistory()">Gesamtes Archiv Leeren</button>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
@@ -260,7 +259,6 @@
             setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
         }
 
-        // --- NAVIGATION STACK LOGIC ---
         function openView(viewName, isBackAction = false) {
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -310,14 +308,13 @@
             });
         }
 
-        // --- HISTORY MANAGEMENT ---
         function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
             let mainCategory = "Nahrung";
             if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
-            if (category.includes("Optisch") || category.includes("OCR")) mainCategory = "Optisch";
-            if (category.includes("KI Extraktion")) mainCategory = "KI Extraktion";
+            if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
+            
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
             try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) { console.error("LocalStorage voll."); }
@@ -331,7 +328,7 @@
         }
 
         function deleteHistoryItem(event, barcode) {
-            event.stopPropagation(); // Verhindert, dass das Item beim Löschen geöffnet wird
+            event.stopPropagation();
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
             localStorage.setItem('op_history', JSON.stringify(history));
@@ -389,9 +386,9 @@
                 <div class="res-card">
                     <div class="status-bar st-alert">Primär-Datenbanken versagen.</div>
                     <div class="res-body" style="display:flex; flex-direction:column; gap:12px;">
-                        <p style="font-size:13px; color:#aaa; margin-top:0;">Wähle eine Extraktions-Methode:</p>
+                        <p style="font-size:13px; color:#aaa; margin-top:0;">Das System besitzt keine Daten zu diesem Objekt. Wähle eine Extraktions-Methode:</p>
                         
-                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Text-Scan (Rückseite)</button>
+                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (Rückseite)</button>
                         <div style="width:100%; text-align:center; color:#555; font-size:12px; margin:5px 0;">-- KI GROUNDING --</div>
                         <button class="gemini-btn" onclick="triggerGeminiTextSearch('${barcode}', '${searchTerm}')">🧠 2. KI: Name eingeben</button>
                         <div style="display:flex; gap:10px;">
@@ -429,7 +426,6 @@
                 contents.push({ parts: [ { text: prompt } ] });
             }
 
-            // payload with Google Search Tool enabled
             let payload = {
                 contents: contents,
                 tools: [{ "googleSearch": {} }]
