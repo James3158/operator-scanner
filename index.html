@@ -33,7 +33,6 @@
         
         body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        /* Header & Dynamic Back Button */
         .header-container { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 450px; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; min-height: 50px; }
         .header-title { font-size: 1.1rem; font-weight: 900; color: var(--text-main); letter-spacing: 2px; text-transform: uppercase; margin: 0; text-align: right; flex-grow: 1; }
         .version-tag { font-size: 9px; color: var(--matrix-green); font-family: monospace; letter-spacing: 1px; display: block; margin-top: 2px;}
@@ -41,7 +40,6 @@
         #backBtn { color: var(--matrix-green); font-size: 11px; font-weight: 800; cursor: pointer; display: none; padding: 10px 14px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; margin-right: 15px; }
         #backBtn:active { background: #222; }
 
-        /* Liquid Glass Navigation */
         .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; padding: 8px 12px; border-radius: 16px; }
         .nav-item.active { color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
@@ -63,7 +61,6 @@
         .action-btn { background: var(--panel-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-weight: 800; font-size: 14px; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .action-btn:active { transform: scale(0.98); background: #ccc; }
         
-        /* Theme Toggle Element */
         .toggle-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 10px; }
         
         .search-box { display: flex; gap: 10px; }
@@ -135,7 +132,7 @@
         </div>
     </div>
     
-    <div id="db-status">SYSTEMFEHLER: JSON Datenbank beschädigt.</div>
+    <div id="db-status">SYSTEMFEHLER: JSON ...</div>
 
     <div class="glass-nav">
         <div class="nav-item active" id="nav-home" onclick="openView('home')"><div class="nav-icon">🌐</div><span>Home</span></div>
@@ -213,7 +210,6 @@
     <input type="file" accept="image/*" capture="environment" id="ocrInputText" style="display:none;">
     <input type="file" accept="image/*" capture="environment" id="geminiVisionCamera" style="display:none;">
     <input type="file" accept="image/*" id="geminiVisionGallery" style="display:none;">
-    
     <input type="file" accept="image/*" id="archiveImageInjectorInput" style="display:none;">
 
     <div id="detailModalOverlay" onclick="closeModal()"></div>
@@ -229,13 +225,13 @@
         let viewStack = ['home']; let activeArchiveInjectBarcode = "";
 
         const alternativeDeepDiveMatrix = {
-            "100% rohkakao-masse": "Roher Kakao ist frei von industriellem raffiniertem Zucker und ungesunden Fetten. Er liefert maximale Polyphenole und Magnesium, stärkt das Herz-Kreislauf-System und hebt die Vril-Frequenz ohne Dopamin-Absturz.",
-            "luftgetrocknetes beef jerky": "Liefert reines Protein und bioverfügbares Eisen ohne entzündliche Samenöle (Sojalecithirin, Sonnenblumenöl) oder künstliche Geschmacksverstärker.",
+            "100% rohkakao-masse": "Roher Kakao ist frei von industriellem raffiniertem Zucker und ungesunden Fetten. Er liefert maximale Polyphenole und Magnesium, stärkt das Herz-Kreislauf-System und hebt die Frequenz ohne Dopamin-Absturz.",
+            "luftgetrocknetes beef jerky": "Liefert reines Protein und bioverfügbares Eisen ohne entzündliche Samenöle (Sojalecithin, Sonnenblumenöl) oder künstliche Geschmacksverstärker.",
             "gefiltertes eiswasser": "Reines strukturiertes Wasser rehydriert die Zellen direkt. Elektrolyte aus Meersalz optimieren die neuronale Signalübertragung der Muskulatur.",
-            "echtes sauerteigbrot": "Durch die lange Fermentation der Milchsäurebakterien werden Gluten und Phytinsäure (die Mineralstoffblocker der Matrix) vorab abgebaut. Macht Nährstoffe maximal bioverfügbar.",
+            "echtes sauerteigbrot": "Durch die lange Fermentation der Milchsäurebakterien werden Gluten und Phytinsäure vorab abgebaut. Macht Nährstoffe maximal bioverfügbar.",
             "lavaerde (rhassoul)": "Reinigt Haut und Haare rein physikalisch durch Ionenbindung, ohne Tenside (SLS) einzusetzen. Schützt die Lipidbarriere der Haut komplett.",
             "reiner rindertalg (tallow)": "Besitzt eine fast 1:1 identische Fettsäuren-Struktur zum menschlichen Hauttalg. Zieht perfekt ein, liefert die Vitamine A, D, E, K und verzichtet vollständig auf erdölbasierte Silikone.",
-            "100% kernseife": "Frei von synthetischen Duftstoffen (Parfum), Mikroplastik und hormonellen Konservierungsstoffen (Parabene). Reinigt biologisch neutral.",
+            "100% kernseife": "Frei von Duftstoffen (Parfum), Mikroplastik und hormonellen Konservierungsstoffen (Parabene). Reinigt biologisch neutral.",
             "natürlicher alaunstein": "Ein mineralisches Salz, das antibakteriell wirkt und Gerüche hemmt, ohne die Schweißdrüsen mit neurotoxischen Aluminium-Komplexen zu verstopfen.",
             "unverarbeitetes weidefleisch": "Das optimale menschliche Nährstoffprofil. Reich an gesättigten Fettsäuren (Fundament der Testosteronsynthese) und frei von Nitritpökelsalz.",
             "rohe eier": "Maximale biologische Wertigkeit. Liefert Cholesterin als direkten Baustein für die Leydig-Zellen im Hoden zur Testosteronproduktion. Frei von Industrie-Süßstoffen."
@@ -260,7 +256,15 @@
             "soja": "Weidefleisch, Eier (Testosteron-Basis)."
         };
 
-        // --- THEME ENGINE ---
+        let timestamp = new Date().getTime();
+        Promise.all([
+            fetch('blacklist.json?v=' + timestamp).then(r => r.json()),
+            fetch('whitelist.json?v=' + timestamp).then(r => r.json())
+        ]).then(data => {
+            blacklist = data[0]; whitelist = data[1]; dbActive = true;
+            initTheme();
+        }).catch(() => { document.getElementById('db-status').style.display = 'block'; });
+
         function toggleTheme(checkbox) {
             if (checkbox.checked) {
                 document.documentElement.classList.add('light-theme');
@@ -277,16 +281,6 @@
                 document.getElementById('themeToggleCheckbox').checked = true;
             }
         }
-
-        // --- INIT DATA ---
-        let timestamp = new Date().getTime();
-        Promise.all([
-            fetch('blacklist.json?v=' + timestamp).then(r => r.json()),
-            fetch('whitelist.json?v=' + timestamp).then(r => r.json())
-        ]).then(data => {
-            blacklist = data[0]; whitelist = data[1]; dbActive = true;
-            initTheme();
-        }).catch(() => { document.getElementById('db-status').style.display = 'block'; });
 
         function saveApiKey() {
             let key = document.getElementById('geminiApiKey').value.trim();
@@ -315,12 +309,27 @@
             checkApiCounter();
         }
 
-        // Navigation Controller
+        function openModal(title, desc, detail, isAlert) {
+            document.getElementById('mod-title').innerText = title;
+            document.getElementById('mod-desc').innerText = desc;
+            document.getElementById('mod-desc').style.color = isAlert ? "var(--alert)" : "var(--matrix-green)";
+            document.getElementById('mod-detail').innerText = detail;
+            document.getElementById('detailModalOverlay').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('detailModalOverlay').style.opacity = '1';
+                document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(0)';
+            }, 10);
+        }
+        function closeModal() {
+            document.getElementById('detailModalOverlay').style.opacity = '0';
+            document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(100%)';
+            setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
+        }
+
         function openView(viewName, isBackAction = false) {
             if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
             if (!isBackAction) {
                 if (viewStack[viewStack.length - 1] !== viewName) viewStack.push(viewName);
             }
@@ -339,7 +348,6 @@
             }
         }
 
-        // Scanner Logic
         function startScanner() {
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('reader').style.display = 'block';
@@ -357,7 +365,6 @@
             });
         }
 
-        // --- ARCHIV IMAGE INJECTOR (Canvas compression) ---
         function triggerArchiveImageInject(event, barcode) {
             event.stopPropagation();
             activeArchiveInjectBarcode = barcode;
@@ -375,19 +382,14 @@
                 img.onload = function() {
                     let canvas = document.createElement('canvas');
                     let ctx = canvas.getContext('2d');
-                    // Target resolution max 120x120 for extreme space optimization
                     let max_size = 120;
                     let width = img.width;
                     let height = img.height;
                     if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } } 
                     else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width; canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    let compressedBase64 = canvas.toDataURL('image/jpeg', 0.5); // Quality 50%
-                    
-                    // LocalStorage update
+                    let compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
                     let history = JSON.parse(localStorage.getItem('op_history')) || [];
                     let item = history.find(i => i.barcode === activeArchiveInjectBarcode);
                     if(item) {
@@ -399,7 +401,6 @@
             };
         };
 
-        // --- HISTORY MANAGEMENT ---
         function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
             let history = JSON.parse(localStorage.getItem('op_history')) || [];
             history = history.filter(item => item.barcode !== barcode);
@@ -408,7 +409,7 @@
             if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
             history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
             if (history.length > 100) history.pop();
-            try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) { console.error("LocalStorage Overflow."); }
+            try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) {}
         }
 
         function filterHistory(category, btnId) {
@@ -439,7 +440,6 @@
             else {
                 filtered.forEach(item => {
                     let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
-                    let imgStyle = item.imageUrl ? `src="${item.imageUrl}"` : '';
                     let imgHtml = item.imageUrl ? `<img src="${item.imageUrl}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
                     
                     html += `
@@ -466,7 +466,6 @@
             else fetchDataCascade(barcode);
         }
 
-        // --- RECHERCHE FALLBACK MODULE ---
         function renderFallbackUI(barcode, productName = "", searchTerm = "") {
             document.getElementById('result-content').innerHTML = `
                 <div class="res-card">
@@ -538,7 +537,7 @@
             let reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = async function () {
-                let promptText = `Identifiziere das Produkt auf dem Bild. Nutze Google Search um die exakte Zutatenliste abzugleichen falls nötig. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1...", "category": "Nahrung"}.`;
+                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, nutze die Google Suche, um die GENAUEN Zutaten zu recherchieren, falls sie auf dem Bild nicht lesbar sind. Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1...", "category": "Nahrung"}.`;
                 let resultJson = await callGeminiAPI(promptText, reader.result);
                 if(resultJson) analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, resultJson.category + " (KI)", barcode, true);
                 else renderFallbackUI(barcode);
@@ -552,7 +551,6 @@
             }).catch(() => { renderFallbackUI(barcode, productName); });
         }
 
-        // --- SEARCH ENGINE ---
         document.getElementById('searchBtn').addEventListener('click', () => {
             let term = document.getElementById('searchInput').value.trim();
             if(!term) return;
@@ -595,7 +593,6 @@
             analyzeProduct({status: 1, product: JSON.parse(decodeURIComponent(dataStr))}, category, barcode);
         }
 
-        // --- COMPREHENSIVE ANALYSIS ENGINE ---
         function analyzeProduct(data, category, barcode, isExtracted = false) {
             if(!dbActive) return;
             let p = data.product;
@@ -609,7 +606,9 @@
                 renderFallbackUI(barcode, productName); return;
             }
 
-            let foundToxins = [], foundGood = [], suggestedAlts = [], score = 100, contextMatch = false;
+            let foundToxins = [], foundGood = [], score = 100;
+            let collectedAlts = new Set();
+            let contextMatch = false;
 
             if (ingredientsRaw.trim() !== "") {
                 for (let mainKey in blacklist) {
@@ -618,6 +617,12 @@
                         let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                         foundToxins.push(`<li class="list-toxin" onclick="openModal('${mainKey.toUpperCase()}', '${safeDesc}', '${safeDetail}', true)">${mainKey.toUpperCase()}</li>`); 
                         score -= 25;
+                        
+                        if (!contextMatch) {
+                            for (let key in fallbackAlternatives) {
+                                if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
+                            }
+                        }
                     }
                 }
                 for (let mainKey in whitelist) {
@@ -629,42 +634,33 @@
                     }
                 }
 
-                // CAM & Deep Dive Trigger für Alternativen
                 if (foundToxins.length > 0) {
+                    let tempContextAlts = new Set();
                     for (let key in contextualAlternatives) {
                         if (key.split('|').some(kw => productContext.includes(kw))) {
                             let alternativeText = contextualAlternatives[key];
-                            // Parse extrahierten Text in klickbare Komponenten
                             let components = alternativeText.split(', ');
                             components.forEach(comp => {
                                 let cleanComp = comp.replace(/\./g, "").trim();
-                                let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => cleanComp.toLowerCase().includes(k));
-                                if (lookupKey) {
-                                    let safeDetail = alternativeDeepDiveMatrix[lookupKey].replace(/'/g, "\\'");
-                                    suggestedAlts.push(`<li class="list-alt-clickable" onclick="openModal('${cleanComp.toUpperCase()}', 'BIOLOGISCHER SCHUTZSCHILD', '${safeDetail}', false)">${cleanComp}</li>`);
-                                } else {
-                                    suggestedAlts.push(`<li>${cleanComp}</li>`);
-                                }
+                                if (cleanComp) tempContextAlts.add(cleanComp);
                             });
                             contextMatch = true;
                         }
                     }
-                    if (!contextMatch) {
-                        for (let key in fallbackAlternatives) {
-                            if (foundToxins.some(t => t.toLowerCase().includes(key))) {
-                                let rawAlt = fallbackAlternatives[key];
-                                let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => rawAlt.toLowerCase().includes(k));
-                                if(lookupKey) {
-                                    let safeDetail = alternativeDeepDiveMatrix[lookupKey].replace(/'/g, "\\'");
-                                    suggestedAlts.push(`<li class="list-alt-clickable" onclick="openModal('${rawAlt.toUpperCase()}', 'SOUVERÄNE ALTERNATIVE', '${safeDetail}', false)">${rawAlt}</li>`);
-                                } else {
-                                    suggestedAlts.push(`<li>${rawAlt}</li>`);
-                                }
-                            }
-                        }
-                    }
+                    if (contextMatch) collectedAlts = tempContextAlts;
                 }
             }
+
+            let suggestedAltsHtml = [];
+            collectedAlts.forEach(alt => {
+                let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => alt.toLowerCase().includes(k));
+                if (lookupKey) {
+                    let safeDetail = alternativeDeepDiveMatrix[lookupKey].replace(/'/g, "\\'");
+                    suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal('${alt.toUpperCase()}', 'BIOLOGISCHER SCHUTZSCHILD', '${safeDetail}', false)">${alt}</li>`);
+                } else {
+                    suggestedAltsHtml.push(`<li>${alt}</li>`);
+                }
+            });
 
             score = Math.max(0, Math.min(100, score));
             let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
@@ -682,7 +678,7 @@
 
             if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische Toxine (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
             if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
-            if (suggestedAlts.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAlts.join('')}</ul>`;
+            if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
             
             resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${p.ingredients_text_de || p.ingredients_text || ingredientsRaw}</div></div></div>`;
             document.getElementById('result-content').innerHTML = resultHtml;
