@@ -4,154 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Operator Terminal v13.2</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-    <style>
-        :root { 
-            --matrix-green: #00ff41; 
-            --bg-color: #050505; 
-            --panel-bg: #111; 
-            --border-color: #222; 
-            --text-main: #e0e0e0; 
-            --text-muted: #777; 
-            --alert: #ff003c; 
-            --gemini-blue: #4285F4; 
-            --radius: 16px; 
-            --nav-bg: rgba(15, 15, 15, 0.65);
-        }
-        
-        .light-theme {
-            --bg-color: #f4f4f7;
-            --panel-bg: #ffffff;
-            --border-color: #d1d1d6;
-            --text-main: #1c1c1e;
-            --text-muted: #8e8e93;
-            --nav-bg: rgba(244, 244, 247, 0.75);
-        }
-        
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: background-color 0.2s, border-color 0.2s; }
-        
-        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        
-        .header-container { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 450px; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; min-height: 50px; }
-        .header-title { font-size: 1.1rem; font-weight: 900; color: var(--text-main); letter-spacing: 2px; text-transform: uppercase; margin: 0; text-align: right; flex-grow: 1; }
-        .version-tag { font-size: 9px; color: var(--matrix-green); font-family: monospace; letter-spacing: 1px; display: block; margin-top: 2px;}
-        
-        #backBtn { color: var(--matrix-green); font-size: 11px; font-weight: 800; cursor: pointer; display: none; padding: 10px 14px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; margin-right: 15px; }
-        #backBtn:active { background: #222; }
-
-        .glass-nav { position: fixed; bottom: 25px; width: calc(100% - 30px); max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; display: flex; justify-content: space-around; padding: 12px 10px; z-index: 9000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; padding: 8px 12px; border-radius: 16px; }
-        .nav-item.active { color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
-        .nav-icon { font-size: 22px; margin-bottom: 4px; }
-
-        .view { display: none; width: 100%; max-width: 450px; flex-direction: column; gap: 15px; animation: fadeIn 0.3s ease; }
-        .view.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .dash-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .dash-card:active { transform: scale(0.98); border-color: var(--matrix-green); }
-        .dash-icon-lg { font-size: 30px; background: rgba(0,0,0,0.2); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); flex-shrink: 0;}
-        .dash-text h3 { margin: 0 0 5px 0; color: var(--text-main); font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
-        .dash-text p { margin: 0; color: var(--text-muted); font-size: 13px; }
-
-        #reader { width: 100%; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--matrix-green); background: #000; box-shadow: 0 0 20px rgba(0,255,65,0.1); }
-        #reader img, #reader span, #reader a, #reader button, #reader div[style*="border"] { display: none !important; }
-        #reader video { object-fit: cover; }
-        .action-btn { background: var(--panel-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-weight: 800; font-size: 14px; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .action-btn:active { transform: scale(0.98); background: #ccc; }
-        
-        .toggle-container { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 10px; }
-        
-        .search-box { display: flex; gap: 10px; }
-        .std-input { flex-grow: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--panel-bg); color: var(--text-main); font-size: 16px; outline: none; transition: 0.2s; width: 100%; }
-        .std-input:focus { border-color: var(--matrix-green); }
-        .btn-search { background: var(--matrix-green); color: #000; border: none; border-radius: 12px; padding: 0 20px; font-weight: 800; cursor: pointer; }
-        
-        .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
-        .filter-row::-webkit-scrollbar { display: none; }
-        .flt-btn { background: var(--panel-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
-        .flt-btn.active { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
-        
-        .hist-item { position: relative; background: var(--panel-bg); padding: 12px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); cursor: pointer; }
-        .hist-img-container { position: relative; width: 55px; height: 55px; flex-shrink: 0; }
-        .hist-img { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-color); background: #000; }
-        .hist-img-upload-trigger { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: bold; opacity: 0; transition: opacity 0.2s; }
-        .hist-img-container:hover .hist-img-upload-trigger { opacity: 1; }
-        .hist-info { flex-grow: 1; overflow: hidden; }
-        .hist-score { font-weight: 900; font-size: 22px; width: 45px; text-align: right; flex-shrink: 0;}
-        
-        .hist-delete { position: absolute; right: 10px; bottom: 10px; background: rgba(255, 0, 60, 0.1); color: var(--alert); border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px; padding: 4px 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        .hist-clear-all { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; padding: 10px; font-weight: bold; width: 100%; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; cursor: pointer;}
-
-        .res-card { background: var(--panel-bg); border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
-        .res-header { display: flex; gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); align-items: flex-start; }
-        .res-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; background: #000; border: 1px solid var(--border-color); flex-shrink: 0; }
-        .res-info { flex-grow: 1; }
-        .res-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0 0 5px 0; line-height: 1.2; }
-        .res-badge { display: inline-block; background: rgba(0,0,0,0.05); border: 1px solid var(--border-color); color: var(--text-main); font-size: 10px; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        .res-score-circle { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; border: 3px solid; flex-shrink: 0; background: #000; }
-        
-        .status-bar { padding: 12px; font-weight: 800; font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
-        .st-alert { background: var(--alert); color: #fff; }
-        .st-clean { background: var(--matrix-green); color: #000; }
-        .st-gemini { background: var(--gemini-blue); color: #fff; }
-        
-        .res-body { padding: 20px; }
-        .sec-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 800; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-        
-        .data-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
-        .data-list li { margin-bottom: 8px; font-size: 14px; padding: 12px 15px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .data-list li::after { content: 'ℹ️'; font-size: 12px; opacity: 0.5; }
-        .list-toxin { border-left: 3px solid var(--alert) !important; color: var(--text-main); }
-        .list-good { border-left: 3px solid var(--matrix-green) !important; color: var(--text-main); }
-        .list-alt-clickable { border-left: 3px solid var(--gemini-blue) !important; color: var(--text-main); }
-        
-        .raw-text { color: var(--text-muted); font-size: 12px; line-height: 1.6; font-family: 'Courier New', Courier, monospace; word-break: break-word;}
-
-        .ocr-btn { background: #ffcc00; color: #000; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
-        #db-status { display: none; background: var(--alert); color: #fff; padding: 10px; text-align: center; font-weight: bold; border-radius: 12px; margin-bottom: 15px; width: 100%; max-width: 450px; font-size: 12px;}
-
-        #detailModalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: none; opacity: 0; transition: opacity 0.3s; }
-        #detailModal { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 450px; background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px 24px 0 0; padding: 30px 20px 50px 20px; z-index: 9999; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: #fff; }
-        .modal-handle { width: 40px; height: 4px; background: #555; border-radius: 4px; margin: 0 auto 20px auto; }
-        #mod-title { font-size: 22px; font-weight: 900; color: #fff; margin: 0 0 5px 0; text-transform: uppercase; }
-        #mod-desc { font-size: 13px; font-weight: 700; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; }
-        #mod-detail { font-size: 15px; color: #ccc; line-height: 1.6; margin: 0; }
-        
-        .gemini-btn { background: var(--gemini-blue); color: #fff; margin-top: 10px; border:none; padding:15px; border-radius:12px; font-weight:800; width:100%; cursor:pointer; text-transform:uppercase; letter-spacing:1px; }
-        .gemini-vision-btn { background: #9b72cb; color: #fff; margin-top: 10px; border:none; padding:15px; border-radius:12px; font-weight:800; width:100%; cursor:pointer; text-transform:uppercase; letter-spacing:1px; }
-    </style>
 </head>
 <body>
     <div class="header-container">
-        <button id="backBtn" onclick="goBack()">&#10094; ZURÜCK</button>
+        <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag">SYSTEM EXECUTION V13.2</span>
+            <span class="version-tag">SYSTEM EXECUTION V13.2 (MODULAR)</span>
         </div>
     </div>
     
     <div id="db-status">SYSTEMFEHLER: JSON DATENSTRUKTUR DEFEKT.</div>
 
     <div class="glass-nav">
-        <div class="nav-item active" id="nav-home" onclick="openView('home')"><div class="nav-icon">🌐</div><span>Home</span></div>
-        <div class="nav-item" id="nav-scan" onclick="openView('scan')"><div class="nav-icon">👁️</div><span>Sensor</span></div>
-        <div class="nav-item" id="nav-search" onclick="openView('search')"><div class="nav-icon">⌨️</div><span>Suche</span></div>
-        <div class="nav-item" id="nav-history" onclick="openView('history')"><div class="nav-icon">🗄️</div><span>Archiv</span></div>
-        <div class="nav-item" id="nav-settings" onclick="openView('settings')"><div class="nav-icon">⚙️</div><span>Config</span></div>
+        <div class="nav-item active" id="nav-home"><div class="nav-icon">🌐</div><span>Home</span></div>
+        <div class="nav-item" id="nav-scan"><div class="nav-icon">👁️</div><span>Sensor</span></div>
+        <div class="nav-item" id="nav-search"><div class="nav-icon">⌨️</div><span>Suche</span></div>
+        <div class="nav-item" id="nav-history"><div class="nav-icon">🗄️</div><span>Archiv</span></div>
+        <div class="nav-item" id="nav-settings"><div class="nav-icon">⚙️</div><span>Config</span></div>
     </div>
 
     <div id="view-home" class="view active">
-        <div class="dash-card" onclick="openView('scan')">
+        <div class="dash-card" id="card-scan">
             <div class="dash-icon-lg" style="color:var(--matrix-green);">👁️</div>
             <div class="dash-text"><h3>Optischer Sensor</h3><p>Barcodes & OCR Extraktion</p></div>
         </div>
-        <div class="dash-card" onclick="openView('search')">
+        <div class="dash-card" id="card-search">
             <div class="dash-icon-lg" style="color:#fff;">⌨️</div>
             <div class="dash-text"><h3>Terminal Suche</h3><p>Manuelle API-Abfrage</p></div>
         </div>
-        <div class="dash-card" onclick="openView('history')">
+        <div class="dash-card" id="card-history">
             <div class="dash-icon-lg" style="color:#ffcc00;">🗄️</div>
             <div class="dash-text"><h3>Lokal-Archiv</h3><p>Offline Matrix-Daten</p></div>
         </div>
@@ -164,24 +49,24 @@
                 <div class="sec-title">Interface Polarität</div>
                 <div class="toggle-container">
                     <span>Light Mode Aktivierung</span>
-                    <input type="checkbox" id="themeToggleCheckbox" onchange="toggleTheme(this)" style="width:20px; height:20px;">
+                    <input type="checkbox" id="themeToggleCheckbox" style="width:20px; height:20px;">
                 </div>
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
                 <div class="sec-title">KI Fallback Modul (Gemini 3.1 Flash-Lite)</div>
                 <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Der Schlüssel wird im sandboxed Dateisystem deines Browsers lokal gesichert. Das Modell nutzt <b>Google Search Grounding</b>.</p>
                 <input type="password" id="geminiApiKey" class="std-input" placeholder="API Key eingeben..." style="margin-bottom:15px;">
-                <button class="gemini-btn" onclick="saveApiKey()">Key Speichern</button>
+                <button class="gemini-btn" id="saveApiKeyBtn">Key Speichern</button>
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
                 <div class="sec-title">Lokaler Traffic-Monitor</div>
                 <div style="font-size:24px; font-weight:900; color:var(--text-main); text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:var(--text-muted);">/ 1500 (Free RPD)</span></div>
-                <button class="action-btn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;" onclick="resetApiCounter()">Zähler Reset</button>
+                <button class="action-btn" id="resetApiCounterBtn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;">Zähler Reset</button>
             </div>
         </div>
     </div>
 
     <div id="view-scan" class="view">
         <div id="reader"></div>
-        <button id="startBtn" class="action-btn" onclick="startScanner()">Sensor Aktivieren</button>
+        <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
     </div>
 
     <div id="view-search" class="view">
@@ -194,12 +79,12 @@
 
     <div id="view-history" class="view">
         <div class="filter-row">
-            <button id="flt-alle" class="flt-btn active" onclick="filterHistory('Alle', 'flt-alle')">Alle</button>
-            <button id="flt-nahrung" class="flt-btn" onclick="filterHistory('Nahrung', 'flt-nahrung')">Nahrung</button>
-            <button id="flt-kosmetik" class="flt-btn" onclick="filterHistory('Kosmetik', 'flt-kosmetik')">Kosmetik</button>
-            <button id="flt-optisch" class="flt-btn" onclick="filterHistory('Optisch', 'flt-optisch')">Optisch</button>
+            <button id="flt-alle" class="flt-btn active">Alle</button>
+            <button id="flt-nahrung" class="flt-btn">Nahrung</button>
+            <button id="flt-kosmetik" class="flt-btn">Kosmetik</button>
+            <button id="flt-optisch" class="flt-btn">Optisch</button>
         </div>
-        <button class="hist-clear-all" onclick="clearHistory()">Gesamtes Archiv Leeren</button>
+        <button class="hist-clear-all" id="clearHistoryBtn">Gesamtes Archiv Leeren</button>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
@@ -212,7 +97,7 @@
     <input type="file" accept="image/*" id="geminiVisionGallery" style="display:none;">
     <input type="file" accept="image/*" id="archiveImageInjectorInput" style="display:none;">
 
-    <div id="detailModalOverlay" onclick="closeModal()"></div>
+    <div id="detailModalOverlay"></div>
     <div id="detailModal">
         <div class="modal-handle"></div>
         <h3 id="mod-title">Toxin</h3>
@@ -220,531 +105,8 @@
         <p id="mod-detail">Detailbeschreibung...</p>
     </div>
 
-    <script>
-        let blacklist = {}; let whitelist = {}; let html5QrCode; let dbActive = false; let currentHistoryFilter = 'Alle';
-        let viewStack = ['home']; let activeArchiveInjectBarcode = "";
-
-        const alternativeDeepDiveMatrix = {
-            "100% rohkakao-masse": "Roher Kakao ist frei von industriellem raffiniertem Zucker und ungesunden Fetten. Er liefert maximale Polyphenole und Magnesium, stärkt das Herz-Kreislauf-System und hebt die Frequenz ohne Dopamin-Absturz.",
-            "luftgetrocknetes beef jerky": "Liefert reines Protein und bioverfügbares Eisen ohne entzündliche Samenöle (Sojalecithin, Sonnenblumenöl) oder künstliche Geschmacksverstärker.",
-            "gefiltertes eiswasser": "Reines strukturiertes Wasser rehydriert die Zellen direkt. Elektrolyte aus Meersalz optimieren die neuronale Signalübertragung der Muskulatur.",
-            "echtes sauerteigbrot": "Durch die lange Fermentation der Milchsäurebakterien werden Gluten und Phytinsäure vorab abgebaut. Macht Nährstoffe maximal bioverfügbar.",
-            "lavaerde (rhassoul)": "Reinigt Haut und Haare rein physikalisch durch Ionenbindung, ohne Tenside (SLS) einzusetzen. Schützt die Lipidbarriere der Haut komplett.",
-            "reiner rindertalg (tallow)": "Besitzt eine fast 1:1 identische Fettsäuren-Struktur zum menschlichen Hauttalg. Zieht perfekt ein, liefert die Vitamine A, D, E, K und verzichtet vollständig auf erdölbasierte Silikone.",
-            "100% kernseife": "Frei von Duftstoffen (Parfum), Mikroplastik und hormonellen Konservierungsstoffen (Parabene). Reinigt biologisch neutral.",
-            "natürlicher alaunstein": "Ein mineralisches Salz, das antibakteriell wirkt und Gerüche hemmt, ohne die Schweißdrüsen mit neurotoxischen Aluminium-Komplexen zu verstopfen.",
-            "unverarbeitetes weidefleisch": "Das optimale menschliche Nährstoffprofil. Reich an gesättigten Fettsäuren (Fundament der Testosteronsynthese) und frei von Nitritpökelsalz.",
-            "rohe eier": "Maximale biologische Wertigkeit. Liefert Cholesterin als direkten Baustein für die Leydig-Zellen im Hoden zur Testosteronproduktion. Frei von Industrie-Süßstoffen."
-        };
-
-        const contextualAlternatives = {
-            "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
-            "chips|snack|crisps": "Luftgetrocknetes Beef Jerky, gebackene Rinderleber-Crisps, rohe Macadamia-Nüsse.",
-            "energy|drink|cola|soda": "Gefiltertes Eiswasser mit keltischem Meersalz, reines Kokoswasser.",
-            "brot|bread|toast": "Echtes Sauerteigbrot (nur Wasser, Salz, Urgetreide-Mehl).",
-            "shampoo|hair|haar": "Lavaerde (Rhassoul), Roggenmehl-Wäsche, Aleppo-Seife.",
-            "creme|lotion|skin|pflege": "Reiner Rindertalg (Tallow), unraffinierte Sheabutter.",
-            "seife|soap|wash|dusch": "100% Kernseife (ohne EDTA/Parfum), afrikanische schwarze Seife.",
-            "deo|deodorant": "Natürlicher Alaunstein, verdünnter Apfelessig.",
-            "wurst|salami|fleisch": "Unverarbeitetes Weidefleisch, Knochenmark vom Metzger.",
-            "protein|riegel|shake": "Rohe Eier, Kefir, Rindersteak. Finger weg von Industrie-Isolaten."
-        };
-
-        const fallbackAlternatives = {
-            "fluorid": "Miswak-Stab, naturreine Zahnkreide.",
-            "aspartam": "Roher Honig.",
-            "soja": "Weidefleisch, Eier (Testosteron-Basis)."
-        };
-
-        // --- XSS SAFETY LAYER ---
-        function escapeHTML(str) {
-            return str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
-        }
-
-        function escapeRegExp(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-
-        // --- INGREDIENT REGEX MATCHING ENGINE ---
-        function matchIngredient(text, alias) {
-            let cleanAlias = alias.toLowerCase().trim();
-            if (cleanAlias.endsWith('-')) {
-                let prefix = cleanAlias.slice(0, -1);
-                return (new RegExp('\\b' + escapeRegExp(prefix) + '-', 'i')).test(text) || (new RegExp('\\b' + escapeRegExp(prefix) + '\\b', 'i')).test(text);
-            }
-            if (cleanAlias === 'palm') {
-                return (new RegExp('\\bpalm(öl|fett|oil|fat)?\\b', 'i')).test(text);
-            }
-            if (cleanAlias === 'aroma') {
-                return (new RegExp('\\b(artfremdes|künstliches|natürliches)?aroma(ta)?\\b', 'i')).test(text);
-            }
-            return (new RegExp('\\b' + escapeRegExp(cleanAlias) + '\\b', 'i')).test(text);
-        }
-
-        let dbTimestamp = new Date().getTime();
-        Promise.all([
-            fetch('blacklist.json?v=' + dbTimestamp).then(r => r.json()),
-            fetch('whitelist.json?v=' + dbTimestamp).then(r => r.json())
-        ]).then(data => {
-            blacklist = data[0]; whitelist = data[1]; dbActive = true;
-            initTheme();
-        }).catch(() => { document.getElementById('db-status').style.display = 'block'; });
-
-        function toggleTheme(checkbox) {
-            if (checkbox.checked) {
-                document.documentElement.classList.add('light-theme');
-                localStorage.setItem('op_theme', 'light');
-            } else {
-                document.documentElement.classList.remove('light-theme');
-                localStorage.setItem('op_theme', 'dark');
-            }
-        }
-        
-        function initTheme() {
-            let savedTheme = localStorage.getItem('op_theme') || 'dark';
-            if (savedTheme === 'light') {
-                document.documentElement.classList.add('light-theme');
-                document.getElementById('themeToggleCheckbox').checked = true;
-            }
-        }
-
-        function saveApiKey() {
-            let key = document.getElementById('geminiApiKey').value.trim();
-            if(key) { localStorage.setItem('op_gemini_key', key); alert('Key verifiziert und lokal gespeichert.'); }
-        }
-        
-        function loadSettings() {
-            document.getElementById('geminiApiKey').value = localStorage.getItem('op_gemini_key') || "";
-            checkApiCounter();
-        }
-        
-        function checkApiCounter() {
-            let date = new Date().toLocaleDateString();
-            let usageObj = JSON.parse(localStorage.getItem('op_api_usage')) || { date: date, count: 0 };
-            if(usageObj.date !== date) usageObj = { date: date, count: 0 };
-            document.getElementById('apiUsageCount').innerText = usageObj.count;
-            localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
-            return usageObj.count;
-        }
-        
-        function incrementApiCounter() {
-            let date = new Date().toLocaleDateString();
-            let usageObj = JSON.parse(localStorage.getItem('op_api_usage')) || { date: date, count: 0 };
-            if(usageObj.date !== date) usageObj = { date: date, count: 0 };
-            usageObj.count += 1;
-            localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
-            if (document.getElementById('apiUsageCount')) document.getElementById('apiUsageCount').innerText = usageObj.count;
-        }
-        
-        function resetApiCounter() {
-            localStorage.setItem('op_api_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
-            checkApiCounter();
-        }
-
-        function openModal(title, desc, detail, isAlert) {
-            document.getElementById('mod-title').innerText = title;
-            document.getElementById('mod-desc').innerText = desc;
-            document.getElementById('mod-desc').style.color = isAlert ? "var(--alert)" : "var(--matrix-green)";
-            document.getElementById('mod-detail').innerText = detail;
-            document.getElementById('detailModalOverlay').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('detailModalOverlay').style.opacity = '1';
-                document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(0)';
-            }, 10);
-        }
-        
-        function closeModal() {
-            document.getElementById('detailModalOverlay').style.opacity = '0';
-            document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(100%)';
-            setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
-        }
-
-        function openView(viewName, isBackAction = false) {
-            if (html5QrCode?.isScanning) {
-                html5QrCode.stop().catch(() => {});
-            }
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            if (!isBackAction) {
-                if (viewStack[viewStack.length - 1] !== viewName) viewStack.push(viewName);
-            }
-            document.getElementById('backBtn').style.display = viewStack.length > 1 ? 'block' : 'none';
-            document.getElementById('view-' + viewName).classList.add('active');
-            if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
-            if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; }
-            if(viewName === 'history') renderHistory();
-            if(viewName === 'settings') loadSettings();
-        }
-
-        function goBack() {
-            if (viewStack.length > 1) {
-                viewStack.pop(); 
-                openView(viewStack[viewStack.length - 1], true);
-            }
-        }
-
-        function startScanner() {
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('reader').style.display = 'block';
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } }, onScanSuccess).catch(() => {
-                alert("Hardware-Zugriff verweigert."); goBack();
-            });
-        }
-
-        function onScanSuccess(decodedText) {
-            if (html5QrCode?.isScanning) {
-                html5QrCode.stop().then(() => {
-                    openView('result');
-                    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Analisiere Signatur [${escapeHTML(decodedText)}]...</div></div>`;
-                    fetchDataCascade(decodedText);
-                }).catch(() => {});
-            }
-        }
-
-        function triggerArchiveImageInject(event, barcode) {
-            event.stopPropagation();
-            activeArchiveInjectBarcode = barcode;
-            document.getElementById('archiveImageInjectorInput').click();
-        }
-
-        document.getElementById('archiveImageInjectorInput').onchange = function(e) {
-            if(e.target.files.length === 0 || !activeArchiveInjectBarcode) return;
-            let file = e.target.files[0];
-            let reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = function(event) {
-                let img = new Image();
-                img.src = event.target.result;
-                img.onload = function() {
-                    let canvas = document.createElement('canvas');
-                    let ctx = canvas.getContext('2d');
-                    let max_size = 120; let width = img.width; let height = img.height;
-                    if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } } 
-                    else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                    canvas.width = width; canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    let compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-                    let history = JSON.parse(localStorage.getItem('op_history')) || [];
-                    let item = history.find(i => i.barcode === activeArchiveInjectBarcode);
-                    if(item) {
-                        item.imageUrl = compressedBase64;
-                        localStorage.setItem('op_history', JSON.stringify(history));
-                        renderHistory();
-                    }
-                };
-            };
-        };
-
-        function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
-            let history = JSON.parse(localStorage.getItem('op_history')) || [];
-            history = history.filter(item => item.barcode !== barcode);
-            let mainCategory = "Nahrung";
-            if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
-            if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
-            history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
-            if (history.length > 100) history.pop();
-            try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) {}
-        }
-
-        function filterHistory(category, btnId) {
-            currentHistoryFilter = category;
-            document.querySelectorAll('.flt-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(btnId).classList.add('active');
-            renderHistory();
-        }
-
-        function deleteHistoryItem(event, barcode) {
-            event.stopPropagation();
-            let history = JSON.parse(localStorage.getItem('op_history')) || [];
-            history = history.filter(item => item.barcode !== barcode);
-            localStorage.setItem('op_history', JSON.stringify(history));
-            renderHistory();
-        }
-
-        function clearHistory() {
-            if(confirm("Lokal-Archiv komplett löschen?")) { localStorage.removeItem('op_history'); renderHistory(); }
-        }
-
-        function renderHistory() {
-            let history = JSON.parse(localStorage.getItem('op_history')) || [];
-            let html = '';
-            let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category === currentHistoryFilter);
-
-            if (filtered.length === 0) { html = '<div style="text-align:center;color:#666;padding:20px;">Archiv leer.</div>'; } 
-            else {
-                filtered.forEach(item => {
-                    let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
-                    let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
-                    
-                    html += `
-                    <div class="hist-item" onclick="loadFromArchive('${escapeHTML(item.barcode)}')">
-                        <div class="hist-img-container">
-                            ${imgHtml}
-                            <div class="hist-img-upload-trigger" onclick="triggerArchiveImageInject(event, '${escapeHTML(item.barcode)}')">➕ FOTO</div>
-                        </div>
-                        <div class="hist-info"><span class="res-badge" style="margin-bottom:3px;">${escapeHTML(item.category)}</span><div style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(item.name)}</div><div style="font-size:11px; color:var(--text-muted);">${escapeHTML(item.date)}</div></div>
-                        <div class="hist-score" style="color:${sColor}; margin-right:30px;">${item.score}</div>
-                        <button class="hist-delete" onclick="deleteHistoryItem(event, '${escapeHTML(item.barcode)}')">DELETE</button>
-                    </div>`;
-                });
-            }
-            document.getElementById('history-list').innerHTML = html;
-        }
-
-        function loadFromArchive(barcode) {
-            openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Lade Archiv...</div></div>`;
-            let history = JSON.parse(localStorage.getItem('op_history')) || [];
-            let item = history.find(i => i.barcode === barcode);
-            if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
-            else fetchDataCascade(barcode);
-        }
-
-        function renderFallbackUI(barcode, productName = "", searchTerm = "") {
-            document.getElementById('result-content').innerHTML = `
-                <div class="res-card">
-                    <div class="status-bar st-alert">Primär-Datenbanken isoliert.</div>
-                    <div class="res-body" style="display:flex; flex-direction:column; gap:12px;">
-                        <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Objekt nicht erfasst. Befehl wählen:</p>
-                        <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (OCR)</button>
-                        <div style="width:100%; text-align:center; color:#555; font-size:11px; margin:5px 0;">-- OVERRIDE VIA GROUNDING ENGINE --</div>
-                        <button class="gemini-btn" onclick="triggerGeminiTextSearch('${escapeHTML(barcode)}', '${escapeHTML(searchTerm)}')">🧠 2. KI: Identität eintippen</button>
-                        <div style="display:flex; gap:10px;">
-                            <button class="gemini-vision-btn" style="flex:1; padding:12px;" onclick="document.getElementById('geminiVisionCamera').click()">👁️ Kamera</button>
-                            <button class="gemini-vision-btn" style="flex:1; padding:12px; background:#333;" onclick="document.getElementById('geminiVisionGallery').click()">🖼️ Galerie</button>
-                        </div>
-                    </div>
-                </div>`;
-                
-            document.getElementById('ocrInputText').onchange = (e) => { if(e.target.files.length > 0) processLocalOCR(e.target.files[0], productName || searchTerm || "Unbekanntes Objekt", barcode, ""); };
-            document.getElementById('geminiVisionCamera').onchange = (e) => { if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); };
-            document.getElementById('geminiVisionGallery').onchange = (e) => { if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); };
-        }
-
-        async function callGeminiAPI(prompt, base64Image = null) {
-            let key = localStorage.getItem('op_gemini_key');
-            if(!key) { alert("API Key Konfiguration unvollständig."); return null; }
-            if(checkApiCounter() >= 1500) { alert("Tägliches Kontingent erschöpft."); return null; }
-
-            incrementApiCounter();
-            let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${key}`;
-            let parts = [{ text: prompt }];
-            if(base64Image) {
-                let mime = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/)[1];
-                let b64Data = base64Image.split(',')[1];
-                parts.push({ inline_data: { mime_type: mime, data: b64Data } });
-            }
-
-            try {
-                let response = await fetch(url, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ contents: [{ parts }], tools: [{ "googleSearch": {} }] }) 
-                });
-                let data = await response.json();
-                if(data.error) throw new Error(data.error.message);
-                
-                let rawText = data.candidates[0].content.parts[0].text;
-                let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                return JSON.parse(jsonStr);
-            } catch (err) {
-                alert("Schnittstellen-Fehler: " + err.message); return null;
-            }
-        }
-
-        async function triggerGeminiTextSearch(barcode, prefilledTerm = "") {
-            let name = prefilledTerm || prompt("Marke und Produktname deklarieren:");
-            if(!name) return;
-            let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
-            openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">Recherchiere Echtzeit-Daten...</div></div>`;
-            
-            let promptText = `Recherchiere via Google Search die wahren Inhaltsstoffe für: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
-            let resultJson = await callGeminiAPI(promptText);
-            if(resultJson) analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: "" } }, resultJson.category + " (KI)", actualBarcode, true);
-            else renderFallbackUI(actualBarcode, name, name);
-        }
-
-        function processGeminiVision(file, barcode) {
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-gemini">Analysiere Bildmatrix...</div></div>`;
-            let reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async function () {
-                let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, nutze die Google Suche, um die GENAUEN Zutaten zu recherchieren, falls sie auf dem Bild nicht lesbar sind. Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1...", "category": "Nahrung"}.`;
-                let resultJson = await callGeminiAPI(promptText, reader.result);
-                if(resultJson) analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, resultJson.category + " (KI)", barcode, true);
-                else renderFallbackUI(barcode);
-            };
-        }
-
-        function processLocalOCR(file, productName, barcode, imgUrlFinal) {
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">OCR Analysator aktiv...</div></div>`;
-            Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
-                analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: imgUrlFinal } }, "Optisch", barcode, true);
-            }).catch(() => { renderFallbackUI(barcode, productName); });
-        }
-
-        document.getElementById('searchBtn').addEventListener('click', () => {
-            let term = document.getElementById('searchInput').value.trim();
-            if(!term) return;
-            openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Scanne Primär-Sektoren...</div></div>`;
-            
-            fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
-            .then(r => r.json()).then(data => {
-                if(data.products && data.products.length > 0) renderSearchResults(data.products, "Nahrung", term);
-                else {
-                    fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
-                    .then(rb => rb.json()).then(dataB => {
-                        if(dataB.products && dataB.products.length > 0) renderSearchResults(dataB.products, "Kosmetik", term);
-                        else { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); }
-                    });
-                }
-            }).catch(() => { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); });
-        });
-
-        function renderSearchResults(products, categoryStr, originalTerm) {
-            let html = `
-                <div class="res-card" style="padding:15px; margin-bottom:15px;">
-                    <div style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">Suche: [${escapeHTML(originalTerm)}]</div>
-                    <button class="gemini-btn" style="margin:0 0 5px 0; padding:12px; font-size:12px;" onclick="triggerGeminiTextSearch('', '${escapeHTML(originalTerm)}')">🧠 KI Grounding-Suche erzwingen</button>
-                </div>`;
-            products.forEach(p => {
-                let name = p.product_name || "Unbekannt"; let img = p.image_front_small_url || p.image_url || "";
-                let imgHtml = img ? `<img src="${escapeHTML(img)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
-                let safeData = encodeURIComponent(JSON.stringify(p));
-                html += `
-                <div class="hist-item" style="margin-bottom:10px;" onclick="selectSearchResult('${escapeHTML(p.code || name)}', '${escapeHTML(categoryStr)}', '${safeData}')">
-                    ${imgHtml}
-                    <div class="hist-info"><div style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(name)}</div><div style="font-size:11px; color:var(--text-muted);">${escapeHTML(p.brands || 'Keine Marke')}</div></div>
-                </div>`;
-            });
-            document.getElementById('result-content').innerHTML = html;
-        }
-
-        function selectSearchResult(barcode, category, dataStr) {
-            analyzeProduct({status: 1, product: JSON.parse(decodeURIComponent(dataStr))}, category, barcode);
-        }
-
-        // --- CORE EVALUATION MATRIX ---
-        function analyzeProduct(data, category, barcode, isExtracted = false) {
-            if(!dbActive) return;
-            let p = data.product;
-            let imgUrlFinal = p.image_url || p.image_front_small_url || "";
-            let ingredientsRaw = [p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""].join(" ").toLowerCase();
-            let productName = p.product_name || "Unbekanntes Objekt";
-            let productContext = (productName + " " + (p.categories || "")).toLowerCase();
-            let imageHtml = imgUrlFinal ? `<img src="${escapeHTML(imgUrlFinal)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
-            
-            if (ingredientsRaw.trim() === "" && !isExtracted && !category.includes("Suche")) {
-                renderFallbackUI(barcode, productName); return;
-            }
-
-            let foundToxins = [], foundGood = [], score = 100;
-            let collectedAlts = new Set();
-            let contextMatch = false;
-
-            if (ingredientsRaw.trim() !== "") {
-                // Blacklist Evaluation
-                for (let mainKey in blacklist) {
-                    let item = blacklist[mainKey];
-                    if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
-                        let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
-                        foundToxins.push(`<li class="list-toxin" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                        score -= 25;
-                        
-                        if (!contextMatch) {
-                            for (let key in fallbackAlternatives) {
-                                if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
-                            }
-                        }
-                    }
-                }
-                // Whitelist Evaluation
-                for (let mainKey in whitelist) {
-                    let item = whitelist[mainKey];
-                    if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
-                        let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
-                        foundGood.push(`<li class="list-good" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', false)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                        score += 5;
-                    }
-                }
-
-                // Contextual Alternative Core (CAM)
-                if (foundToxins.length > 0) {
-                    let tempContextAlts = new Set();
-                    for (let key in contextualAlternatives) {
-                        if (key.split('|').some(kw => productContext.includes(kw))) {
-                            let alternativeText = contextualAlternatives[key];
-                            let components = alternativeText.split(', ');
-                            components.forEach(comp => {
-                                let cleanComp = comp.replace(/\./g, "").trim();
-                                if (cleanComp) tempContextAlts.add(cleanComp);
-                            });
-                            contextMatch = true;
-                        }
-                    }
-                    if (contextMatch) collectedAlts = tempContextAlts;
-                }
-            }
-
-            // CRITICAL SCORING FIX: Toxine deckeln das Ergebnis absolut auf maximal 50 Punkte
-            if (foundToxins.length > 0) {
-                score = Math.min(score, 50);
-            } else {
-                score = Math.max(0, Math.min(100, score));
-            }
-
-            let suggestedAltsHtml = [];
-            collectedAlts.forEach(alt => {
-                let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => alt.toLowerCase().includes(k));
-                if (lookupKey) {
-                    let safeDetail = alternativeDeepDiveMatrix[lookupKey].replace(/'/g, "\\'");
-                    suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal('${escapeHTML(alt.toUpperCase())}', 'BIOLOGISCHER SCHUTZSCHILD', '${escapeHTML(safeDetail)}', false)">${escapeHTML(alt)}</li>`);
-                } else {
-                    suggestedAltsHtml.push(`<li>${escapeHTML(alt)}</li>`);
-                }
-            });
-
-            let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
-            saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
-
-            let resultHtml = `
-                <div class="res-card">
-                    <div class="res-header">
-                        ${imageHtml}
-                        <div class="res-info"><span class="res-badge">${escapeHTML(category)}</span><h3 class="res-title">${escapeHTML(productName)}</h3></div>
-                        <div class="res-score-circle" style="color:${scoreColor}; border-color:${scoreColor};">${score}</div>
-                    </div>
-                    <div class="status-bar ${foundToxins.length > 0 ? 'st-alert' : 'st-clean'}">${foundToxins.length > 0 ? 'ANGRIFF DETEKTIERT' : 'STATUS REIN'}</div>
-                    <div class="res-body">`;
-
-            if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische Toxine (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
-            if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
-            if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
-            
-            resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRaw)}</div></div></div>`;
-            document.getElementById('result-content').innerHTML = resultHtml;
-        }
-
-        async function fetchDataCascade(barcode) {
-            try {
-                let resOFF = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-                if(resOFF.ok) {
-                    let dataOFF = await resOFF.json();
-                    if(dataOFF.status === 1) { analyzeProduct(dataOFF, "Nahrung", barcode); return; }
-                }
-            } catch(e) {}
-            try {
-                let resOBF = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`);
-                if(resOBF.ok) {
-                    let dataOBF = await resOBF.json();
-                    if(dataOBF.status === 1) { analyzeProduct(dataOBF, "Kosmetik", barcode); return; }
-                }
-            } catch(e) {}
-            renderFallbackUI(barcode);
-        }
-    </script>
+    <script src="rules.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
