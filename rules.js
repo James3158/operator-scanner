@@ -1,4 +1,4 @@
-// Globales Zustandsgedächtnis für lokale JSON-Dateien
+// Globale Datenbehälter für die Laufzeit
 let blacklist = {}; 
 let whitelist = {}; 
 let dbActive = false;
@@ -16,7 +16,25 @@ const alternativeDeepDiveMatrix = {
     "rohe eier": "Maximale biologische Wertigkeit. Liefert Cholesterin als direkten Baustein für die Leydig-Zellen im Hoden zur Testosteronproduktion. Frei von Industrie-Süßstoffen."
 };
 
-// XSS Sanitizer zur Vorbeugung von HTML-Injektionen
+const contextualAlternatives = {
+    "schokolade|choco|kakao": "100% Rohkakao-Masse, Kakaonibs, oder selbstgemacht aus Kakaobutter und rohem Bio-Honig.",
+    "chips|snack|crisps": "Luftgetrocknetes Beef Jerky, gebackene Rinderleber-Crisps, rohe Macadamia-Nüsse.",
+    "energy|drink|cola|soda": "Gefiltertes Eiswasser mit keltischem Meersalz, reines Kokoswasser.",
+    "brot|bread|toast": "Echtes Sauerteigbrot (nur Wasser, Salz, Urgetreide-Mehl).",
+    "shampoo|hair|haar": "Lavaerde (Rhassoul), Roggenmehl-Wäsche, Aleppo-Seife.",
+    "creme|lotion|skin|pflege": "Reiner Rindertalg (Tallow), unraffinierte Sheabutter.",
+    "seife|soap|wash|dusch": "100% Kernseife (ohne EDTA/Parfum), afrikanische schwarze Seife.",
+    "deo|deodorant": "Natürlicher Alaunstein, verdünnter Apfelessig.",
+    "wurst|salami|fleisch": "Unverarbeitetes Weidefleisch, Knochenmark vom Metzger.",
+    "protein|riegel|shake": "Rohe Eier, Kefir, Rindersteak. Finger weg von Industrie-Isolaten."
+};
+
+const fallbackAlternatives = {
+    "fluorid": "Miswak-Stab, naturreine Zahnkreide.",
+    "aspartam": "Roher Honig.",
+    "soja": "Weidefleisch, Eier (Testosteron-Basis)."
+};
+
 function escapeHTML(str) {
     return str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
 }
@@ -25,7 +43,6 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Token-basiertes Regex-Matching zur Vermeidung von Falsch-Treffern
 function matchIngredient(text, alias) {
     let cleanAlias = alias.toLowerCase().trim();
     if (cleanAlias.endsWith('-')) {
@@ -41,7 +58,6 @@ function matchIngredient(text, alias) {
     return (new RegExp('\\b' + escapeRegExp(cleanAlias) + '\\b', 'i')).test(text);
 }
 
-// Core Analyser-Matrix
 function analyzeProduct(data, category, barcode, isExtracted = false) {
     if(!dbActive) return;
     let p = data.product;
@@ -52,8 +68,7 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     let imageHtml = imgUrlFinal ? `<img src="${escapeHTML(imgUrlFinal)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
     
     if (ingredientsRaw.trim() === "" && !isExtracted && !category.includes("Suche")) {
-        renderFallbackUI(barcode, productName); 
-        return;
+        renderFallbackUI(barcode, productName); return;
     }
 
     let foundToxins = [], foundGood = [], score = 100;
@@ -61,14 +76,12 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     let contextMatch = false;
 
     if (ingredientsRaw.trim() !== "") {
-        // Toxin Abgleich
         for (let mainKey in blacklist) {
             let item = blacklist[mainKey];
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
                 let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                 foundToxins.push(`<li class="list-toxin" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
                 score -= 25;
-                
                 if (!contextMatch) {
                     for (let key in fallbackAlternatives) {
                         if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
@@ -76,7 +89,6 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
                 }
             }
         }
-        // Whitelist Abgleich
         for (let mainKey in whitelist) {
             let item = whitelist[mainKey];
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
@@ -86,7 +98,6 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
             }
         }
 
-        // Contextual Alternative Generator (CAM)
         if (foundToxins.length > 0) {
             let tempContextAlts = new Set();
             for (let key in contextualAlternatives) {
@@ -104,12 +115,8 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     }
 
-    // Toxin Dominanz Logik: Deckelung auf maximal 50 Punkte bei Kontamination
-    if (foundToxins.length > 0) {
-        score = Math.min(score, 50);
-    } else {
-        score = Math.max(0, Math.min(100, score));
-    }
+    if (foundToxins.length > 0) { score = Math.min(score, 50); } 
+    else { score = Math.max(0, Math.min(100, score)); }
 
     let suggestedAltsHtml = [];
     collectedAlts.forEach(alt => {
