@@ -1,26 +1,26 @@
 {
   "olivenöl": {
-    "aliases": ["olivenöl", "olive oil"],
+    "aliases": ["olivenöl", "olive oil", "olea europaea fruit oil", "olea europaea oil"],
     "desc": "Zellschutz / Hochwertige Lipide",
     "detail": "Kaltgepresstes Olivenöl liefert einfach ungesättigte Fettsäuren und Polyphenole. Schützt die Zellen vor Oxidation und unterstützt die Testosteron-Synthese."
   },
   "kokosöl": {
-    "aliases": ["kokosöl", "coconut oil"],
+    "aliases": ["kokosöl", "coconut oil", "cocos nucifera oil", "cocos nucifera"],
     "desc": "MCT-Fette / Kognitive Energie",
     "detail": "Besteht primär aus mittelkettigen Triglyceriden (MCTs). Liefert saubere Energie für das Gehirn ohne Insulin-Spike."
   },
   "sheabutter": {
-    "aliases": ["sheabutter", "shea butter", "butyrospermum parkii"],
+    "aliases": ["sheabutter", "shea butter", "butyrospermum parkii", "butyrospermum parkii butter"],
     "desc": "Natürliche Hautbarriere",
     "detail": "Unraffiniertes Fett aus der Kariténuss. Enthält Allantoin und Vitamin E. Repariert die Hautbarriere, ohne in das Hormonsystem einzugreifen."
   },
   "meersalz": {
-    "aliases": ["meersalz", "sea salt", "maris sal"],
+    "aliases": ["meersalz", "sea salt", "maris sal", "sea salt extract"],
     "desc": "Elektrolyt-Matrix / Zelluläre Hydration",
     "detail": "Unraffiniertes Salz enthält alle essenziellen Spurenelemente. Es optimiert die zelluläre Hydration, die Leitfähigkeit der Nervenbahnen und stabilisiert den Vril-Energiefluss."
   },
   "aloe_vera": {
-    "aliases": ["aloe vera", "aloe barbadensis"],
+    "aliases": ["aloe vera", "aloe barbadensis", "aloe barbadensis leaf juice", "aloe extract"],
     "desc": "Regenerativ / Entzündungshemmend",
     "detail": "Ihre Enzyme und Polysaccharide reparieren Gewebeschäden auf zellulärer Ebene und kühlen systemische Entzündungen."
   },
@@ -30,7 +30,7 @@
     "detail": "Bildet einen atmungsaktiven Schutzfilm auf der Haut, wirkt antibakteriell und zieht keine Toxine an."
   },
   "rohkakao": {
-    "aliases": ["rohkakao", "cacao"],
+    "aliases": ["rohkakao", "cacao", "theobroma cacao", "cacao seed butter", "kakaobutter"],
     "desc": "Antioxidantien / Vril-Stimulanz",
     "detail": "Unerhitzter Kakao ist extrem reich an Magnesium und Theobromin. Erweitert die Blutgefäße und stimuliert das System."
   },
@@ -40,7 +40,7 @@
     "detail": "Roher Honig ist präbiotisch und antimikrobiell. Er enthält die nötigen Enzyme zur eigenen Verstoffwechselung."
   },
   "dinkel": {
-    "aliases": ["dinkel", "spelt"],
+    "aliases": ["dinkel", "spelt", "dinkelmehl", "spelt flour"],
     "desc": "Urgetreide / Bessere Verträglichkeit",
     "detail": "Ein genetisch intaktes Urgetreide. Enthält weniger Reizproteine als Weizen und unterstützt die physische Stärke."
   },
@@ -50,14 +50,14 @@
     "detail": "Milchsäurebakterien bauen Antinährstoffe ab. Maximiert die Mineralstoffaufnahme und schützt das Mikrobiom."
   },
   "jojoba": {
-    "aliases": ["jojoba", "simmondsia chinensis"],
+    "aliases": ["jojoba", "simmondsia chinensis", "simmondsia chinensis seed oil", "jojoba esters"],
     "desc": "Haut-Identisches Wachs",
     "detail": "Strukturell fast identisch mit menschlichem Talg. Versiegelt die Hautbarriere gegen Matrix-Toxine."
   },
   "arganöl": {
-    "aliases": ["arganöl", "argan oil", "argania spinosa"],
+    "aliases": ["arganöl", "argan oil", "argania spinosa", "argania spinosa kernel oil"],
     "desc": "Vitamin E / Zellregeneration",
-    "detail": "Ein stabiles Lipidprofil. Schützt die Zellen vor oxidativem Stress und liefert Rohstoffe für die Hormonproduktion."
+    "detail": "Ein stabile Lipidprofil mit hohem Antioxidantien-Anteil. Schützt die Zellen vor oxidativem Stress und liefert Rohstoffe für die Hormonproduktion."
   },
   "rindertalg": {
     "aliases": ["rindertalg", "beef tallow", "tallow", "adeps bovis"],
@@ -65,14 +65,14 @@
     "detail": "Das Profil ähnelt dem menschlichen Sebum. Wird perfekt resorbiert und nährt die Zellen tiefgreifend."
   },
   "lanolin": {
-    "aliases": ["lanolin"],
+    "aliases": ["lanolin", "wool fat"],
     "desc": "Wollwachs / Natürliche Barriere",
     "detail": "Repariert Risse in der physischen Hülle und verhindert das Eindringen von synthetischen Chemikalien."
   },
   "tocopherol": {
-    "aliases": ["tocopherol", "vitamin e"],
+    "aliases": ["tocopherol", "vitamin e", "tocopheryl acetate"],
     "desc": "Vitamin E / Zelluläres Antioxidans",
-    "detail": "Ein potentes Antioxidans. Schützt die Lipidmembranen der Zellen vor Zerstörung durch freie Radikale."
+    "detail": "Ein potenten Antioxidans. Es schützt die Lipidmembranen der Zellen vor Zerstörung durch freie Radikale."
   },
   "squalane": {
     "aliases": ["squalane", "squalene"],
@@ -80,12 +80,12 @@
     "detail": "Ein biologischer Kohlenwasserstoff, der natürlich im Körper vorkommt. Fungiert als Isolator gegen Umweltstressoren."
   },
   "heilerde": {
-    "aliases": ["bentonite", "kaolin", "rhassoul", "lavaerde", "tonerde"],
+    "aliases": ["bentonite", "kaolin", "rhassoul", "lavaerde", "tonerde", "solum fullonum"],
     "desc": "Heilerde / Schwermetall-Entgiftung",
-    "detail": "Besitzen eine starke negative Ionenladung. Binden toxische Schwermetalle und Matrix-Chemikalien physisch an sich und leiten sie aus."
+    "detail": "Besitzen eine forte negative Ionenladung. Binden toxische Schwermetalle und Matrix-Chemikalien physisch an sich und leiten sie aus."
   },
   "weidebutter": {
-    "aliases": ["weidebutter", "grass-fed butter", "ghee"],
+    "aliases": ["weidebutter", "grass-fed butter", "ghee", "butterfat"],
     "desc": "Bio-identische Fette / Hormon-Baustein",
     "detail": "Enthält essenzielle fettlösliche Vitamine und Cholesterin. Dies ist das exakte fundamentale Rohmaterial für eine maximale Testosteron-Synthese."
   },
@@ -95,12 +95,12 @@
     "detail": "Milch im Originalzustand. Die intakten Laktase-Enzyme machen sie verträglich. Stärkt Knochen und Immunsystem massiv."
   },
   "maca": {
-    "aliases": ["maca"],
+    "aliases": ["maca", "lepidium meyenii"],
     "desc": "Adaptogen / Hormonelle Balance",
     "detail": "Gleicht das endokrine System aus, steigert die physische Resilienz und hebt die Vril-Kraft ohne künstliche Stimulation an."
   },
   "shilajit": {
-    "aliases": ["shilajit"],
+    "aliases": ["shilajit", "mumijo", "mineral pitch"],
     "desc": "Fulvinsäure / Mineralstoff-Matrix",
     "detail": "Organische Mineralien-Verbindung. Transportiert Nährstoffe direkt in die Zellen und reinigt das Gefäß von Schwermetallen."
   },
@@ -115,7 +115,7 @@
     "detail": "Bio-identische Lipide, die den 'Mörtel' zwischen den Hautzellen bilden. Verhindern das Eindringen toxischer Moleküle."
   },
   "niacinamide": {
-    "aliases": ["niacinamide", "vitamin b3"],
+    "aliases": ["niacinamide", "vitamin b3", "nicotinamide"],
     "desc": "Zell-Kommunikation / Barriereschutz",
     "detail": "Stärkt die Hautbarriere, mindert Entzündungen und repariert DNA-Schäden durch systemische Toxine."
   },
