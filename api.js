@@ -23,20 +23,37 @@ function resetApiCounter() {
 
 function saveApiKey() {
     let key = document.getElementById('geminiApiKey').value.trim();
-    if(key) { localStorage.setItem('op_gemini_key', key); alert('Schlüssel im sandboxed Container abgelegt.'); }
+    if(key) { localStorage.setItem('op_gemini_key', key); alert('Gemini Key im sandboxed Container abgelegt.'); }
+}
+
+function saveDeepSeekKey() {
+    let key = document.getElementById('deepseekApiKey').value.trim();
+    if(key) { localStorage.setItem('op_deepseek_key', key); alert('DeepSeek Key im sandboxed Container abgelegt.'); }
 }
 
 function loadSettings() {
     document.getElementById('geminiApiKey').value = localStorage.getItem('op_gemini_key') || "";
+    document.getElementById('deepseekApiKey').value = localStorage.getItem('op_deepseek_key') || "";
+    if(localStorage.getItem('op_active_model')) {
+        document.getElementById('activeModelSelect').value = localStorage.getItem('op_active_model');
+    }
     checkApiCounter();
+}
+
+// Nativer Core-Wechsler für KI-Abfragen
+async function executeKIEngine(prompt, base64Image = null) {
+    let selectedModel = document.getElementById('activeModelSelect').value;
+    
+    if (selectedModel === 'gemini') {
+        return await callGeminiAPI(prompt, base64Image);
+    } else {
+        return await callDeepSeekAPI(prompt, base64Image);
+    }
 }
 
 async function callGeminiAPI(prompt, base64Image = null) {
     let key = localStorage.getItem('op_gemini_key');
-    if(!key) { alert("API Key Konfiguration unvollständig."); return null; }
-    if(checkApiCounter() >= 1500) { alert("Tägliches Kontingent erschöpft."); return null; }
-
-    incrementApiCounter();
+    if(!key) { alert("Gemini API Key fehlt."); return null; }
     let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${key}`;
     let parts = [{ text: prompt }];
     if(base64Image) {
@@ -44,8 +61,8 @@ async function callGeminiAPI(prompt, base64Image = null) {
         let b64Data = base64Image.split(',')[1];
         parts.push({ inline_data: { mime_type: mime, data: b64Data } });
     }
-
     try {
+        incrementApiCounter();
         let response = await fetch(url, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
@@ -53,24 +70,60 @@ async function callGeminiAPI(prompt, base64Image = null) {
         });
         let data = await response.json();
         if(data.error) throw new Error(data.error.message);
-        
         let rawText = data.candidates[0].content.parts[0].text;
         let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(jsonStr);
-    } catch (err) {
-        alert("Schnittstellen-Fehler: " + err.message); return null;
-    }
+    } catch (err) { alert("Gemini-Fehler: " + err.message); return null; }
 }
 
-async function triggerGeminiTextSearch(barcode, prefilledTerm = "") {
+async function callDeepSeekAPI(prompt, base64Image = null) {
+    let key = localStorage.getItem('op_deepseek_key');
+    if(!key) { alert("DeepSeek API Key fehlt."); return null; }
+    
+    let messages = [];
+    if(base64Image) {
+        // Falls DeepSeek-Schnittstelle im Endpoint keine nativen Vision-Daten verarbeitet, Kapselung als multimodaler Payload
+        messages = [{
+            role: "user",
+            content: [
+                { type: "text", text: prompt },
+                { type: "image_url", image_url: { url: base64Image } }
+            ]
+        }];
+    } else {
+        messages = [{ role: "user", content: prompt }];
+    }
+
+    try {
+        let response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${key}`
+            },
+            body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: messages,
+                response_format: { type: "json_object" }
+            })
+        });
+        let data = await response.json();
+        if(data.error) throw new Error(data.error.message);
+        let rawText = data.choices[0].message.content;
+        let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(jsonStr);
+    } catch (err) { alert("DeepSeek-Fehler: " + err.message); return null; }
+}
+
+async function triggerKIExtraktion(barcode, prefilledTerm = "") {
     let name = prefilledTerm || prompt("Marke und Produktname deklarieren:");
     if(!name) return;
     let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
     openView('result');
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Nutze Google Search Grounding um Fakten zu prüfen...</div></div>`;
+    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">KI Pipeline gestartet. Analysiere Spezifikationen...</div></div>`;
     
-    let promptText = `Recherchiere via Google Search die wahren Inhaltsstoffe für: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
-    let resultJson = await callGeminiAPI(promptText);
+    let promptText = `Du bist ein toxikologisches Analyse-Terminal. Ermittle die präzisen Inhaltsstoffe für das Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category strikt auf "Nahrung" oder "Kosmetik".`;
+    let resultJson = await executeKIEngine(promptText);
     if(resultJson) {
         let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
         analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: "" } }, cat, actualBarcode, true);
@@ -79,13 +132,13 @@ async function triggerGeminiTextSearch(barcode, prefilledTerm = "") {
     }
 }
 
-function processGeminiVision(file, barcode) {
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Nutze Bild und Google Search Grounding...</div></div>`;
+function processKIVision(file, barcode) {
+    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Verarbeite Bildmatrix über aktive KI...</div></div>`;
     let reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async function () {
-        let promptText = `Analysiere dieses Bild eines Produkts. Erkenne den Namen, nutze die Google Suche, um die GENAUEN Zutaten zu recherchieren. Bestimme ob es "Nahrung" oder "Kosmetik" ist. Antworte AUSSCHLIESSLICH in JSON: {"product_name": "Name", "ingredients_text": "Zutat 1...", "category": "Nahrung"}.`;
-        let resultJson = await callGeminiAPI(promptText, reader.result);
+        let promptText = `Analysiere dieses Bild. Erkenne das Produkt, ermittle die exakten Inhaltsstoffe. Antworte AUSSCHLIESSLICH im JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
+        let resultJson = await executeKIEngine(promptText, reader.result);
         if(resultJson) {
             let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
             analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, cat, barcode, true);
@@ -95,50 +148,21 @@ function processGeminiVision(file, barcode) {
     };
 }
 
-function processLocalOCR(file, productName, barcode, imgUrlFinal) {
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="status-bar st-alert">OCR Analysator aktiv...</div></div>`;
-    Tesseract.recognize(file, 'deu+eng').then(({ data: { text } }) => {
-        analyzeProduct({ product: { product_name: productName, ingredients_text: text, image_url: imgUrlFinal } }, "Optisch", barcode, true);
-    }).catch(() => { renderFallbackUI(barcode, productName); });
-}
-
-function renderSearchResults(products, categoryStr, originalTerm) {
-    let html = `
-        <div class="res-card" style="padding:15px; margin-bottom:15px;">
-            <div style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">Suche: [${escapeHTML(originalTerm)}]</div>
-            <button class="gemini-btn" style="margin:0 0 5px 0; padding:12px; font-size:12px;" onclick="triggerGeminiTextSearch('', '${escapeHTML(originalTerm)}')">🧠 KI Grounding-Suche erzwingen</button>
-        </div>`;
-    products.forEach(p => {
-        let name = p.product_name || "Unbekannt"; let img = p.image_front_small_url || p.image_url || "";
-        let imgHtml = img ? `<img src="${escapeHTML(img)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
-        let safeData = encodeURIComponent(JSON.stringify(p));
-        html += `
-        <div class="hist-item" style="margin-bottom:10px;" onclick="selectSearchResult('${escapeHTML(p.code || name)}', '${escapeHTML(categoryStr)}', '${safeData}')">
-            ${imgHtml}
-            <div class="hist-info"><div style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(name)}</div><div style="font-size:11px; color:var(--text-muted);">${escapeHTML(p.brands || 'Keine Marke')}</div></div>
-        </div>`;
-    });
-    document.getElementById('result-content').innerHTML = html;
-}
-
-function selectSearchResult(barcode, category, dataStr) {
-    analyzeProduct({status: 1, product: JSON.parse(decodeURIComponent(dataStr))}, category, barcode);
-}
-
-async function fetchDataCascade(barcode) {
-    try {
-        let resOFF = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        if(resOFF.ok) {
-            let dataOFF = await resOFF.json();
-            if(dataOFF.status === 1) { analyzeProduct(dataOFF, "Nahrung", barcode); return; }
+function executeDatabaseSearch() {
+    let term = document.getElementById('searchInput').value.trim();
+    if(!term) return;
+    openView('result');
+    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Scanne Primär-Sektoren...</div></div>`;
+    
+    fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
+    .then(r => r.json()).then(data => {
+        if(data.products && data.products.length > 0) renderSearchResults(data.products, "Nahrung", term);
+        else {
+            fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
+            .then(rb => rb.json()).then(dataB => {
+                if(dataB.products && dataB.products.length > 0) renderSearchResults(dataB.products, "Kosmetik", term);
+                else { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); }
+            });
         }
-    } catch(e) {}
-    try {
-        let resOBF = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`);
-        if(resOBF.ok) {
-            let dataOBF = await resOBF.json();
-            if(dataOBF.status === 1) { analyzeProduct(dataOBF, "Kosmetik", barcode); return; }
-        }
-    } catch(e) {}
-    renderFallbackUI(barcode);
+    }).catch(() => { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); });
 }
