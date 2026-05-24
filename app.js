@@ -161,8 +161,8 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
             <div class="res-body" style="display:flex; flex-direction:column; gap:12px;">
                 <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Objekt nicht erfasst. Befehl wählen:</p>
                 <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (OCR)</button>
-                <div style="width:100%; text-align:center; color:#555; font-size:11px; margin:5px 0;">-- OVERRIDE VIA GROUNDING ENGINE --</div>
-                <button class="gemini-btn" onclick="triggerGeminiTextSearch('${escapeHTML(barcode)}', '${escapeHTML(searchTerm)}')">🧠 2. KI: Identität eintippen</button>
+                <div style="width:100%; text-align:center; color:#555; font-size:11px; margin:5px 0;">-- OVERRIDE VIA KI ENGINE --</div>
+                <button class="gemini-btn" onclick="triggerKIExtraktion('${escapeHTML(barcode)}', '${escapeHTML(searchTerm)}')">🧠 2. KI: Name eingeben</button>
                 <div style="display:flex; gap:10px;">
                     <button class="gemini-vision-btn" style="flex:1; padding:12px;" onclick="document.getElementById('geminiVisionCamera').click()">👁️ Kamera</button>
                     <button class="gemini-vision-btn" style="flex:1; padding:12px; background:#333;" onclick="document.getElementById('geminiVisionGallery').click()">🖼️ Galerie</button>
@@ -171,8 +171,8 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
         </div>`;
         
     document.getElementById('ocrInputText').onchange = (e) => { if(e.target.files.length > 0) processLocalOCR(e.target.files[0], productName || searchTerm || "Unbekanntes Objekt", barcode, ""); };
-    document.getElementById('geminiVisionCamera').onchange = (e) => { if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); };
-    document.getElementById('geminiVisionGallery').onchange = (e) => { if(e.target.files.length > 0) processGeminiVision(e.target.files[0], barcode); };
+    document.getElementById('geminiVisionCamera').onchange = (e) => { if(e.target.files.length > 0) processKIVision(e.target.files[0], barcode); };
+    document.getElementById('geminiVisionGallery').onchange = (e) => { if(e.target.files.length > 0) processKIVision(e.target.files[0], barcode); };
 }
 
 // Boot-Sequenz & Event-Binding
@@ -187,6 +187,12 @@ Promise.all([
 }).catch(() => { if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'block'; });
 
 document.addEventListener('DOMContentLoaded', () => {
+    // CRITICAL FIX: Zuweisung des Navigations-Stack-Events für den Back-Button
+    document.getElementById('backBtn').addEventListener('click', goBack);
+
+    // CRITICAL FIX: Zuweisung des Such-Events an den Terminal-Button
+    document.getElementById('searchBtn').addEventListener('click', executeDatabaseSearch);
+
     document.getElementById('nav-home').addEventListener('click', () => openView('home'));
     document.getElementById('nav-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('nav-search').addEventListener('click', () => openView('search'));
@@ -204,10 +210,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('themeToggleCheckbox').addEventListener('change', (e) => toggleTheme(e.target));
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
+    document.getElementById('saveDeepSeekKeyBtn').addEventListener('click', saveDeepSeekKey);
     document.getElementById('resetApiCounterBtn').addEventListener('click', resetApiCounter);
     document.getElementById('startBtn').addEventListener('click', startScanner);
     document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
     document.getElementById('detailModalOverlay').addEventListener('click', closeModal);
+
+    document.getElementById('activeModelSelect').addEventListener('change', (e) => {
+        localStorage.setItem('op_active_model', e.target.value);
+    });
 
     document.getElementById('archiveImageInjectorInput').onchange = function(e) {
         if(e.target.files.length === 0 || !activeArchiveInjectBarcode) return;
