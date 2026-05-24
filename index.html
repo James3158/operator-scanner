@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Operator Terminal v13.2</title>
+    <title>Operator Terminal v13.3</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -13,7 +13,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag">SYSTEM EXECUTION V13.2 (MODULAR)</span>
+            <span class="version-tag">SYSTEM EXECUTION V13.3 (DYNAMIC CORES)</span>
         </div>
     </div>
     
@@ -52,12 +52,25 @@
                     <input type="checkbox" id="themeToggleCheckbox" style="width:20px; height:20px;">
                 </div>
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
-                <div class="sec-title">KI Fallback Modul (Gemini 3.1 Flash-Lite)</div>
-                <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Der Schlüssel wird im sandboxed Dateisystem deines Browsers lokal gesichert. Das Modell nutzt <b>Google Search Grounding</b>.</p>
-                <input type="password" id="geminiApiKey" class="std-input" placeholder="API Key eingeben..." style="margin-bottom:15px;">
-                <button class="gemini-btn" id="saveApiKeyBtn">Key Speichern</button>
+                
+                <div class="sec-title">Aktive KI Extraktions-Engine</div>
+                <select id="activeModelSelect" class="std-input" style="margin-bottom:15px;">
+                    <option value="gemini">Gemini 3.1 Flash-Lite (Grounding)</option>
+                    <option value="deepseek">DeepSeek V4 (Chat Pipeline)</option>
+                </select>
+                
+                <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
+                <div class="sec-title">Gemini API Key</div>
+                <input type="password" id="geminiApiKey" class="std-input" placeholder="Gemini Key eingeben..." style="margin-bottom:10px;">
+                <button class="gemini-btn" id="saveApiKeyBtn">Gemini Key Speichern</button>
+                
+                <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
+                <div class="sec-title">DeepSeek API Key</div>
+                <input type="password" id="deepseekApiKey" class="std-input" placeholder="DeepSeek Key eingeben..." style="margin-bottom:10px;">
+                <button class="gemini-btn" id="saveDeepSeekKeyBtn" style="background:#222; color:#fff; border:1px solid var(--border-color);">DeepSeek Key Speichern</button>
+                
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
-                <div class="sec-title">Lokaler Traffic-Monitor</div>
+                <div class="sec-title">Lokaler Traffic-Monitor (Gemini)</div>
                 <div style="font-size:24px; font-weight:900; color:var(--text-main); text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:var(--text-muted);">/ 1500 (Free RPD)</span></div>
                 <button class="action-btn" id="resetApiCounterBtn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;">Zähler Reset</button>
             </div>
