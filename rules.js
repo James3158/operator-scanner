@@ -77,9 +77,18 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     let collectedAlts = new Set();
     let contextMatch = false;
 
+    // Custom Toxine mergen
+    let effectiveBlacklist = Object.assign({}, blacklist);
+    try {
+        let customToxins = JSON.parse(localStorage.getItem('op_custom_toxins')) || {};
+        Object.keys(customToxins).forEach(key => {
+            effectiveBlacklist['custom_' + key] = customToxins[key];
+        });
+    } catch(e) {}
+
     if (ingredientsRaw.trim() !== "") {
-        for (let mainKey in blacklist) {
-            let item = blacklist[mainKey];
+        for (let mainKey in effectiveBlacklist) {
+            let item = effectiveBlacklist[mainKey];
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                 foundToxins.push(`<li class="list-toxin" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 

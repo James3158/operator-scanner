@@ -40,6 +40,16 @@
             <div class="dash-icon-lg" style="color:#ffcc00;">🗄️</div>
             <div class="dash-text"><h3>Lokal-Archiv</h3><p>Offline Matrix-Daten</p></div>
         </div>
+        <div class="dash-card" id="card-compare">
+            <div class="dash-icon-lg" style="color:#9b72cb;">⚖️</div>
+            <div class="dash-text"><h3>Produkt-Vergleich</h3><p>Side-by-Side Analyse</p></div>
+        </div>
+        <div id="stats-dashboard" class="res-card" style="margin-top:15px;">
+            <div class="status-bar st-gemini">📊 Statistik-Dashboard</div>
+            <div class="res-body" id="stats-content">
+                <p style="text-align:center;color:var(--text-muted);">Scanne Produkte, um Statistiken zu generieren.</p>
+            </div>
+        </div>
     </div>
 
     <div id="view-settings" class="view">
@@ -81,6 +91,20 @@
                 <div style="font-size:20px; font-weight:900; color:var(--text-main); text-align:center;"><span id="deepseekUsageCount">0</span> <span style="font-size:12px; color:var(--text-muted);">Calls heute (Pay-per-Token, Concurrency-Limit)</span></div>
                 
                 <button class="action-btn" id="resetApiCounterBtn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;">Zähler Reset</button>
+                
+                <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
+                <div class="sec-title">🧬 Custom Toxin-Definition</div>
+                <input type="text" id="customToxinName" class="std-input" placeholder="Toxin-Name (z.B. maltodextrin)" style="margin-bottom:8px;">
+                <input type="text" id="customToxinAliases" class="std-input" placeholder="Aliase (Komma getrennt)" style="margin-bottom:8px;">
+                <select id="customToxinSeverity" class="std-input" style="margin-bottom:8px;">
+                    <option value="high">Hoch (Neurotoxin, Karzinogen)</option>
+                    <option value="medium" selected>Mittel (Entzündung, Hormon)</option>
+                    <option value="low">Niedrig (Füllstoff, Mild)</option>
+                </select>
+                <input type="text" id="customToxinDesc" class="std-input" placeholder="Kurzbeschreibung" style="margin-bottom:8px;">
+                <textarea id="customToxinDetail" class="std-input" placeholder="Detaillierte Beschreibung..." style="height:60px; resize:vertical; margin-bottom:8px;"></textarea>
+                <button class="gemini-btn" id="addCustomToxinBtn">Toxin Hinzufügen</button>
+                <div id="customToxinList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:5px;"></div>
             </div>
         </div>
     </div>
@@ -88,12 +112,23 @@
     <div id="view-scan" class="view">
         <div id="reader"></div>
         <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button id="torchToggleBtn" class="action-btn" style="flex:1; font-size:12px; padding:12px; display:none;">🔦 Blitz Ein</button>
+            <button id="barcodePhotoBtn" class="action-btn" style="flex:1; font-size:12px; padding:12px;">📷 Barcode aus Foto</button>
+        </div>
+        <input type="file" accept="image/*" id="barcodePhotoInput" style="display:none;">
     </div>
 
     <div id="view-search" class="view">
         <div class="search-box">
             <input type="text" id="searchInput" class="std-input" placeholder="Produktidentifikation eingeben...">
             <button id="searchBtn" class="btn-search">GO</button>
+        </div>
+        <div class="sec-title" style="margin-top:20px;">⚡ Schnellbewertung (Offline)</div>
+        <textarea id="quickScanInput" class="std-input" placeholder="Zutatenliste hier einfügen für Offline-Analyse..." style="height:100px; resize:vertical; font-size:14px;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <input type="text" id="quickScanName" class="std-input" placeholder="Produktname (optional)" style="flex:1;">
+            <button id="quickScanBtn" class="btn-search" style="white-space:nowrap;">ANALYSIEREN</button>
         </div>
         <div id="search-results"></div>
     </div>
@@ -106,6 +141,10 @@
             <button id="flt-optisch" class="flt-btn">Optisch</button>
         </div>
         <button class="hist-clear-all" id="clearHistoryBtn">Gesamtes Archiv Leeren</button>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <button class="flt-btn" id="exportHistoryBtn" style="flex:1;">📤 Export JSON</button>
+            <button class="flt-btn" id="importHistoryBtn" style="flex:1;">📥 Import JSON</button>
+        </div>
         <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
@@ -113,10 +152,29 @@
         <div id="result-content"></div>
     </div>
 
+    <div id="view-compare" class="view">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div class="compare-slot" id="compareSlotA" style="flex:1;">
+                <div class="sec-title" style="text-align:center;">Produkt A</div>
+                <div class="compare-placeholder" onclick="selectCompareSlot('A')">Tippen zum Auswählen<br>aus Archiv</div>
+                <div class="compare-content" style="display:none;"></div>
+            </div>
+            <div style="display:flex; align-items:center; font-size:24px; font-weight:900; color:var(--text-muted);">VS</div>
+            <div class="compare-slot" id="compareSlotB" style="flex:1;">
+                <div class="sec-title" style="text-align:center;">Produkt B</div>
+                <div class="compare-placeholder" onclick="selectCompareSlot('B')">Tippen zum Auswählen<br>aus Archiv</div>
+                <div class="compare-content" style="display:none;"></div>
+            </div>
+        </div>
+        <button class="action-btn" id="compareRunBtn" style="display:none;">⚖️ Vergleich Ausführen</button>
+        <div id="compare-result" style="margin-top:15px;"></div>
+    </div>
+
     <input type="file" accept="image/*" id="ocrInputText" style="display:none;">
     <input type="file" accept="image/*" capture="environment" id="geminiVisionCamera" style="display:none;">
     <input type="file" accept="image/*" id="geminiVisionGallery" style="display:none;">
     <input type="file" accept="image/*" id="archiveImageInjectorInput" style="display:none;">
+    <input type="file" accept=".json,application/json" id="importHistoryInput" style="display:none;">
 
     <div id="detailModalOverlay"></div>
     <div id="detailModal" role="dialog" aria-modal="true" aria-labelledby="mod-title">

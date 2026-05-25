@@ -261,15 +261,58 @@ function executeDatabaseSearch() {
     openView('result');
     showLoading('Scanne Primär-Sektoren...');
     
-    fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
+    // Timeout nach 15s, falls API hängt
+    let controller = new AbortController();
+    let timeout = setTimeout(() => controller.abort(), 15000);
+    
+    fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`, { signal: controller.signal })
     .then(r => r.json()).then(data => {
-        if(data.products && data.products.length > 0) renderSearchResults(data.products, "Nahrung", term);
-        else {
-            fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
-            .then(rb => rb.json()).then(dataB => {
-                if(dataB.products && dataB.products.length > 0) renderSearchResults(dataB.products, "Kosmetik", term);
-                else { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); }
-            });
-        }
-    }).catch(() => { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); });
+        clearTimeout(timeout);
+        if(data.products && data.products.length > 0) { renderSearchResults(data.products, "Nahrung", term); return; }
+        // Sekundär: OpenBeautyFacts
+        showLoading('Nahrungs-DB negativ. Scanne Kosmetik-Sektor...');
+        let c2 = new AbortController();
+        let t2 = setTimeout(() => c2.abort(), 15000);
+        fetch(`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`, { signal: c2.signal })
+        .then(rb => rb.json()).then(dataB => {
+            clearTimeout(t2);
+            if(dataB.products && dataB.products.length > 0) { renderSearchResults(dataB.products, "Kosmetik", term); }
+            else { let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); }
+        }).catch(() => { clearTimeout(t2); let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); });
+    }).catch(() => { clearTimeout(timeout); let fakeId = "MANUAL-" + Date.now().toString().slice(-6); renderFallbackUI(fakeId, term, term); });
+}
+
+// Rendert Suchergebnisse als klickbare Karten
+function renderSearchResults(products, category, searchTerm) {
+    window._searchResults = products;
+    let html = products.map((p, i) => {
+        let imgUrl = p.image_url || p.image_front_small_url || '';
+        let imgHtml = imgUrl ? `<img src="${escapeHTML(imgUrl)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
+        let name = p.product_name || p.generic_name || 'Unbekanntes Objekt';
+        let brand = p.brands || '';
+        return `
+        <div class="res-card search-result-card" onclick="analyzeSearchResult(${i}, '${escapeHTML(category)}')">
+            <div class="res-header">
+                ${imgHtml}
+                <div class="res-info">
+                    <span class="res-badge">${escapeHTML(category)}</span>
+                    <h3 class="res-title">${escapeHTML(name)}</h3>
+                    ${brand ? `<div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${escapeHTML(brand)}</div>` : ''}
+                </div>
+                <div style="color:var(--text-muted); font-size:20px;">→</div>
+            </div>
+        </div>`;
+    }).join('');
+    
+    document.getElementById('result-content').innerHTML = 
+        `<div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">${products.length} Ergebnisse für "${escapeHTML(searchTerm)}"</div>` +
+        html;
+}
+
+function analyzeSearchResult(index, category) {
+    let product = window._searchResults[index];
+    if (product) {
+        let barcode = product.code || ('SEARCH-' + Date.now());
+        analyzeProduct({ product }, category, barcode, false);
+    }
 }

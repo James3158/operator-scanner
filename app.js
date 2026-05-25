@@ -67,6 +67,7 @@ function goBack() {
 function startScanner() {
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('reader').style.display = 'block';
+    document.getElementById('torchToggleBtn').style.display = 'block';
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start({ facingMode: "environment" }, { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } }, onScanSuccess).catch(() => {
         alert("Hardware-Zugriff verweigert."); goBack();
@@ -209,6 +210,291 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
     document.getElementById('geminiVisionGallery').onchange = (e) => { if(e.target.files.length > 0) processKIVision(e.target.files[0], barcode); };
 }
 
+// ─── FEATURE: Schnellbewertung Offline ───
+function executeQuickScan() {
+    let ingredients = document.getElementById('quickScanInput').value.trim();
+    if (!ingredients) { alert('Zutatenliste eingeben.'); return; }
+    let productName = document.getElementById('quickScanName').value.trim() || 'Schnellbewertung';
+    let fakeBarcode = 'QUICK-' + Date.now().toString().slice(-6);
+    openView('result');
+    analyzeProduct({ product: { product_name: productName, ingredients_text: ingredients, image_url: '' } }, 'Offline-Analyse', fakeBarcode, true);
+}
+
+// ─── FEATURE: Export / Import ───
+function exportHistory() {
+    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    if (history.length === 0) { alert('Archiv ist leer.'); return; }
+    let blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = `operator-archiv-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importHistory(file) {
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error('Ungültiges Format');
+            let existing = JSON.parse(localStorage.getItem('op_history')) || [];
+            // Mergen: Neuere Einträge überschreiben alte mit gleichem Barcode
+            let merged = [...data];
+            existing.forEach(item => {
+                if (!merged.find(m => m.barcode === item.barcode)) merged.push(item);
+            });
+            merged = merged.slice(0, 100);
+            localStorage.setItem('op_history', JSON.stringify(merged));
+            renderHistory();
+            alert(`${merged.length} Einträge importiert.`);
+        } catch (err) { alert('Import fehlgeschlagen: Ungültige JSON-Datei.'); }
+    };
+    reader.readAsText(file);
+}
+
+// ─── FEATURE: Custom Toxine ───
+function getCustomToxins() {
+    try { return JSON.parse(localStorage.getItem('op_custom_toxins')) || {}; }
+    catch(e) { return {}; }
+}
+
+function addCustomToxin() {
+    let name = document.getElementById('customToxinName').value.trim().toLowerCase();
+    let aliasesRaw = document.getElementById('customToxinAliases').value.trim();
+    let severity = document.getElementById('customToxinSeverity').value;
+    let desc = document.getElementById('customToxinDesc').value.trim();
+    let detail = document.getElementById('customToxinDetail').value.trim();
+    if (!name || !aliasesRaw) { alert('Name und Aliase erforderlich.'); return; }
+    
+    let customToxins = getCustomToxins();
+    let key = name.replace(/\s+/g, '_');
+    customToxins[key] = {
+        aliases: aliasesRaw.split(',').map(s => s.trim()).filter(Boolean),
+        severity: severity,
+        desc: desc || 'Custom Toxin',
+        detail: detail || 'Benutzerdefiniertes Toxin.'
+    };
+    localStorage.setItem('op_custom_toxins', JSON.stringify(customToxins));
+    renderCustomToxinList();
+    // Felder leeren
+    ['customToxinName','customToxinAliases','customToxinDesc','customToxinDetail'].forEach(id => document.getElementById(id).value = '');
+}
+
+function removeCustomToxin(key) {
+    let customToxins = getCustomToxins();
+    delete customToxins[key];
+    localStorage.setItem('op_custom_toxins', JSON.stringify(customToxins));
+    renderCustomToxinList();
+}
+
+function renderCustomToxinList() {
+    let customToxins = getCustomToxins();
+    let html = '';
+    for (let key in customToxins) {
+        let t = customToxins[key];
+        html += `<span class="custom-toxin-tag">${escapeHTML(key.replace(/_/g, ' '))} <button onclick="removeCustomToxin('${escapeHTML(key)}')">×</button></span>`;
+    }
+    let el = document.getElementById('customToxinList');
+    if (el) el.innerHTML = html || '<span style="color:var(--text-muted); font-size:11px;">Keine Custom-Toxine definiert.</span>';
+}
+
+// ─── FEATURE: Kamera-Blitz ───
+function toggleTorch() {
+    if (!html5QrCode) return;
+    let videoTrack = html5QrCode._html5QrcodeImpl?._videoTrack || 
+                     html5QrCode.getRunningTrack?.();
+    if (!videoTrack) {
+        // Versuche Track aus dem Video-Element zu extrahieren
+        let video = document.querySelector('#reader video');
+        if (video && video.srcObject) {
+            videoTrack = video.srcObject.getVideoTracks()[0];
+        }
+    }
+    if (!videoTrack) return;
+    let capabilities = videoTrack.getCapabilities?.() || {};
+    if (!capabilities.torch) { alert('Blitz auf diesem Gerät nicht verfügbar.'); return; }
+    let currentTorch = videoTrack.getSettings().torch || false;
+    videoTrack.applyConstraints({ advanced: [{ torch: !currentTorch }] }).then(() => {
+        document.getElementById('torchToggleBtn').innerText = currentTorch ? '🔦 Blitz Ein' : '🔦 Blitz Aus';
+    }).catch(() => alert('Blitz-Steuerung fehlgeschlagen.'));
+}
+
+// ─── FEATURE: Barcode aus Foto ───
+function processBarcodePhoto(file) {
+    showLoading('Extrahiere Barcode aus Foto...');
+    Tesseract.recognize(file, 'eng', {
+        logger: m => {
+            if (m.status === 'recognizing text') {
+                showLoading(`Barcode-Erkennung: ${Math.round(m.progress * 100)}%`);
+            }
+        }
+    }).then(({ data: { text } }) => {
+        // Suche nach Barcode-Mustern (EAN-13, UPC-A, etc.)
+        let barcodeMatch = text.match(/\b(\d{8,14})\b/g);
+        if (barcodeMatch) {
+            let barcode = barcodeMatch[0];
+            openView('result');
+            showLoading(`Barcode [${barcode}] erkannt. Rufe Daten ab...`);
+            fetchDataCascade(barcode);
+        } else {
+            // Fallback: OCR der Zutaten
+            processLocalOCR(file, 'Foto-Analyse', 'PHOTO-' + Date.now().toString().slice(-6), 'Optisch (OCR)');
+        }
+    }).catch(() => {
+        alert('Barcode-Erkennung fehlgeschlagen.');
+    });
+}
+
+// ─── FEATURE: Statistik-Dashboard ───
+function renderStats() {
+    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    if (history.length === 0) {
+        document.getElementById('stats-content').innerHTML = '<p style="text-align:center;color:var(--text-muted);">Scanne Produkte, um Statistiken zu generieren.</p>';
+        return;
+    }
+    let total = history.length;
+    let avgScore = Math.round(history.reduce((s,i) => s + i.score, 0) / total);
+    let thisWeek = history.filter(i => {
+        let d = new Date(i.date.split('.').reverse().join('-'));
+        let weekAgo = new Date(Date.now() - 7*24*60*60*1000);
+        return d > weekAgo;
+    }).length;
+    
+    // Häufigste Toxine (aus rawIngredients grob schätzen)
+    let toxinCounts = {};
+    let toxinKeys = Object.keys(blacklist);
+    history.forEach(item => {
+        let ingr = (item.rawIngredients || '').toLowerCase();
+        toxinKeys.forEach(key => {
+            let toxin = blacklist[key];
+            if (toxin.aliases.some(a => ingr.includes(a.toLowerCase()))) {
+                toxinCounts[key] = (toxinCounts[key] || 0) + 1;
+            }
+        });
+    });
+    let topToxins = Object.entries(toxinCounts).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    
+    let scoreColor = avgScore >= 80 ? 'var(--matrix-green)' : (avgScore >= 40 ? '#ffcc00' : 'var(--alert)');
+    
+    let html = `
+    <div class="stats-grid">
+        <div class="stat-item"><div class="stat-value">${total}</div><div class="stat-label">Gesamt-Scans</div></div>
+        <div class="stat-item"><div class="stat-value">${thisWeek}</div><div class="stat-label">Letzte 7 Tage</div></div>
+        <div class="stat-item"><div class="stat-value" style="color:${scoreColor};">${avgScore}</div><div class="stat-label">Ø Score</div></div>
+        <div class="stat-item"><div class="stat-value">${Object.keys(toxinCounts).length}</div><div class="stat-label">Versch. Toxine</div></div>
+    </div>`;
+    
+    if (topToxins.length > 0) {
+        let maxCount = topToxins[0][1];
+        html += '<div class="stat-bar-container"><div class="sec-title">Häufigste Toxine</div>';
+        topToxins.forEach(([key, count]) => {
+            let pct = Math.round((count/maxCount)*100);
+            html += `<div class="stat-bar-row"><span class="stat-bar-name">${escapeHTML(key)}</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%; background:var(--alert);"></div></div><span style="font-size:10px; color:var(--text-muted);">${count}</span></div>`;
+        });
+        html += '</div>';
+    }
+    
+    document.getElementById('stats-content').innerHTML = html;
+}
+
+// ─── FEATURE: Produkt-Vergleich ───
+let compareData = { A: null, B: null };
+
+function selectCompareSlot(slot) {
+    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    if (history.length === 0) { alert('Archiv ist leer. Scanne zuerst Produkte.'); return; }
+    
+    let overlay = document.getElementById('compareArchiveModal');
+    if (!overlay) {
+        // Modal dynamisch erstellen
+        overlay = document.createElement('div');
+        overlay.id = 'compareArchiveModal';
+        document.body.appendChild(overlay);
+    }
+    
+    let html = `<div id="compareArchiveList"><h3 style="color:var(--text-main); margin:0 0 15px; text-transform:uppercase; letter-spacing:1px;">Produkt für Slot ${slot} wählen</h3>`;
+    history.forEach((item, i) => {
+        let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;">NO IMG</div>`;
+        html += `<div class="hist-item" onclick="setCompareSlot('${slot}', ${i}); document.getElementById('compareArchiveModal').classList.remove('active');">
+            <div class="hist-img-container">${imgHtml}</div>
+            <div class="hist-info"><span class="res-badge">${escapeHTML(item.category)}</span><div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHTML(item.name)}</div></div>
+            <div class="hist-score" style="color:${item.score>=80?'var(--matrix-green)':(item.score>=40?'#ffcc00':'var(--alert)')}">${item.score}</div>
+        </div>`;
+    });
+    html += `<button class="action-btn" style="margin-top:10px;" onclick="document.getElementById('compareArchiveModal').classList.remove('active')">Abbrechen</button></div>`;
+    overlay.innerHTML = html;
+    overlay.classList.add('active');
+}
+
+function setCompareSlot(slot, historyIndex) {
+    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    compareData[slot] = history[historyIndex];
+    updateCompareUI();
+}
+
+function updateCompareUI() {
+    ['A','B'].forEach(slot => {
+        let data = compareData[slot];
+        let el = document.getElementById('compareSlot' + slot);
+        let placeholder = el.querySelector('.compare-placeholder');
+        let content = el.querySelector('.compare-content');
+        
+        if (data) {
+            let imgHtml = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
+            content.innerHTML = `<div class="res-header">${imgHtml}<div class="res-info"><span class="res-badge">${escapeHTML(data.category)}</span><h3 class="res-title">${escapeHTML(data.name)}</h3><div style="font-size:20px; font-weight:900; color:${data.score>=80?'var(--matrix-green)':(data.score>=40?'#ffcc00':'var(--alert)')};">${data.score}</div></div></div>`;
+            placeholder.style.display = 'none';
+            content.style.display = 'block';
+            el.classList.add('selected');
+        } else {
+            placeholder.style.display = 'flex';
+            content.style.display = 'none';
+            el.classList.remove('selected');
+        }
+    });
+    document.getElementById('compareRunBtn').style.display = (compareData.A && compareData.B) ? 'block' : 'none';
+}
+
+function runCompare() {
+    if (!compareData.A || !compareData.B) return;
+    let a = compareData.A, b = compareData.B;
+    let diff = a.score - b.score;
+    let winner = diff > 0 ? a.name : (diff < 0 ? b.name : null);
+    let diffAbs = Math.abs(diff);
+    let diffColor = diff > 0 ? 'var(--matrix-green)' : (diff < 0 ? 'var(--alert)' : '#ffcc00');
+    
+    let html = `<div class="res-card"><div class="res-body">`;
+    if (winner) {
+        html += `<div class="compare-score-diff" style="color:${diffColor}; background:${diff>0?'rgba(0,255,65,0.08)':'rgba(255,0,60,0.08)'};">
+            🏆 ${escapeHTML(winner)} ist ${diffAbs} Punkte besser
+        </div>`;
+    } else {
+        html += `<div class="compare-score-diff" style="color:#ffcc00; background:rgba(255,204,0,0.08);">⚖️ Gleichstand — beide Score ${a.score}</div>`;
+    }
+    html += `<p style="color:var(--text-muted); font-size:13px; text-align:center;">${escapeHTML(a.name)} (${a.score}) vs ${escapeHTML(b.name)} (${b.score})</p>`;
+    
+    // Zutaten-Vergleich
+    let aIng = (a.rawIngredients || '').toLowerCase();
+    let bIng = (b.rawIngredients || '').toLowerCase();
+    if (aIng && bIng) {
+        html += `<div class="sec-title">Zutaten-Vergleich</div>`;
+        html += `<p style="font-size:11px; color:var(--text-muted);"><strong>${escapeHTML(a.name)}:</strong> ${escapeHTML(a.rawIngredients.substring(0,200))}${a.rawIngredients.length>200?'…':''}</p>`;
+        html += `<p style="font-size:11px; color:var(--text-muted);"><strong>${escapeHTML(b.name)}:</strong> ${escapeHTML(b.rawIngredients.substring(0,200))}${b.rawIngredients.length>200?'…':''}</p>`;
+    }
+    html += `</div></div>`;
+    document.getElementById('compare-result').innerHTML = html;
+}
+
+// Event: Home-View rendert Stats
+let _originalOpenView = openView;
+openView = function(viewName, isBackAction) {
+    _originalOpenView(viewName, isBackAction);
+    if (viewName === 'home') renderStats();
+    if (viewName === 'settings') renderCustomToxinList();
+    if (viewName === 'compare') updateCompareUI();
+};
+
 // Boot-Sequenz & Event-Binding
 let dbTimestamp = new Date().getTime();
 Promise.all([
@@ -236,6 +522,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('card-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('card-search').addEventListener('click', () => openView('search'));
     document.getElementById('card-history').addEventListener('click', () => openView('history'));
+    document.getElementById('card-compare').addEventListener('click', () => openView('compare'));
+
+    // Quick-Scan
+    document.getElementById('quickScanBtn').addEventListener('click', executeQuickScan);
+    
+    // Export/Import
+    document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
+    document.getElementById('importHistoryBtn').addEventListener('click', () => document.getElementById('importHistoryInput').click());
+    document.getElementById('importHistoryInput').onchange = (e) => { if(e.target.files.length > 0) importHistory(e.target.files[0]); };
+    
+    // Custom Toxin
+    document.getElementById('addCustomToxinBtn').addEventListener('click', addCustomToxin);
+    
+    // Torch
+    document.getElementById('torchToggleBtn').addEventListener('click', toggleTorch);
+    
+    // Barcode aus Foto
+    document.getElementById('barcodePhotoBtn').addEventListener('click', () => document.getElementById('barcodePhotoInput').click());
+    document.getElementById('barcodePhotoInput').onchange = (e) => { if(e.target.files.length > 0) processBarcodePhoto(e.target.files[0]); };
+    
+    // Compare
+    document.getElementById('compareRunBtn').addEventListener('click', runCompare);
 
     document.getElementById('flt-alle').addEventListener('click', () => filterHistory('Alle', 'flt-alle'));
     document.getElementById('flt-nahrung').addEventListener('click', () => filterHistory('Nahrung', 'flt-nahrung'));
