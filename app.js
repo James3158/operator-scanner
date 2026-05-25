@@ -77,10 +77,44 @@ function onScanSuccess(decodedText) {
     if (html5QrCode?.isScanning) {
         html5QrCode.stop().then(() => {
             openView('result');
-            document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Analisiere Signatur [${escapeHTML(decodedText)}]...</div></div>`;
+            showLoading(`Analysiere Signatur [${escapeHTML(decodedText)}]...`);
             fetchDataCascade(decodedText);
         }).catch(() => {});
     }
+}
+
+// Zentrale Barcode-Kaskade: OpenFoodFacts → OpenBeautyFacts → Fallback
+function fetchDataCascade(barcode) {
+    // Primär: OpenFoodFacts
+    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 1 && data.product) {
+            analyzeProduct(data, "Nahrung", barcode, false);
+        } else {
+            // Sekundär: OpenBeautyFacts
+            fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
+            .then(rb => rb.json())
+            .then(dataB => {
+                if (dataB.status === 1 && dataB.product) {
+                    analyzeProduct(dataB, "Kosmetik", barcode, false);
+                } else {
+                    renderFallbackUI(barcode);
+                }
+            }).catch(() => renderFallbackUI(barcode));
+        }
+    }).catch(() => {
+        // Selbst wenn OFF down ist, BeautyFacts versuchen
+        fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
+        .then(rb => rb.json())
+        .then(dataB => {
+            if (dataB.status === 1 && dataB.product) {
+                analyzeProduct(dataB, "Kosmetik", barcode, false);
+            } else {
+                renderFallbackUI(barcode);
+            }
+        }).catch(() => renderFallbackUI(barcode));
+    });
 }
 
 function triggerArchiveImageInject(event, barcode) {
@@ -147,7 +181,7 @@ function renderHistory() {
 
 function loadFromArchive(barcode) {
     openView('result');
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Lade Archiv...</div></div>`;
+    showLoading('Lade Archiv...');
     let history = JSON.parse(localStorage.getItem('op_history')) || [];
     let item = history.find(i => i.barcode === barcode);
     if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
@@ -211,10 +245,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('themeToggleCheckbox').addEventListener('change', (e) => toggleTheme(e.target));
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
     document.getElementById('saveDeepSeekKeyBtn').addEventListener('click', saveDeepSeekKey);
+    document.getElementById('clearGeminiKeyBtn').addEventListener('click', clearGeminiKey);
+    document.getElementById('clearDeepSeekKeyBtn').addEventListener('click', clearDeepSeekKey);
     document.getElementById('resetApiCounterBtn').addEventListener('click', resetApiCounter);
     document.getElementById('startBtn').addEventListener('click', startScanner);
     document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
     document.getElementById('detailModalOverlay').addEventListener('click', closeModal);
+    
+    // KI Modal
+    document.getElementById('kiModalConfirm').addEventListener('click', confirmKIInputModal);
+    document.getElementById('kiModalCancel').addEventListener('click', cancelKIInputModal);
+    document.getElementById('kiModalOverlay').addEventListener('click', cancelKIInputModal);
+    document.getElementById('kiModalInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmKIInputModal();
+        if (e.key === 'Escape') cancelKIInputModal();
+    });
+    
+    // Globale Escape-Taste für Modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (document.getElementById('kiModalBox').classList.contains('active')) cancelKIInputModal();
+            if (document.getElementById('detailModalOverlay').style.display === 'block') closeModal();
+        }
+    });
+    
+    // Keyboard-Navigation: Enter auf Nav-Items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') item.click();
+        });
+    });
 
     document.getElementById('activeModelSelect').addEventListener('change', (e) => {
         localStorage.setItem('op_active_model', e.target.value);

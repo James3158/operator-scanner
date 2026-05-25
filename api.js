@@ -18,17 +18,93 @@ function incrementApiCounter() {
 
 function resetApiCounter() {
     localStorage.setItem('op_api_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
+    localStorage.setItem('op_deepseek_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
     checkApiCounter();
+    checkDeepSeekCounter();
+}
+
+// DeepSeek Counter: DeepSeek hat KEIN tägliches Free-Limit wie Gemini (1500 RPD),
+// sondern arbeitet mit Concurrency-Limits & Pay-per-Token. Der Counter dient
+// hier nur zur Transparenz für den Nutzer.
+function checkDeepSeekCounter() {
+    let date = new Date().toLocaleDateString();
+    let usageObj = JSON.parse(localStorage.getItem('op_deepseek_usage')) || { date: date, count: 0 };
+    if(usageObj.date !== date) usageObj = { date: date, count: 0 };
+    if(document.getElementById('deepseekUsageCount')) document.getElementById('deepseekUsageCount').innerText = usageObj.count;
+    localStorage.setItem('op_deepseek_usage', JSON.stringify(usageObj));
+    return usageObj.count;
+}
+
+function incrementDeepSeekCounter() {
+    let date = new Date().toLocaleDateString();
+    let usageObj = JSON.parse(localStorage.getItem('op_deepseek_usage')) || { date: date, count: 0 };
+    if(usageObj.date !== date) usageObj = { date: date, count: 0 };
+    usageObj.count += 1;
+    localStorage.setItem('op_deepseek_usage', JSON.stringify(usageObj));
+    if (document.getElementById('deepseekUsageCount')) document.getElementById('deepseekUsageCount').innerText = usageObj.count;
+}
+
+// Zentraler Lade-Spinner
+function showLoading(message) {
+    let el = document.getElementById('result-content');
+    if (el) el.innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">
+        <div class="spinner"></div>
+        <p style="margin-top:15px; color:var(--text-muted); font-size:14px;">${message}</p>
+    </div></div>`;
+}
+
+// Modales Eingabefeld als prompt()-Ersatz
+let _kiModalResolve = null;
+
+function showKIInputModal(barcode, prefilledTerm) {
+    return new Promise((resolve) => {
+        _kiModalResolve = resolve;
+        document.getElementById('kiModalInput').value = prefilledTerm || '';
+        document.getElementById('kiModalOverlay').style.display = 'block';
+        document.getElementById('kiModalBox').classList.add('active');
+        document.getElementById('kiModalInput').focus();
+    });
+}
+
+function confirmKIInputModal() {
+    let val = document.getElementById('kiModalInput').value.trim();
+    document.getElementById('kiModalOverlay').style.display = 'none';
+    document.getElementById('kiModalBox').classList.remove('active');
+    if (_kiModalResolve) { _kiModalResolve(val); _kiModalResolve = null; }
+}
+
+function cancelKIInputModal() {
+    document.getElementById('kiModalOverlay').style.display = 'none';
+    document.getElementById('kiModalBox').classList.remove('active');
+    if (_kiModalResolve) { _kiModalResolve(''); _kiModalResolve = null; }
 }
 
 function saveApiKey() {
     let key = document.getElementById('geminiApiKey').value.trim();
-    if(key) { localStorage.setItem('op_gemini_key', key); alert('Gemini Key im sandboxed Container abgelegt.'); }
+    if(key) { 
+        localStorage.setItem('op_gemini_key', key); 
+        document.getElementById('keyWarningGemini').style.display = 'block';
+        setTimeout(() => { document.getElementById('keyWarningGemini').style.display = 'none'; }, 4000);
+    }
 }
 
 function saveDeepSeekKey() {
     let key = document.getElementById('deepseekApiKey').value.trim();
-    if(key) { localStorage.setItem('op_deepseek_key', key); alert('DeepSeek Key im sandboxed Container abgelegt.'); }
+    if(key) { 
+        localStorage.setItem('op_deepseek_key', key); 
+        document.getElementById('keyWarningDeepSeek').style.display = 'block';
+        setTimeout(() => { document.getElementById('keyWarningDeepSeek').style.display = 'none'; }, 4000);
+    }
+}
+
+function clearGeminiKey() {
+    localStorage.removeItem('op_gemini_key');
+    document.getElementById('geminiApiKey').value = '';
+}
+
+function clearDeepSeekKey() {
+    localStorage.removeItem('op_deepseek_key');
+    document.getElementById('deepseekApiKey').value = '';
 }
 
 function loadSettings() {
@@ -38,6 +114,7 @@ function loadSettings() {
         document.getElementById('activeModelSelect').value = localStorage.getItem('op_active_model');
     }
     checkApiCounter();
+    checkDeepSeekCounter();
 }
 
 // Nativer Core-Wechsler für KI-Abfragen
@@ -95,6 +172,7 @@ async function callDeepSeekAPI(prompt, base64Image = null) {
     }
 
     try {
+        incrementDeepSeekCounter();
         let response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: 'POST',
             headers: {
@@ -116,11 +194,11 @@ async function callDeepSeekAPI(prompt, base64Image = null) {
 }
 
 async function triggerKIExtraktion(barcode, prefilledTerm = "") {
-    let name = prefilledTerm || prompt("Marke und Produktname deklarieren:");
+    let name = prefilledTerm || await showKIInputModal(barcode, '');
     if(!name) return;
     let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
     openView('result');
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">KI Pipeline gestartet. Analysiere Spezifikationen...</div></div>`;
+    showLoading('KI Pipeline gestartet. Analysiere Spezifikationen...');
     
     let promptText = `Du bist ein toxikologisches Analyse-Terminal. Ermittle die präzisen Inhaltsstoffe für das Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category strikt auf "Nahrung" oder "Kosmetik".`;
     let resultJson = await executeKIEngine(promptText);
@@ -133,7 +211,7 @@ async function triggerKIExtraktion(barcode, prefilledTerm = "") {
 }
 
 function processKIVision(file, barcode) {
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Verarbeite Bildmatrix über aktive KI...</div></div>`;
+    showLoading('Verarbeite Bildmatrix über aktive KI...');
     let reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async function () {
@@ -148,11 +226,40 @@ function processKIVision(file, barcode) {
     };
 }
 
+// Offline OCR-Pipeline via Tesseract.js — extrahiert Zutatenliste aus Produktfotos
+function processLocalOCR(file, productName, barcode, category) {
+    showLoading('Optische Texterkennung gestartet...');
+    Tesseract.recognize(
+        file,
+        'deu+eng',  // Deutsch + Englisch
+        { logger: m => {
+            if (m.status === 'recognizing text') {
+                let progress = Math.round(m.progress * 100);
+                showLoading(`OCR Fortschritt: ${progress}%`);
+            }
+        }}
+    ).then(({ data: { text } }) => {
+        if (!text || text.trim().length < 5) {
+            renderFallbackUI(barcode, productName);
+            return;
+        }
+        analyzeProduct({ 
+            product: { 
+                product_name: productName, 
+                ingredients_text: text,
+                image_url: "" 
+            } 
+        }, category || "Optisch (OCR)", barcode, true);
+    }).catch(() => {
+        renderFallbackUI(barcode, productName);
+    });
+}
+
 function executeDatabaseSearch() {
     let term = document.getElementById('searchInput').value.trim();
     if(!term) return;
     openView('result');
-    document.getElementById('result-content').innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">Scanne Primär-Sektoren...</div></div>`;
+    showLoading('Scanne Primär-Sektoren...');
     
     fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=15`)
     .then(r => r.json()).then(data => {

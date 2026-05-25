@@ -22,6 +22,22 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: background-color 0.2s, border-color 0.2s; }
 
+/* Accessibility: Focus-Indikator */
+:focus-visible {
+    outline: 2px solid var(--matrix-green);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+button:focus-visible, .nav-item:focus-visible, .dash-card:focus-visible, .hist-item:focus-visible {
+    outline: 2px solid var(--matrix-green);
+    outline-offset: 2px;
+}
+input:focus-visible, select:focus-visible {
+    outline: none;
+    border-color: var(--matrix-green) !important;
+    box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.3);
+}
+
 body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
 
 .header-container { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 450px; margin-bottom: 25px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; min-height: 50px; }
@@ -113,3 +129,68 @@ body { background-color: var(--bg-color); color: var(--text-main); font-family: 
 
 .gemini-btn { background: var(--gemini-blue); color: #fff; margin-top: 10px; border:none; padding:15px; border-radius:12px; font-weight:800; width:100%; cursor:pointer; text-transform:uppercase; letter-spacing:1px; }
 .gemini-vision-btn { background: #9b72cb; color: #fff; margin-top: 10px; border:none; padding:15px; border-radius:12px; font-weight:800; width:100%; cursor:pointer; text-transform:uppercase; letter-spacing:1px; }
+
+/* Lade-Spinner */
+.spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--matrix-green);
+    border-radius: 50%;
+    margin: 0 auto;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* KI Modal (Eingabe-Dialog) */
+#kiModalOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); z-index: 10000; display: none;
+}
+#kiModalBox {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: calc(100% - 40px); max-width: 400px;
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); padding: 25px 20px;
+    z-index: 10001; display: none; opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+#kiModalBox.active {
+    display: block; opacity: 1; transform: translate(-50%, -50%) scale(1);
+}
+#kiModalBox h3 {
+    color: var(--text-main); margin: 0 0 15px 0;
+    font-size: 16px; text-transform: uppercase; letter-spacing: 1px;
+}
+#kiModalInput {
+    width: 100%; padding: 14px; border-radius: 10px;
+    border: 1px solid var(--border-color); background: var(--bg-color);
+    color: var(--text-main); font-size: 16px; margin-bottom: 15px;
+    outline: none; transition: border-color 0.2s;
+}
+#kiModalInput:focus { border-color: var(--matrix-green); }
+.ki-modal-actions { display: flex; gap: 10px; }
+.ki-modal-actions button { 
+    flex: 1; padding: 12px; border-radius: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+    border: none; font-size: 14px;
+}
+.ki-modal-confirm { background: var(--matrix-green); color: #000; }
+.ki-modal-cancel { background: var(--border-color); color: var(--text-main); }
+
+/* Security Warnings */
+.key-warning {
+    display: none; background: rgba(255, 0, 60, 0.12); color: var(--alert);
+    border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px;
+    padding: 10px 14px; margin-top: 10px; font-size: 11px;
+    font-weight: 600; text-align: center; animation: fadeIn 0.3s ease;
+}
+.key-clear-btn {
+    background: transparent; color: var(--alert); border: 1px solid rgba(255, 0, 60, 0.3);
+    border-radius: 8px; padding: 8px 14px; font-size: 11px; font-weight: 800;
+    cursor: pointer; margin-top: 8px; text-transform: uppercase; letter-spacing: 1px;
+}
+.key-clear-btn:active { background: rgba(255, 0, 60, 0.1); }

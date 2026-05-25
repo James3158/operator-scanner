@@ -17,14 +17,14 @@
         </div>
     </div>
     
-    <div id="db-status">SYSTEMFEHLER: JSON DATENSTRUKTUR DEFEKT.</div>
+    <div id="db-status">⚠️ DATENBANKEN KONNTEN NICHT GELADEN WERDEN. ANALYSE-FUNKTIONEN EINGESCHRÄNKT.</div>
 
-    <div class="glass-nav">
-        <div class="nav-item active" id="nav-home"><div class="nav-icon">🌐</div><span>Home</span></div>
-        <div class="nav-item" id="nav-scan"><div class="nav-icon">👁️</div><span>Sensor</span></div>
-        <div class="nav-item" id="nav-search"><div class="nav-icon">⌨️</div><span>Suche</span></div>
-        <div class="nav-item" id="nav-history"><div class="nav-icon">🗄️</div><span>Archiv</span></div>
-        <div class="nav-item" id="nav-settings"><div class="nav-icon">⚙️</div><span>Config</span></div>
+    <div class="glass-nav" role="navigation" aria-label="Hauptmenü">
+        <div class="nav-item active" id="nav-home" role="button" aria-label="Home" tabindex="0"><div class="nav-icon" aria-hidden="true">🌐</div><span>Home</span></div>
+        <div class="nav-item" id="nav-scan" role="button" aria-label="Sensor" tabindex="0"><div class="nav-icon" aria-hidden="true">👁️</div><span>Sensor</span></div>
+        <div class="nav-item" id="nav-search" role="button" aria-label="Suche" tabindex="0"><div class="nav-icon" aria-hidden="true">⌨️</div><span>Suche</span></div>
+        <div class="nav-item" id="nav-history" role="button" aria-label="Archiv" tabindex="0"><div class="nav-icon" aria-hidden="true">🗄️</div><span>Archiv</span></div>
+        <div class="nav-item" id="nav-settings" role="button" aria-label="Config" tabindex="0"><div class="nav-icon" aria-hidden="true">⚙️</div><span>Config</span></div>
     </div>
 
     <div id="view-home" class="view active">
@@ -61,17 +61,25 @@
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
                 <div class="sec-title">Gemini API Key</div>
-                <input type="password" id="geminiApiKey" class="std-input" placeholder="Gemini Key eingeben..." style="margin-bottom:10px;">
+                <input type="password" id="geminiApiKey" class="std-input" placeholder="Gemini Key eingeben..." style="margin-bottom:10px;" autocomplete="off">
                 <button class="gemini-btn" id="saveApiKeyBtn">Gemini Key Speichern</button>
+                <button class="key-clear-btn" id="clearGeminiKeyBtn" style="margin-left:5px;">Key Löschen</button>
+                <div id="keyWarningGemini" class="key-warning">⚠️ Key wird lokal im Browser gespeichert. Niemals auf geteilten Geräten nutzen.</div>
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
                 <div class="sec-title">DeepSeek API Key</div>
-                <input type="password" id="deepseekApiKey" class="std-input" placeholder="DeepSeek Key eingeben..." style="margin-bottom:10px;">
+                <input type="password" id="deepseekApiKey" class="std-input" placeholder="DeepSeek Key eingeben..." style="margin-bottom:10px;" autocomplete="off">
                 <button class="gemini-btn" id="saveDeepSeekKeyBtn" style="background:#222; color:#fff; border:1px solid var(--border-color);">DeepSeek Key Speichern</button>
+                <button class="key-clear-btn" id="clearDeepSeekKeyBtn" style="margin-left:5px;">Key Löschen</button>
+                <div id="keyWarningDeepSeek" class="key-warning">⚠️ Key wird lokal im Browser gespeichert. Niemals auf geteilten Geräten nutzen.</div>
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
                 <div class="sec-title">Lokaler Traffic-Monitor (Gemini)</div>
                 <div style="font-size:24px; font-weight:900; color:var(--text-main); text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:var(--text-muted);">/ 1500 (Free RPD)</span></div>
+                
+                <div class="sec-title" style="margin-top:15px;">Traffic-Monitor (DeepSeek)</div>
+                <div style="font-size:20px; font-weight:900; color:var(--text-main); text-align:center;"><span id="deepseekUsageCount">0</span> <span style="font-size:12px; color:var(--text-muted);">Calls heute (Pay-per-Token, Concurrency-Limit)</span></div>
+                
                 <button class="action-btn" id="resetApiCounterBtn" style="background:#222; color:#fff; margin-top:15px; font-size:12px;">Zähler Reset</button>
             </div>
         </div>
@@ -111,11 +119,22 @@
     <input type="file" accept="image/*" id="archiveImageInjectorInput" style="display:none;">
 
     <div id="detailModalOverlay"></div>
-    <div id="detailModal">
+    <div id="detailModal" role="dialog" aria-modal="true" aria-labelledby="mod-title">
         <div class="modal-handle"></div>
         <h3 id="mod-title">Toxin</h3>
         <p id="mod-desc">Kategorie</p>
         <p id="mod-detail">Detailbeschreibung...</p>
+    </div>
+
+    <!-- KI Eingabe-Modal (prompt()-Ersatz) -->
+    <div id="kiModalOverlay"></div>
+    <div id="kiModalBox" role="dialog" aria-modal="true" aria-label="Produktname eingeben">
+        <h3>Produktidentifikation</h3>
+        <input type="text" id="kiModalInput" placeholder="Marke & Produktname..." autocomplete="off">
+        <div class="ki-modal-actions">
+            <button class="ki-modal-cancel" id="kiModalCancel">Abbrechen</button>
+            <button class="ki-modal-confirm" id="kiModalConfirm">Analysieren</button>
+        </div>
     </div>
 
     <script src="rules.js"></script>

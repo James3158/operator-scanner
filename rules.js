@@ -43,18 +43,18 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function matchIngredient(text, alias) {
+function matchIngredient(text, alias, itemPattern) {
+    // Wenn ein explizites Regex-Pattern in der JSON definiert ist, nutze dieses
+    if (itemPattern) {
+        return (new RegExp(itemPattern, 'i')).test(text);
+    }
     let cleanAlias = alias.toLowerCase().trim();
+    // Prefix-Match: Alias endet mit '-' → matcht alle Wörter die so beginnen
     if (cleanAlias.endsWith('-')) {
         let prefix = cleanAlias.slice(0, -1);
         return (new RegExp('\\b' + escapeRegExp(prefix) + '-', 'i')).test(text) || (new RegExp('\\b' + escapeRegExp(prefix) + '\\b', 'i')).test(text);
     }
-    if (cleanAlias === 'palm') {
-        return (new RegExp('\\bpalm(öl|fett|oil|fat)?\\b', 'i')).test(text);
-    }
-    if (cleanAlias === 'aroma') {
-        return (new RegExp('\\b(artfremdes|künstliches|natürliches)?aroma(ta)?\\b', 'i')).test(text);
-    }
+    // Standard: ganzes Wort
     return (new RegExp('\\b' + escapeRegExp(cleanAlias) + '\\b', 'i')).test(text);
 }
 
@@ -72,16 +72,18 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     }
 
     let foundToxins = [], foundGood = [], score = 100;
+    // Severity-Gewichtung: high=-30, medium=-20, low=-10
+    const severityPenalty = { high: 30, medium: 20, low: 10 };
     let collectedAlts = new Set();
     let contextMatch = false;
 
     if (ingredientsRaw.trim() !== "") {
         for (let mainKey in blacklist) {
             let item = blacklist[mainKey];
-            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
+            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                 foundToxins.push(`<li class="list-toxin" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                score -= 25;
+                score -= (severityPenalty[item.severity] || 20);
                 if (!contextMatch) {
                     for (let key in fallbackAlternatives) {
                         if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
@@ -91,7 +93,7 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
         for (let mainKey in whitelist) {
             let item = whitelist[mainKey];
-            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias))) {
+            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
                 foundGood.push(`<li class="list-good" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', false)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
                 score += 5;
@@ -115,8 +117,9 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     }
 
-    if (foundToxins.length > 0) { score = Math.min(score, 50); } 
-    else { score = Math.max(0, Math.min(100, score)); }
+    // Score floor = 0, cap = 100
+    score = Math.max(0, Math.min(100, score));
+    if (foundToxins.length > 0 && score > 50) { score = 50; }
 
     let suggestedAltsHtml = [];
     collectedAlts.forEach(alt => {
