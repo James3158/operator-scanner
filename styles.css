@@ -188,10 +188,24 @@ body { background-color: var(--bg-color); color: var(--text-main); font-family: 
 
 /* Security Warnings */
 .key-warning {
-    display: none; background: rgba(255, 0, 60, 0.12); color: var(--alert);
-    border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px;
+    display: none; background: rgba(0, 255, 65, 0.08); color: var(--matrix-green);
+    border: 1px solid rgba(0, 255, 65, 0.28); border-radius: 8px;
     padding: 10px 14px; margin-top: 10px; font-size: 11px;
     font-weight: 600; text-align: center; animation: fadeIn 0.3s ease;
+}
+.key-mode-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+.key-mode-box .toggle-container { margin-top: 0; }
+.key-mode-box p {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+    margin: 8px 2px 0;
 }
 .key-clear-btn {
     background: transparent; color: var(--alert); border: 1px solid rgba(255, 0, 60, 0.3);

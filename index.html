@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Operator Terminal v13.3</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <div class="header-container">
@@ -68,20 +68,27 @@
                     <option value="gemini">Gemini 3.1 Flash-Lite (Grounding)</option>
                     <option value="deepseek">DeepSeek V4 (Chat Pipeline)</option>
                 </select>
+                <div class="key-mode-box">
+                    <label class="toggle-container" for="sessionKeyToggle">
+                        <span>Keys für diese Browser-Sitzung merken</span>
+                        <input type="checkbox" id="sessionKeyToggle" style="width:20px; height:20px;">
+                    </label>
+                    <p>Ohne Backend sind API-Keys im Browser nie vollständig geheim. Diese App speichert Keys standardmäßig nur im Arbeitsspeicher; mit aktivierter Sitzung bleiben sie bis zum Schließen des Tabs in sessionStorage.</p>
+                </div>
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
                 <div class="sec-title">Gemini API Key</div>
                 <input type="password" id="geminiApiKey" class="std-input" placeholder="Gemini Key eingeben..." style="margin-bottom:10px;" autocomplete="off">
-                <button class="gemini-btn" id="saveApiKeyBtn">Gemini Key Speichern</button>
+                <button class="gemini-btn" id="saveApiKeyBtn">Gemini Key Aktivieren</button>
                 <button class="key-clear-btn" id="clearGeminiKeyBtn" style="margin-left:5px;">Key Löschen</button>
-                <div id="keyWarningGemini" class="key-warning">⚠️ Key wird lokal im Browser gespeichert. Niemals auf geteilten Geräten nutzen.</div>
+                <div id="keyWarningGemini" class="key-warning">Gemini Key aktiv. Er wurde nicht dauerhaft im Browser gespeichert.</div>
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
                 <div class="sec-title">DeepSeek API Key</div>
                 <input type="password" id="deepseekApiKey" class="std-input" placeholder="DeepSeek Key eingeben..." style="margin-bottom:10px;" autocomplete="off">
-                <button class="gemini-btn" id="saveDeepSeekKeyBtn" style="background:#222; color:#fff; border:1px solid var(--border-color);">DeepSeek Key Speichern</button>
+                <button class="gemini-btn" id="saveDeepSeekKeyBtn" style="background:#222; color:#fff; border:1px solid var(--border-color);">DeepSeek Key Aktivieren</button>
                 <button class="key-clear-btn" id="clearDeepSeekKeyBtn" style="margin-left:5px;">Key Löschen</button>
-                <div id="keyWarningDeepSeek" class="key-warning">⚠️ Key wird lokal im Browser gespeichert. Niemals auf geteilten Geräten nutzen.</div>
+                <div id="keyWarningDeepSeek" class="key-warning">DeepSeek Key aktiv. Er wurde nicht dauerhaft im Browser gespeichert.</div>
                 
                 <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
                 <div class="sec-title">Lokaler Traffic-Monitor (Gemini)</div>

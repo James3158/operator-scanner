@@ -39,32 +39,125 @@ function escapeHTML(str) {
     return str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
 }
 
+function jsArg(value) {
+    return escapeHTML(JSON.stringify(String(value || '')));
+}
+
+function readJsonStorage(key, fallback) {
+    try {
+        let parsed = JSON.parse(localStorage.getItem(key));
+        return parsed === null ? fallback : parsed;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function writeJsonStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function normalizeText(str) {
+    return String(str || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[’`´]/g, "'")
+        .toLowerCase();
+}
+
+function normalizeIngredientText(str) {
+    return normalizeText(str)
+        .replace(/[_/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function isSafeImageUrl(url) {
+    if (!url) return false;
+    let val = String(url);
+    return /^https?:\/\//i.test(val) || /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val);
+}
+
+function getDisplayDate(isoDate) {
+    let d = isoDate ? new Date(isoDate) : new Date();
+    if (Number.isNaN(d.getTime())) d = new Date();
+    return d.toLocaleDateString('de-DE');
+}
+
+function normalizeHistoryItem(item) {
+    if (!item || typeof item !== 'object') return null;
+    let barcode = String(item.barcode || '').slice(0, 80);
+    if (!barcode) return null;
+    let category = ['Nahrung', 'Kosmetik', 'Optisch'].includes(item.category) ? item.category : 'Optisch';
+    let score = Number.parseInt(item.score, 10);
+    if (Number.isNaN(score)) score = 0;
+    let dateIso = item.dateIso || item.date || new Date().toISOString();
+    return {
+        barcode,
+        name: String(item.name || 'Unbekanntes Objekt').slice(0, 180),
+        score: Math.max(0, Math.min(100, score)),
+        category,
+        rawIngredients: String(item.rawIngredients || '').slice(0, 20000),
+        imageUrl: isSafeImageUrl(item.imageUrl) ? String(item.imageUrl) : '',
+        date: getDisplayDate(dateIso),
+        dateIso
+    };
+}
+
+function getHistory() {
+    let raw = readJsonStorage('op_history', []);
+    if (!Array.isArray(raw)) return [];
+    return raw.map(normalizeHistoryItem).filter(Boolean).slice(0, 100);
+}
+
+function saveHistory(history) {
+    return writeJsonStorage('op_history', history.map(normalizeHistoryItem).filter(Boolean).slice(0, 100));
+}
+
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function hasUnicodeBoundary(text, token) {
+    let pattern = new RegExp('(^|[^\\p{L}\\p{N}])' + escapeRegExp(token) + '(?=$|[^\\p{L}\\p{N}])', 'iu');
+    return pattern.test(text);
 }
 
 function matchIngredient(text, alias, itemPattern) {
     // Wenn ein explizites Regex-Pattern in der JSON definiert ist, nutze dieses
     if (itemPattern) {
-        return (new RegExp(itemPattern, 'i')).test(text);
+        try {
+            return (new RegExp(itemPattern, 'iu')).test(text);
+        } catch (e) {
+            return false;
+        }
     }
-    let cleanAlias = alias.toLowerCase().trim();
+    let cleanText = normalizeIngredientText(text);
+    let cleanAlias = normalizeIngredientText(alias);
+    if (!cleanAlias) return false;
     // Prefix-Match: Alias endet mit '-' → matcht alle Wörter die so beginnen
     if (cleanAlias.endsWith('-')) {
         let prefix = cleanAlias.slice(0, -1);
-        return (new RegExp('\\b' + escapeRegExp(prefix) + '-', 'i')).test(text) || (new RegExp('\\b' + escapeRegExp(prefix) + '\\b', 'i')).test(text);
+        return hasUnicodeBoundary(cleanText, prefix) || new RegExp('(^|[^\\p{L}\\p{N}])' + escapeRegExp(prefix) + '-', 'iu').test(cleanText);
     }
-    // Standard: ganzes Wort
-    return (new RegExp('\\b' + escapeRegExp(cleanAlias) + '\\b', 'i')).test(text);
+    return hasUnicodeBoundary(cleanText, cleanAlias);
 }
 
 function analyzeProduct(data, category, barcode, isExtracted = false) {
-    if(!dbActive) return;
+    if (!data || !data.product) {
+        renderFallbackUI(barcode);
+        return;
+    }
     let p = data.product;
-    let imgUrlFinal = p.image_url || p.image_front_small_url || "";
-    let ingredientsRaw = [p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""].join(" ").toLowerCase();
+    let imgUrlFinal = isSafeImageUrl(p.image_url || p.image_front_small_url || "") ? (p.image_url || p.image_front_small_url || "") : "";
+    let ingredientsRawOriginal = [p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""].join(" ");
+    let ingredientsRaw = normalizeIngredientText(ingredientsRawOriginal);
     let productName = p.product_name || "Unbekanntes Objekt";
-    let productContext = (productName + " " + (p.categories || "")).toLowerCase();
+    let productContext = normalizeIngredientText(productName + " " + (p.categories || ""));
     let imageHtml = imgUrlFinal ? `<img src="${escapeHTML(imgUrlFinal)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;">NO IMG</div>`;
     
     if (ingredientsRaw.trim() === "" && !isExtracted && !category.includes("Suche")) {
@@ -80,7 +173,7 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     // Custom Toxine mergen
     let effectiveBlacklist = Object.assign({}, blacklist);
     try {
-        let customToxins = JSON.parse(localStorage.getItem('op_custom_toxins')) || {};
+        let customToxins = readJsonStorage('op_custom_toxins', {});
         Object.keys(customToxins).forEach(key => {
             effectiveBlacklist['custom_' + key] = customToxins[key];
         });
@@ -89,9 +182,9 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (ingredientsRaw.trim() !== "") {
         for (let mainKey in effectiveBlacklist) {
             let item = effectiveBlacklist[mainKey];
+            if (!item || !Array.isArray(item.aliases)) continue;
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
-                let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
-                foundToxins.push(`<li class="list-toxin" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
+                foundToxins.push(`<li class="list-toxin" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
                 score -= (severityPenalty[item.severity] || 20);
                 if (!contextMatch) {
                     for (let key in fallbackAlternatives) {
@@ -102,9 +195,9 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
         for (let mainKey in whitelist) {
             let item = whitelist[mainKey];
+            if (!item || !Array.isArray(item.aliases)) continue;
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
-                let safeDesc = item.desc.replace(/'/g, "\\'"); let safeDetail = item.detail.replace(/'/g, "\\'");
-                foundGood.push(`<li class="list-good" onclick="openModal('${escapeHTML(mainKey.toUpperCase())}', '${escapeHTML(safeDesc)}', '${escapeHTML(safeDetail)}', false)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
+                foundGood.push(`<li class="list-good" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, false)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
                 score += 5;
             }
         }
@@ -134,8 +227,7 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     collectedAlts.forEach(alt => {
         let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => alt.toLowerCase().includes(k));
         if (lookupKey) {
-            let safeDetail = alternativeDeepDiveMatrix[lookupKey].replace(/'/g, "\\'");
-            suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal('${escapeHTML(alt.toUpperCase())}', 'BIOLOGISCHER SCHUTZSCHILD', '${escapeHTML(safeDetail)}', false)">${escapeHTML(alt)}</li>`);
+            suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal(${jsArg(alt.toUpperCase())}, 'BIOLOGISCHER SCHUTZSCHILD', ${jsArg(alternativeDeepDiveMatrix[lookupKey])}, false)">${escapeHTML(alt)}</li>`);
         } else {
             suggestedAltsHtml.push(`<li>${escapeHTML(alt)}</li>`);
         }
@@ -158,6 +250,6 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
     if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
     
-    resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRaw)}</div></div></div>`;
+    resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRawOriginal || ingredientsRaw)}</div></div></div>`;
     document.getElementById('result-content').innerHTML = resultHtml;
 }

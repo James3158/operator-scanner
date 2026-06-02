@@ -3,6 +3,17 @@ let currentHistoryFilter = 'Alle';
 let viewStack = ['home']; 
 let activeArchiveInjectBarcode = "";
 
+function fetchJsonWithTimeout(url, timeoutMs = 15000) {
+    let controller = new AbortController();
+    let timeout = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { signal: controller.signal })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .finally(() => clearTimeout(timeout));
+}
+
 function toggleTheme(checkbox) {
     if (checkbox.checked) {
         document.documentElement.classList.add('light-theme');
@@ -70,7 +81,10 @@ function startScanner() {
     document.getElementById('torchToggleBtn').style.display = 'block';
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start({ facingMode: "environment" }, { fps: 20, useBarCodeDetectorIfSupported: true, videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } }, onScanSuccess).catch(() => {
-        alert("Hardware-Zugriff verweigert."); goBack();
+        document.getElementById('startBtn').style.display = 'block';
+        document.getElementById('reader').style.display = 'none';
+        document.getElementById('torchToggleBtn').style.display = 'none';
+        alert("Hardware-Zugriff verweigert.");
     });
 }
 
@@ -87,15 +101,13 @@ function onScanSuccess(decodedText) {
 // Zentrale Barcode-Kaskade: OpenFoodFacts → OpenBeautyFacts → Fallback
 function fetchDataCascade(barcode) {
     // Primär: OpenFoodFacts
-    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-    .then(r => r.json())
+    fetchJsonWithTimeout(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
     .then(data => {
         if (data.status === 1 && data.product) {
             analyzeProduct(data, "Nahrung", barcode, false);
         } else {
             // Sekundär: OpenBeautyFacts
-            fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-            .then(rb => rb.json())
+            fetchJsonWithTimeout(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
             .then(dataB => {
                 if (dataB.status === 1 && dataB.product) {
                     analyzeProduct(dataB, "Kosmetik", barcode, false);
@@ -106,8 +118,7 @@ function fetchDataCascade(barcode) {
         }
     }).catch(() => {
         // Selbst wenn OFF down ist, BeautyFacts versuchen
-        fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-        .then(rb => rb.json())
+        fetchJsonWithTimeout(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
         .then(dataB => {
             if (dataB.status === 1 && dataB.product) {
                 analyzeProduct(dataB, "Kosmetik", barcode, false);
@@ -125,14 +136,14 @@ function triggerArchiveImageInject(event, barcode) {
 }
 
 function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     history = history.filter(item => item.barcode !== barcode);
     let mainCategory = "Nahrung";
     if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
     if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
-    history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, date: new Date().toLocaleDateString() });
+    history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, dateIso: new Date().toISOString() });
     if (history.length > 100) history.pop();
-    try { localStorage.setItem('op_history', JSON.stringify(history)); } catch (e) {}
+    saveHistory(history);
 }
 
 function filterHistory(category, btnId) {
@@ -144,9 +155,9 @@ function filterHistory(category, btnId) {
 
 function deleteHistoryItem(event, barcode) {
     event.stopPropagation();
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     history = history.filter(item => item.barcode !== barcode);
-    localStorage.setItem('op_history', JSON.stringify(history));
+    saveHistory(history);
     renderHistory();
 }
 
@@ -155,7 +166,7 @@ function clearHistory() {
 }
 
 function renderHistory() {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     let html = '';
     let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category === currentHistoryFilter);
 
@@ -163,17 +174,17 @@ function renderHistory() {
     else {
         filtered.forEach(item => {
             let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
-            let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
+            let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
             
             html += `
-            <div class="hist-item" onclick="loadFromArchive('${escapeHTML(item.barcode)}')">
+            <div class="hist-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
                 <div class="hist-img-container">
                     ${imgHtml}
-                    <div class="hist-img-upload-trigger" onclick="triggerArchiveImageInject(event, '${escapeHTML(item.barcode)}')">➕ FOTO</div>
+                    <div class="hist-img-upload-trigger" onclick="triggerArchiveImageInject(event, ${jsArg(item.barcode)})">➕ FOTO</div>
                 </div>
                 <div class="hist-info"><span class="res-badge" style="margin-bottom:3px;">${escapeHTML(item.category)}</span><div style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(item.name)}</div><div style="font-size:11px; color:var(--text-muted);">${escapeHTML(item.date)}</div></div>
                 <div class="hist-score" style="color:${sColor}; margin-right:30px;">${item.score}</div>
-                <button class="hist-delete" onclick="deleteHistoryItem(event, '${escapeHTML(item.barcode)}')">DELETE</button>
+                <button class="hist-delete" onclick="deleteHistoryItem(event, ${jsArg(item.barcode)})">DELETE</button>
                     </div>`;
         });
     }
@@ -183,7 +194,7 @@ function renderHistory() {
 function loadFromArchive(barcode) {
     openView('result');
     showLoading('Lade Archiv...');
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     let item = history.find(i => i.barcode === barcode);
     if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
     else fetchDataCascade(barcode);
@@ -197,7 +208,7 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
                 <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Objekt nicht erfasst. Befehl wählen:</p>
                 <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (OCR)</button>
                 <div style="width:100%; text-align:center; color:#555; font-size:11px; margin:5px 0;">-- OVERRIDE VIA KI ENGINE --</div>
-                <button class="gemini-btn" onclick="triggerKIExtraktion('${escapeHTML(barcode)}', '${escapeHTML(searchTerm)}')">🧠 2. KI: Name eingeben</button>
+                <button class="gemini-btn" onclick="triggerKIExtraktion(${jsArg(barcode)}, ${jsArg(searchTerm)})">🧠 2. KI: Name eingeben</button>
                 <div style="display:flex; gap:10px;">
                     <button class="gemini-vision-btn" style="flex:1; padding:12px;" onclick="document.getElementById('geminiVisionCamera').click()">👁️ Kamera</button>
                     <button class="gemini-vision-btn" style="flex:1; padding:12px; background:#333;" onclick="document.getElementById('geminiVisionGallery').click()">🖼️ Galerie</button>
@@ -222,7 +233,7 @@ function executeQuickScan() {
 
 // ─── FEATURE: Export / Import ───
 function exportHistory() {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     if (history.length === 0) { alert('Archiv ist leer.'); return; }
     let blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
     let url = URL.createObjectURL(blob);
@@ -239,14 +250,14 @@ function importHistory(file) {
         try {
             let data = JSON.parse(e.target.result);
             if (!Array.isArray(data)) throw new Error('Ungültiges Format');
-            let existing = JSON.parse(localStorage.getItem('op_history')) || [];
+            let existing = getHistory();
             // Mergen: Neuere Einträge überschreiben alte mit gleichem Barcode
-            let merged = [...data];
+            let merged = data.map(normalizeHistoryItem).filter(Boolean);
             existing.forEach(item => {
                 if (!merged.find(m => m.barcode === item.barcode)) merged.push(item);
             });
             merged = merged.slice(0, 100);
-            localStorage.setItem('op_history', JSON.stringify(merged));
+            saveHistory(merged);
             renderHistory();
             alert(`${merged.length} Einträge importiert.`);
         } catch (err) { alert('Import fehlgeschlagen: Ungültige JSON-Datei.'); }
@@ -256,8 +267,7 @@ function importHistory(file) {
 
 // ─── FEATURE: Custom Toxine ───
 function getCustomToxins() {
-    try { return JSON.parse(localStorage.getItem('op_custom_toxins')) || {}; }
-    catch(e) { return {}; }
+    return readJsonStorage('op_custom_toxins', {});
 }
 
 function addCustomToxin() {
@@ -276,7 +286,7 @@ function addCustomToxin() {
         desc: desc || 'Custom Toxin',
         detail: detail || 'Benutzerdefiniertes Toxin.'
     };
-    localStorage.setItem('op_custom_toxins', JSON.stringify(customToxins));
+    writeJsonStorage('op_custom_toxins', customToxins);
     renderCustomToxinList();
     // Felder leeren
     ['customToxinName','customToxinAliases','customToxinDesc','customToxinDetail'].forEach(id => document.getElementById(id).value = '');
@@ -285,7 +295,7 @@ function addCustomToxin() {
 function removeCustomToxin(key) {
     let customToxins = getCustomToxins();
     delete customToxins[key];
-    localStorage.setItem('op_custom_toxins', JSON.stringify(customToxins));
+    writeJsonStorage('op_custom_toxins', customToxins);
     renderCustomToxinList();
 }
 
@@ -293,8 +303,7 @@ function renderCustomToxinList() {
     let customToxins = getCustomToxins();
     let html = '';
     for (let key in customToxins) {
-        let t = customToxins[key];
-        html += `<span class="custom-toxin-tag">${escapeHTML(key.replace(/_/g, ' '))} <button onclick="removeCustomToxin('${escapeHTML(key)}')">×</button></span>`;
+        html += `<span class="custom-toxin-tag">${escapeHTML(key.replace(/_/g, ' '))} <button onclick="removeCustomToxin(${jsArg(key)})">×</button></span>`;
     }
     let el = document.getElementById('customToxinList');
     if (el) el.innerHTML = html || '<span style="color:var(--text-muted); font-size:11px;">Keine Custom-Toxine definiert.</span>';
@@ -303,8 +312,7 @@ function renderCustomToxinList() {
 // ─── FEATURE: Kamera-Blitz ───
 function toggleTorch() {
     if (!html5QrCode) return;
-    let videoTrack = html5QrCode._html5QrcodeImpl?._videoTrack || 
-                     html5QrCode.getRunningTrack?.();
+    let videoTrack = html5QrCode.getRunningTrack?.();
     if (!videoTrack) {
         // Versuche Track aus dem Video-Element zu extrahieren
         let video = document.querySelector('#reader video');
@@ -323,7 +331,34 @@ function toggleTorch() {
 
 // ─── FEATURE: Barcode aus Foto ───
 function processBarcodePhoto(file) {
+    openView('result');
     showLoading('Extrahiere Barcode aus Foto...');
+    if ('BarcodeDetector' in window) {
+        let detector;
+        try {
+            detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
+        } catch (e) {
+            detector = null;
+        }
+        if (detector) {
+            createImageBitmap(file).then(bitmap => detector.detect(bitmap)).then(codes => {
+                if (codes && codes.length > 0 && codes[0].rawValue) {
+                    let barcode = String(codes[0].rawValue).replace(/\D/g, '');
+                    if (barcode.length >= 8) {
+                        showLoading(`Barcode [${barcode}] erkannt. Rufe Daten ab...`);
+                        fetchDataCascade(barcode);
+                        return;
+                    }
+                }
+                processBarcodePhotoViaOCR(file);
+            }).catch(() => processBarcodePhotoViaOCR(file));
+            return;
+        }
+    }
+    processBarcodePhotoViaOCR(file);
+}
+
+function processBarcodePhotoViaOCR(file) {
     Tesseract.recognize(file, 'eng', {
         logger: m => {
             if (m.status === 'recognizing text') {
@@ -335,7 +370,6 @@ function processBarcodePhoto(file) {
         let barcodeMatch = text.match(/\b(\d{8,14})\b/g);
         if (barcodeMatch) {
             let barcode = barcodeMatch[0];
-            openView('result');
             showLoading(`Barcode [${barcode}] erkannt. Rufe Daten ab...`);
             fetchDataCascade(barcode);
         } else {
@@ -349,7 +383,7 @@ function processBarcodePhoto(file) {
 
 // ─── FEATURE: Statistik-Dashboard ───
 function renderStats() {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     if (history.length === 0) {
         document.getElementById('stats-content').innerHTML = '<p style="text-align:center;color:var(--text-muted);">Scanne Produkte, um Statistiken zu generieren.</p>';
         return;
@@ -357,19 +391,19 @@ function renderStats() {
     let total = history.length;
     let avgScore = Math.round(history.reduce((s,i) => s + i.score, 0) / total);
     let thisWeek = history.filter(i => {
-        let d = new Date(i.date.split('.').reverse().join('-'));
+        let d = new Date(i.dateIso || i.date);
         let weekAgo = new Date(Date.now() - 7*24*60*60*1000);
-        return d > weekAgo;
+        return !Number.isNaN(d.getTime()) && d > weekAgo;
     }).length;
     
     // Häufigste Toxine (aus rawIngredients grob schätzen)
     let toxinCounts = {};
     let toxinKeys = Object.keys(blacklist);
     history.forEach(item => {
-        let ingr = (item.rawIngredients || '').toLowerCase();
+        let ingr = normalizeIngredientText(item.rawIngredients || '');
         toxinKeys.forEach(key => {
             let toxin = blacklist[key];
-            if (toxin.aliases.some(a => ingr.includes(a.toLowerCase()))) {
+            if (toxin.aliases.some(a => matchIngredient(ingr, a, toxin.pattern || null))) {
                 toxinCounts[key] = (toxinCounts[key] || 0) + 1;
             }
         });
@@ -403,7 +437,7 @@ function renderStats() {
 let compareData = { A: null, B: null };
 
 function selectCompareSlot(slot) {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     if (history.length === 0) { alert('Archiv ist leer. Scanne zuerst Produkte.'); return; }
     
     let overlay = document.getElementById('compareArchiveModal');
@@ -416,7 +450,7 @@ function selectCompareSlot(slot) {
     
     let html = `<div id="compareArchiveList"><h3 style="color:var(--text-main); margin:0 0 15px; text-transform:uppercase; letter-spacing:1px;">Produkt für Slot ${slot} wählen</h3>`;
     history.forEach((item, i) => {
-        let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;">NO IMG</div>`;
+        let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;">NO IMG</div>`;
         html += `<div class="hist-item" onclick="setCompareSlot('${slot}', ${i}); document.getElementById('compareArchiveModal').classList.remove('active');">
             <div class="hist-img-container">${imgHtml}</div>
             <div class="hist-info"><span class="res-badge">${escapeHTML(item.category)}</span><div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHTML(item.name)}</div></div>
@@ -429,7 +463,7 @@ function selectCompareSlot(slot) {
 }
 
 function setCompareSlot(slot, historyIndex) {
-    let history = JSON.parse(localStorage.getItem('op_history')) || [];
+    let history = getHistory();
     compareData[slot] = history[historyIndex];
     updateCompareUI();
 }
@@ -442,7 +476,7 @@ function updateCompareUI() {
         let content = el.querySelector('.compare-content');
         
         if (data) {
-            let imgHtml = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
+            let imgHtml = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img" alt="">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
             content.innerHTML = `<div class="res-header">${imgHtml}<div class="res-info"><span class="res-badge">${escapeHTML(data.category)}</span><h3 class="res-title">${escapeHTML(data.name)}</h3><div style="font-size:20px; font-weight:900; color:${data.score>=80?'var(--matrix-green)':(data.score>=40?'#ffcc00':'var(--alert)')};">${data.score}</div></div></div>`;
             placeholder.style.display = 'none';
             content.style.display = 'block';
@@ -498,13 +532,19 @@ openView = function(viewName, isBackAction) {
 // Boot-Sequenz & Event-Binding
 let dbTimestamp = new Date().getTime();
 Promise.all([
-    fetch('blacklist.json?v=' + dbTimestamp).then(r => r.json()),
-    fetch('whitelist.json?v=' + dbTimestamp).then(r => r.json())
+    fetchJsonWithTimeout('blacklist.json?v=' + dbTimestamp).then(r => r),
+    fetchJsonWithTimeout('whitelist.json?v=' + dbTimestamp).then(r => r)
 ]).then(data => {
     blacklist = data[0]; whitelist = data[1]; dbActive = true;
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'none';
     initTheme();
-}).catch(() => { if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'block'; });
+}).catch(() => {
+    blacklist = blacklist || {};
+    whitelist = whitelist || {};
+    dbActive = false;
+    initTheme();
+    if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'block';
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     // CRITICAL FIX: Zuweisung des Navigations-Stack-Events für den Back-Button
@@ -587,6 +627,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('activeModelSelect').addEventListener('change', (e) => {
         localStorage.setItem('op_active_model', e.target.value);
     });
+    document.getElementById('sessionKeyToggle')?.addEventListener('change', (e) => {
+        localStorage.setItem('op_key_session_mode', e.target.checked ? '1' : '0');
+        if (!e.target.checked) {
+            sessionStorage.removeItem('op_gemini_key_session');
+            sessionStorage.removeItem('op_deepseek_key_session');
+        }
+    });
 
     document.getElementById('archiveImageInjectorInput').onchange = function(e) {
         if(e.target.files.length === 0 || !activeArchiveInjectBarcode) return;
@@ -605,11 +652,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.width = width; canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
                 let compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-                let history = JSON.parse(localStorage.getItem('op_history')) || [];
+                let history = getHistory();
                 let item = history.find(i => i.barcode === activeArchiveInjectBarcode);
                 if(item) {
                     item.imageUrl = compressedBase64;
-                    localStorage.setItem('op_history', JSON.stringify(history));
+                    saveHistory(history);
                     renderHistory();
                 }
             };

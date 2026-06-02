@@ -1,24 +1,25 @@
 function checkApiCounter() {
-    let date = new Date().toLocaleDateString();
-    let usageObj = JSON.parse(localStorage.getItem('op_api_usage')) || { date: date, count: 0 };
+    let date = new Date().toISOString().slice(0, 10);
+    let usageObj = readJsonStorage('op_api_usage', { date: date, count: 0 });
     if(usageObj.date !== date) usageObj = { date: date, count: 0 };
     if(document.getElementById('apiUsageCount')) document.getElementById('apiUsageCount').innerText = usageObj.count;
-    localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
+    writeJsonStorage('op_api_usage', usageObj);
     return usageObj.count;
 }
 
 function incrementApiCounter() {
-    let date = new Date().toLocaleDateString();
-    let usageObj = JSON.parse(localStorage.getItem('op_api_usage')) || { date: date, count: 0 };
+    let date = new Date().toISOString().slice(0, 10);
+    let usageObj = readJsonStorage('op_api_usage', { date: date, count: 0 });
     if(usageObj.date !== date) usageObj = { date: date, count: 0 };
     usageObj.count += 1;
-    localStorage.setItem('op_api_usage', JSON.stringify(usageObj));
+    writeJsonStorage('op_api_usage', usageObj);
     if (document.getElementById('apiUsageCount')) document.getElementById('apiUsageCount').innerText = usageObj.count;
 }
 
 function resetApiCounter() {
-    localStorage.setItem('op_api_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
-    localStorage.setItem('op_deepseek_usage', JSON.stringify({ date: new Date().toLocaleDateString(), count: 0 }));
+    let date = new Date().toISOString().slice(0, 10);
+    writeJsonStorage('op_api_usage', { date: date, count: 0 });
+    writeJsonStorage('op_deepseek_usage', { date: date, count: 0 });
     checkApiCounter();
     checkDeepSeekCounter();
 }
@@ -27,20 +28,20 @@ function resetApiCounter() {
 // sondern arbeitet mit Concurrency-Limits & Pay-per-Token. Der Counter dient
 // hier nur zur Transparenz für den Nutzer.
 function checkDeepSeekCounter() {
-    let date = new Date().toLocaleDateString();
-    let usageObj = JSON.parse(localStorage.getItem('op_deepseek_usage')) || { date: date, count: 0 };
+    let date = new Date().toISOString().slice(0, 10);
+    let usageObj = readJsonStorage('op_deepseek_usage', { date: date, count: 0 });
     if(usageObj.date !== date) usageObj = { date: date, count: 0 };
     if(document.getElementById('deepseekUsageCount')) document.getElementById('deepseekUsageCount').innerText = usageObj.count;
-    localStorage.setItem('op_deepseek_usage', JSON.stringify(usageObj));
+    writeJsonStorage('op_deepseek_usage', usageObj);
     return usageObj.count;
 }
 
 function incrementDeepSeekCounter() {
-    let date = new Date().toLocaleDateString();
-    let usageObj = JSON.parse(localStorage.getItem('op_deepseek_usage')) || { date: date, count: 0 };
+    let date = new Date().toISOString().slice(0, 10);
+    let usageObj = readJsonStorage('op_deepseek_usage', { date: date, count: 0 });
     if(usageObj.date !== date) usageObj = { date: date, count: 0 };
     usageObj.count += 1;
-    localStorage.setItem('op_deepseek_usage', JSON.stringify(usageObj));
+    writeJsonStorage('op_deepseek_usage', usageObj);
     if (document.getElementById('deepseekUsageCount')) document.getElementById('deepseekUsageCount').innerText = usageObj.count;
 }
 
@@ -49,7 +50,7 @@ function showLoading(message) {
     let el = document.getElementById('result-content');
     if (el) el.innerHTML = `<div class="res-card"><div class="res-body" style="text-align:center;">
         <div class="spinner"></div>
-        <p style="margin-top:15px; color:var(--text-muted); font-size:14px;">${message}</p>
+        <p style="margin-top:15px; color:var(--text-muted); font-size:14px;">${escapeHTML(message)}</p>
     </div></div>`;
 }
 
@@ -79,10 +80,37 @@ function cancelKIInputModal() {
     if (_kiModalResolve) { _kiModalResolve(''); _kiModalResolve = null; }
 }
 
+let runtimeGeminiKey = "";
+let runtimeDeepSeekKey = "";
+
+function shouldKeepKeyForSession() {
+    return Boolean(document.getElementById('sessionKeyToggle')?.checked);
+}
+
+function getSecretKey(provider) {
+    if (provider === 'gemini') return runtimeGeminiKey || sessionStorage.getItem('op_gemini_key_session') || '';
+    return runtimeDeepSeekKey || sessionStorage.getItem('op_deepseek_key_session') || '';
+}
+
+function setSecretKey(provider, key) {
+    let sessionKey = provider === 'gemini' ? 'op_gemini_key_session' : 'op_deepseek_key_session';
+    if (provider === 'gemini') runtimeGeminiKey = key;
+    else runtimeDeepSeekKey = key;
+    sessionStorage.removeItem(sessionKey);
+    if (shouldKeepKeyForSession()) sessionStorage.setItem(sessionKey, key);
+}
+
+function clearLegacyStoredKeys() {
+    localStorage.removeItem('op_gemini_key');
+    localStorage.removeItem('op_deepseek_key');
+}
+
 function saveApiKey() {
     let key = document.getElementById('geminiApiKey').value.trim();
     if(key) { 
-        localStorage.setItem('op_gemini_key', key); 
+        setSecretKey('gemini', key);
+        clearLegacyStoredKeys();
+        document.getElementById('geminiApiKey').value = '';
         document.getElementById('keyWarningGemini').style.display = 'block';
         setTimeout(() => { document.getElementById('keyWarningGemini').style.display = 'none'; }, 4000);
     }
@@ -91,25 +119,35 @@ function saveApiKey() {
 function saveDeepSeekKey() {
     let key = document.getElementById('deepseekApiKey').value.trim();
     if(key) { 
-        localStorage.setItem('op_deepseek_key', key); 
+        setSecretKey('deepseek', key);
+        clearLegacyStoredKeys();
+        document.getElementById('deepseekApiKey').value = '';
         document.getElementById('keyWarningDeepSeek').style.display = 'block';
         setTimeout(() => { document.getElementById('keyWarningDeepSeek').style.display = 'none'; }, 4000);
     }
 }
 
 function clearGeminiKey() {
+    runtimeGeminiKey = '';
+    sessionStorage.removeItem('op_gemini_key_session');
     localStorage.removeItem('op_gemini_key');
     document.getElementById('geminiApiKey').value = '';
 }
 
 function clearDeepSeekKey() {
+    runtimeDeepSeekKey = '';
+    sessionStorage.removeItem('op_deepseek_key_session');
     localStorage.removeItem('op_deepseek_key');
     document.getElementById('deepseekApiKey').value = '';
 }
 
 function loadSettings() {
-    document.getElementById('geminiApiKey').value = localStorage.getItem('op_gemini_key') || "";
-    document.getElementById('deepseekApiKey').value = localStorage.getItem('op_deepseek_key') || "";
+    clearLegacyStoredKeys();
+    document.getElementById('geminiApiKey').value = "";
+    document.getElementById('deepseekApiKey').value = "";
+    if (document.getElementById('sessionKeyToggle')) {
+        document.getElementById('sessionKeyToggle').checked = localStorage.getItem('op_key_session_mode') === '1';
+    }
     if(localStorage.getItem('op_active_model')) {
         document.getElementById('activeModelSelect').value = localStorage.getItem('op_active_model');
     }
@@ -129,12 +167,14 @@ async function executeKIEngine(prompt, base64Image = null) {
 }
 
 async function callGeminiAPI(prompt, base64Image = null) {
-    let key = localStorage.getItem('op_gemini_key');
+    let key = getSecretKey('gemini');
     if(!key) { alert("Gemini API Key fehlt."); return null; }
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${key}`;
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent`;
     let parts = [{ text: prompt }];
     if(base64Image) {
-        let mime = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/)[1];
+        let mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/);
+        if (!mimeMatch) { alert('Ungültiges Bildformat.'); return null; }
+        let mime = mimeMatch[1];
         let b64Data = base64Image.split(',')[1];
         parts.push({ inline_data: { mime_type: mime, data: b64Data } });
     }
@@ -142,20 +182,26 @@ async function callGeminiAPI(prompt, base64Image = null) {
         incrementApiCounter();
         let response = await fetch(url, { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, 
             body: JSON.stringify({ contents: [{ parts }], tools: [{ "googleSearch": {} }] }) 
         });
         let data = await response.json();
+        if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
         if(data.error) throw new Error(data.error.message);
-        let rawText = data.candidates[0].content.parts[0].text;
+        let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error('Leere oder unerwartete Gemini-Antwort.');
         let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(jsonStr);
     } catch (err) { alert("Gemini-Fehler: " + err.message); return null; }
 }
 
 async function callDeepSeekAPI(prompt, base64Image = null) {
-    let key = localStorage.getItem('op_deepseek_key');
+    let key = getSecretKey('deepseek');
     if(!key) { alert("DeepSeek API Key fehlt."); return null; }
+    if (base64Image) {
+        alert("DeepSeek Vision ist in dieser Web-App nicht zuverlässig verfügbar. Bitte Gemini für Bildanalyse nutzen.");
+        return null;
+    }
     
     let messages = [];
     if(base64Image) {
@@ -186,8 +232,10 @@ async function callDeepSeekAPI(prompt, base64Image = null) {
             })
         });
         let data = await response.json();
+        if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
         if(data.error) throw new Error(data.error.message);
-        let rawText = data.choices[0].message.content;
+        let rawText = data?.choices?.[0]?.message?.content;
+        if (!rawText) throw new Error('Leere oder unerwartete DeepSeek-Antwort.');
         let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(jsonStr);
     } catch (err) { alert("DeepSeek-Fehler: " + err.message); return null; }
@@ -291,7 +339,7 @@ function renderSearchResults(products, category, searchTerm) {
         let name = p.product_name || p.generic_name || 'Unbekanntes Objekt';
         let brand = p.brands || '';
         return `
-        <div class="res-card search-result-card" onclick="analyzeSearchResult(${i}, '${escapeHTML(category)}')">
+        <div class="res-card search-result-card" onclick="analyzeSearchResult(${i}, ${jsArg(category)})">
             <div class="res-header">
                 ${imgHtml}
                 <div class="res-info">
