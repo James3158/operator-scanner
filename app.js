@@ -173,7 +173,7 @@ function renderHistory() {
     if (filtered.length === 0) { html = '<div style="text-align:center;color:#666;padding:20px;">Archiv leer.</div>'; } 
     else {
         filtered.forEach(item => {
-            let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? '#ffcc00' : 'var(--alert)');
+            let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? 'var(--warn)' : 'var(--alert)');
             let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
             
             html += `
@@ -410,7 +410,7 @@ function renderStats() {
     });
     let topToxins = Object.entries(toxinCounts).sort((a,b) => b[1]-a[1]).slice(0, 5);
     
-    let scoreColor = avgScore >= 80 ? 'var(--matrix-green)' : (avgScore >= 40 ? '#ffcc00' : 'var(--alert)');
+    let scoreColor = avgScore >= 80 ? 'var(--matrix-green)' : (avgScore >= 40 ? 'var(--warn)' : 'var(--alert)');
     
     let html = `
     <div class="stats-grid">
@@ -454,7 +454,7 @@ function selectCompareSlot(slot) {
         html += `<div class="hist-item" onclick="setCompareSlot('${slot}', ${i}); document.getElementById('compareArchiveModal').classList.remove('active');">
             <div class="hist-img-container">${imgHtml}</div>
             <div class="hist-info"><span class="res-badge">${escapeHTML(item.category)}</span><div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHTML(item.name)}</div></div>
-            <div class="hist-score" style="color:${item.score>=80?'var(--matrix-green)':(item.score>=40?'#ffcc00':'var(--alert)')}">${item.score}</div>
+            <div class="hist-score" style="color:${item.score>=80?'var(--matrix-green)':(item.score>=40?'var(--warn)':'var(--alert)')}">${item.score}</div>
         </div>`;
     });
     html += `<button class="action-btn" style="margin-top:10px;" onclick="document.getElementById('compareArchiveModal').classList.remove('active')">Abbrechen</button></div>`;
@@ -477,7 +477,7 @@ function updateCompareUI() {
         
         if (data) {
             let imgHtml = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img" alt="">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
-            content.innerHTML = `<div class="res-header">${imgHtml}<div class="res-info"><span class="res-badge">${escapeHTML(data.category)}</span><h3 class="res-title">${escapeHTML(data.name)}</h3><div style="font-size:20px; font-weight:900; color:${data.score>=80?'var(--matrix-green)':(data.score>=40?'#ffcc00':'var(--alert)')};">${data.score}</div></div></div>`;
+            content.innerHTML = `<div class="res-header">${imgHtml}<div class="res-info"><span class="res-badge">${escapeHTML(data.category)}</span><h3 class="res-title">${escapeHTML(data.name)}</h3><div style="font-size:20px; font-weight:900; color:${data.score>=80?'var(--matrix-green)':(data.score>=40?'var(--warn)':'var(--alert)')};">${data.score}</div></div></div>`;
             placeholder.style.display = 'none';
             content.style.display = 'block';
             el.classList.add('selected');
@@ -496,7 +496,7 @@ function runCompare() {
     let diff = a.score - b.score;
     let winner = diff > 0 ? a.name : (diff < 0 ? b.name : null);
     let diffAbs = Math.abs(diff);
-    let diffColor = diff > 0 ? 'var(--matrix-green)' : (diff < 0 ? 'var(--alert)' : '#ffcc00');
+    let diffColor = diff > 0 ? 'var(--matrix-green)' : (diff < 0 ? 'var(--alert)' : 'var(--warn)');
     
     let html = `<div class="res-card"><div class="res-body">`;
     if (winner) {
@@ -504,7 +504,7 @@ function runCompare() {
             🏆 ${escapeHTML(winner)} ist ${diffAbs} Punkte besser
         </div>`;
     } else {
-        html += `<div class="compare-score-diff" style="color:#ffcc00; background:rgba(255,204,0,0.08);">⚖️ Gleichstand — beide Score ${a.score}</div>`;
+        html += `<div class="compare-score-diff" style="color:var(--warn); background:rgba(245,158,11,0.08);">⚖️ Gleichstand — beide Score ${a.score}</div>`;
     }
     html += `<p style="color:var(--text-muted); font-size:13px; text-align:center;">${escapeHTML(a.name)} (${a.score}) vs ${escapeHTML(b.name)} (${b.score})</p>`;
     

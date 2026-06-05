@@ -233,7 +233,7 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     });
 
-    let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? '#ffcc00' : 'var(--alert)');
+    let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? 'var(--warn)' : 'var(--alert)');
     saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
 
     let resultHtml = `
