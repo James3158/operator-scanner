@@ -24,9 +24,6 @@ function resetApiCounter() {
     checkDeepSeekCounter();
 }
 
-// DeepSeek Counter: DeepSeek hat KEIN tägliches Free-Limit wie Gemini (1500 RPD),
-// sondern arbeitet mit Concurrency-Limits & Pay-per-Token. Der Counter dient
-// hier nur zur Transparenz für den Nutzer.
 function checkDeepSeekCounter() {
     let date = new Date().toISOString().slice(0, 10);
     let usageObj = readJsonStorage('op_deepseek_usage', { date: date, count: 0 });
@@ -82,6 +79,8 @@ function cancelKIInputModal() {
 
 let runtimeGeminiKey = "";
 let runtimeDeepSeekKey = "";
+let runtimeGoogleSearchKey = "";
+let runtimeGoogleSearchCx = "";
 
 function shouldKeepKeyForSession() {
     return Boolean(document.getElementById('sessionKeyToggle')?.checked);
@@ -89,15 +88,30 @@ function shouldKeepKeyForSession() {
 
 function getSecretKey(provider) {
     if (provider === 'gemini') return runtimeGeminiKey || sessionStorage.getItem('op_gemini_key_session') || '';
-    return runtimeDeepSeekKey || sessionStorage.getItem('op_deepseek_key_session') || '';
+    if (provider === 'deepseek') return runtimeDeepSeekKey || sessionStorage.getItem('op_deepseek_key_session') || '';
+    if (provider === 'google') return runtimeGoogleSearchKey || sessionStorage.getItem('op_google_key_session') || '';
+    return '';
+}
+
+function getGoogleCx() {
+    return runtimeGoogleSearchCx || localStorage.getItem('op_google_cx') || '';
 }
 
 function setSecretKey(provider, key) {
-    let sessionKey = provider === 'gemini' ? 'op_gemini_key_session' : 'op_deepseek_key_session';
+    let sessionKey = provider === 'gemini' ? 'op_gemini_key_session' : 
+                     (provider === 'deepseek' ? 'op_deepseek_key_session' : 'op_google_key_session');
+    
     if (provider === 'gemini') runtimeGeminiKey = key;
-    else runtimeDeepSeekKey = key;
+    else if (provider === 'deepseek') runtimeDeepSeekKey = key;
+    else runtimeGoogleSearchKey = key;
+    
     sessionStorage.removeItem(sessionKey);
     if (shouldKeepKeyForSession()) sessionStorage.setItem(sessionKey, key);
+}
+
+function setGoogleCx(cx) {
+    runtimeGoogleSearchCx = cx;
+    localStorage.setItem('op_google_cx', cx);
 }
 
 function clearLegacyStoredKeys() {
@@ -127,6 +141,21 @@ function saveDeepSeekKey() {
     }
 }
 
+function saveGoogleSearchKey() {
+    let key = document.getElementById('googleSearchApiKey').value.trim();
+    let cx = document.getElementById('googleSearchCx').value.trim();
+    if(key) { 
+        setSecretKey('google', key);
+        document.getElementById('googleSearchApiKey').value = '';
+        document.getElementById('keyWarningGoogle').style.display = 'block';
+        setTimeout(() => { document.getElementById('keyWarningGoogle').style.display = 'none'; }, 4000);
+    }
+    if(cx) {
+        setGoogleCx(cx);
+        document.getElementById('googleSearchCx').value = '';
+    }
+}
+
 function clearGeminiKey() {
     runtimeGeminiKey = '';
     sessionStorage.removeItem('op_gemini_key_session');
@@ -141,10 +170,21 @@ function clearDeepSeekKey() {
     document.getElementById('deepseekApiKey').value = '';
 }
 
+function clearGoogleSearchKey() {
+    runtimeGoogleSearchKey = '';
+    runtimeGoogleSearchCx = '';
+    sessionStorage.removeItem('op_google_key_session');
+    localStorage.removeItem('op_google_cx');
+    document.getElementById('googleSearchApiKey').value = '';
+    document.getElementById('googleSearchCx').value = '';
+}
+
 function loadSettings() {
     clearLegacyStoredKeys();
     document.getElementById('geminiApiKey').value = "";
     document.getElementById('deepseekApiKey').value = "";
+    document.getElementById('googleSearchApiKey').value = "";
+    document.getElementById('googleSearchCx').value = getGoogleCx();
     if (document.getElementById('sessionKeyToggle')) {
         document.getElementById('sessionKeyToggle').checked = localStorage.getItem('op_key_session_mode') === '1';
     }
@@ -205,7 +245,6 @@ async function callDeepSeekAPI(prompt, base64Image = null) {
     
     let messages = [];
     if(base64Image) {
-        // Falls DeepSeek-Schnittstelle im Endpoint keine nativen Vision-Daten verarbeitet, Kapselung als multimodaler Payload
         messages = [{
             role: "user",
             content: [
@@ -246,9 +285,21 @@ async function triggerKIExtraktion(barcode, prefilledTerm = "") {
     if(!name) return;
     let actualBarcode = barcode || ("MANUAL-" + Date.now().toString().slice(-6));
     openView('result');
-    showLoading('KI Pipeline gestartet. Analysiere Spezifikationen...');
+    showLoading('Führe Websuche für Produktzutaten durch...');
+    let snippets = await fetchWebSearchSnippets(name);
     
-    let promptText = `Du bist ein toxikologisches Analyse-Terminal. Ermittle die präzisen Inhaltsstoffe für das Produkt: "${name}". Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category strikt auf "Nahrung" oder "Kosmetik".`;
+    showLoading('KI Pipeline gestartet. Analysiere Spezifikationen...');
+    let searchContext = snippets.length > 0
+        ? `Websuch-Ergebnisse:\n${snippets.join("\n\n")}`
+        : "Nutze dein internes Wissen zur Ermittlung der Zutaten.";
+        
+    let promptText = `Du bist ein toxikologisches Analyse-Terminal. Ermittle die präzisen Inhaltsstoffe für das Produkt: "${name}" anhand der folgenden Suchergebnisse. 
+    Übersetze alle gefundenen Zutaten und den Produktnamen immer vollständig und präzise ins Deutsche (z.B. "şeker" -> "Zucker", "ayçiçek yağı" -> "Sonnenblumenöl").
+    
+    ${searchContext}
+    
+    Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category strikt auf "Nahrung" oder "Kosmetik".`;
+    
     let resultJson = await executeKIEngine(promptText);
     if(resultJson) {
         let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
@@ -263,7 +314,9 @@ function processKIVision(file, barcode) {
     let reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async function () {
-        let promptText = `Analysiere dieses Bild. Erkenne das Produkt, ermittle die exakten Inhaltsstoffe. Antworte AUSSCHLIESSLICH im JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
+        let promptText = `Analysiere dieses Bild. Erkenne das Produkt und ermittle die exakten Inhaltsstoffe. 
+        Übersetze alle Zutaten und den Produktnamen immer vollständig und präzise ins Deutsche (z.B. "şeker" -> "Zucker", "ayçiçek yağı" -> "Sonnenblumenöl").
+        Antworte AUSSCHLIESSLICH im JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
         let resultJson = await executeKIEngine(promptText, reader.result);
         if(resultJson) {
             let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
@@ -362,5 +415,72 @@ function analyzeSearchResult(index, category) {
     if (product) {
         let barcode = product.code || ('SEARCH-' + Date.now());
         analyzeProduct({ product }, category, barcode, false);
+    }
+}
+
+function fetchGoogleCSE(query) {
+    return new Promise((resolve) => {
+        let key = getSecretKey('google');
+        let cx = getGoogleCx();
+        if (!key || !cx) { resolve([]); return; }
+        
+        let callbackName = "googleSearchCallback_" + Math.floor(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+            delete window[callbackName];
+            document.getElementById(scriptId)?.remove();
+            if (data && data.items) {
+                let snippets = data.items.map(item => `${item.title}: ${item.snippet}`);
+                resolve(snippets);
+            } else {
+                resolve([]);
+            }
+        };
+        
+        let scriptId = "googleSearchScript_" + Date.now();
+        let script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&callback=${callbackName}`;
+        script.onerror = function() {
+            delete window[callbackName];
+            script.remove();
+            resolve([]);
+        };
+        document.body.appendChild(script);
+    });
+}
+
+async function fetchDuckDuckGoScrape(query) {
+    let url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    try {
+        let response = await fetch(proxyUrl);
+        if (!response.ok) return [];
+        let json = await response.json();
+        let html = json.contents;
+        if (!html) return [];
+        
+        let parser = new DOMParser();
+        let doc = parser.parseFromString(html, "text/html");
+        let results = doc.querySelectorAll('.result__snippet');
+        let snippets = [];
+        results.forEach(el => {
+            let text = el.textContent.trim();
+            if (text) snippets.push(text);
+        });
+        return snippets.slice(0, 8);
+    } catch (e) {
+        console.error("DuckDuckGo fetch failed:", e);
+        return [];
+    }
+}
+
+async function fetchWebSearchSnippets(productName) {
+    let query = `${productName} Zutaten Inhaltsstoffe ingredients`;
+    let key = getSecretKey('google');
+    let cx = getGoogleCx();
+    if (key && cx) {
+        return await fetchGoogleCSE(query);
+    } else {
+        return await fetchDuckDuckGoScrape(query);
     }
 }

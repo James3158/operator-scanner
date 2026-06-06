@@ -144,7 +144,12 @@ function matchIngredient(text, alias, itemPattern) {
         let prefix = cleanAlias.slice(0, -1);
         return hasUnicodeBoundary(cleanText, prefix) || new RegExp('(^|[^\\p{L}\\p{N}])' + escapeRegExp(prefix) + '-', 'iu').test(cleanText);
     }
-    return hasUnicodeBoundary(cleanText, cleanAlias);
+    // Für sehr kurze Kürzel (z.B. PEG, MSG, SLS, BHT) verlangen wir exakte Wortgrenzen
+    if (cleanAlias.length < 4) {
+        return hasUnicodeBoundary(cleanText, cleanAlias);
+    }
+    // Für längere Begriffe (z.B. fructose, glukose, samenöl, seker) erlauben wir Teilwort-Matching (deutsche Komposita)
+    return cleanText.includes(cleanAlias);
 }
 
 function analyzeProduct(data, category, barcode, isExtracted = false) {

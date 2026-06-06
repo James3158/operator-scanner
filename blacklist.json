@@ -5,7 +5,9 @@
       "fluoride",
       "natriumfluorid",
       "sodium fluoride",
-      "monofluorophosphat"
+      "monofluorophosphat",
+      "florur",
+      "sodyum florur"
     ],
     "severity": "medium",
     "desc": "Zirbeldrüsen-Verkalkung",
@@ -17,7 +19,9 @@
       "nitritpökelsalz",
       "sodium nitrite",
       "kaliumnitrit",
-      "e249"
+      "e249",
+      "sodyum nitrit",
+      "potasyum nitrit"
     ],
     "severity": "high",
     "desc": "Zell-Toxizität",
@@ -27,7 +31,9 @@
     "aliases": [
       "e471",
       "mono- und diglyceride",
-      "mono and diglycerides"
+      "mono and diglycerides",
+      "mono ve digliseritler",
+      "mono- ve digliseritler"
     ],
     "desc": "Industrieller Emulgator / Darmbarriere-Gefahr",
     "detail": "Synthetisches Gemisch aus Speisefettsäuren. Zersetzt die Integrität der Darmschleimhaut (Leaky Gut).",
@@ -60,7 +66,10 @@
       "glutamat",
       "hefeextrakt",
       "yeast extract",
-      "monosodium glutamate"
+      "monosodium glutamate",
+      "monosodyum glutamat",
+      "maya ekstrakti",
+      "maya ozutu"
     ],
     "desc": "Nervenzellen-Stimulanz (Exzitotoxin)",
     "detail": "Ein Geschmacksverstärker. Überstimuliert die Rezeptoren (Exzitotoxizität), was zu neurologischem Stress und Brain-Fog führt.",
@@ -81,7 +90,10 @@
       "soy",
       "soybean",
       "sojalecithin",
-      "soy lecithin"
+      "soy lecithin",
+      "soya",
+      "soya lesitini",
+      "soya yagi"
     ],
     "desc": "Phytoöstrogene / Testosteron-Senker",
     "detail": "Enthält hochkonzentrierte Isoflavone, die im männlichen Körper als Phytoöstrogene wirken und die Testosteronproduktion drosseln.",
@@ -98,7 +110,15 @@
       "agave syrup",
       "fructose",
       "glukose",
-      "sucrose"
+      "sucrose",
+      "seker",
+      "sekeri",
+      "surup",
+      "surubu",
+      "misir surubu",
+      "fruktoz",
+      "glukoz",
+      "sakkaroz"
     ],
     "desc": "Insulin-Spike / Frequenz-Senker",
     "detail": "Industriell isolierte Fruktose und Saccharose. Erzeugt brutale Blutzuckerschwankungen und fördert viszerales Fett.",
@@ -127,7 +147,9 @@
       "weizen",
       "wheat",
       "weizenmehl",
-      "wheat flour"
+      "wheat flour",
+      "bugday",
+      "bugday unu"
     ],
     "desc": "System-Nahrung / Opioide Peptide",
     "detail": "Moderner Hochleistungsweizen enthält Gliadorphin. Bindet an Opiatrezeptoren im Gehirn, erzeugt ein leichtes Suchtverhalten.",
@@ -268,7 +290,11 @@
       "canola oil",
       "distelöl",
       "safflower oil",
-      "helianthus annuus seed oil"
+      "helianthus annuus seed oil",
+      "aycicek yagi",
+      "aycicegi yagi",
+      "kanola yagi",
+      "aspir yagi"
     ],
     "desc": "Industriefett / Entzündungsfördernd",
     "detail": "Hochverarbeitete Fette. Sie schwächen die Zellmembranen und drosseln die mitochondriale ATP-Produktion.",
@@ -279,7 +305,9 @@
       "e211",
       "sodium benzoate",
       "benzoic acid",
-      "benzoesäure"
+      "benzoesäure",
+      "sodyum benzoat",
+      "benzoik asit"
     ],
     "desc": "Mitochondriales Toxin / Zellstress",
     "detail": "Schädigt die Mitochondrien (Kraftwerke der Zellen). Es drosselt die ATP-Produktion, was die Vril-Kraft abschaltet.",

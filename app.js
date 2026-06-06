@@ -50,7 +50,29 @@ function closeModal() {
     setTimeout(() => { document.getElementById('detailModalOverlay').style.display = 'none'; }, 300);
 }
 
+function openDrawer() {
+    loadSettings();
+    renderCustomToxinList();
+    document.getElementById('sideDrawerOverlay').style.display = 'block';
+    setTimeout(() => {
+        document.getElementById('sideDrawerOverlay').style.opacity = '1';
+        document.getElementById('sideDrawer').style.transform = 'translateX(0)';
+    }, 10);
+}
+
+function closeDrawer() {
+    document.getElementById('sideDrawerOverlay').style.opacity = '0';
+    document.getElementById('sideDrawer').style.transform = 'translateX(-100%)';
+    setTimeout(() => {
+        document.getElementById('sideDrawerOverlay').style.display = 'none';
+    }, 300);
+}
+
 function openView(viewName, isBackAction = false) {
+    if (viewName === 'settings') {
+        openDrawer();
+        return;
+    }
     if (html5QrCode?.isScanning) {
         html5QrCode.stop().catch(() => {});
     }
@@ -60,12 +82,17 @@ function openView(viewName, isBackAction = false) {
     if (!isBackAction) {
         if (viewStack[viewStack.length - 1] !== viewName) viewStack.push(viewName);
     }
-    document.getElementById('backBtn').style.display = viewStack.length > 1 ? 'block' : 'none';
+    
+    const showBack = viewStack.length > 1;
+    document.getElementById('backBtn').style.display = showBack ? 'block' : 'none';
+    if (document.getElementById('burgerBtn')) {
+        document.getElementById('burgerBtn').style.display = showBack ? 'none' : 'block';
+    }
+    
     document.getElementById('view-' + viewName).classList.add('active');
     if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
     if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; }
     if(viewName === 'history') renderHistory();
-    if(viewName === 'settings') loadSettings();
 }
 
 function goBack() {
@@ -208,7 +235,7 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
                 <p style="font-size:13px; color:var(--text-muted); margin-top:0;">Objekt nicht erfasst. Befehl wählen:</p>
                 <button class="action-btn ocr-btn" onclick="document.getElementById('ocrInputText').click()">📸 1. Offline Text-Scan (OCR)</button>
                 <div style="width:100%; text-align:center; color:#555; font-size:11px; margin:5px 0;">-- OVERRIDE VIA KI ENGINE --</div>
-                <button class="gemini-btn" onclick="triggerKIExtraktion(${jsArg(barcode)}, ${jsArg(searchTerm)})">🧠 2. KI: Name eingeben</button>
+                <button class="gemini-btn" onclick="triggerKIExtraktion(${jsArg(barcode)}, ${jsArg(searchTerm)})">🌐 2. Web-Suche & KI-Analyse</button>
                 <div style="display:flex; gap:10px;">
                     <button class="gemini-vision-btn" style="flex:1; padding:12px;" onclick="document.getElementById('geminiVisionCamera').click()">👁️ Kamera</button>
                     <button class="gemini-vision-btn" style="flex:1; padding:12px; background:#333;" onclick="document.getElementById('geminiVisionGallery').click()">🖼️ Galerie</button>
@@ -547,6 +574,17 @@ Promise.all([
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Side-Drawer (Burger-Menü) Event-Binding
+    if (document.getElementById('burgerBtn')) {
+        document.getElementById('burgerBtn').addEventListener('click', openDrawer);
+    }
+    if (document.getElementById('closeDrawerBtn')) {
+        document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+    }
+    if (document.getElementById('sideDrawerOverlay')) {
+        document.getElementById('sideDrawerOverlay').addEventListener('click', closeDrawer);
+    }
+
     // CRITICAL FIX: Zuweisung des Navigations-Stack-Events für den Back-Button
     document.getElementById('backBtn').addEventListener('click', goBack);
 
@@ -557,7 +595,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('nav-search').addEventListener('click', () => openView('search'));
     document.getElementById('nav-history').addEventListener('click', () => openView('history'));
-    document.getElementById('nav-settings').addEventListener('click', () => openView('settings'));
+    if (document.getElementById('nav-settings')) {
+        document.getElementById('nav-settings').addEventListener('click', () => openView('settings'));
+    }
 
     document.getElementById('card-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('card-search').addEventListener('click', () => openView('search'));
@@ -593,8 +633,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('themeToggleCheckbox').addEventListener('change', (e) => toggleTheme(e.target));
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
     document.getElementById('saveDeepSeekKeyBtn').addEventListener('click', saveDeepSeekKey);
+    document.getElementById('saveGoogleSearchKeyBtn').addEventListener('click', saveGoogleSearchKey);
     document.getElementById('clearGeminiKeyBtn').addEventListener('click', clearGeminiKey);
     document.getElementById('clearDeepSeekKeyBtn').addEventListener('click', clearDeepSeekKey);
+    document.getElementById('clearGoogleSearchKeyBtn').addEventListener('click', clearGoogleSearchKey);
     document.getElementById('resetApiCounterBtn').addEventListener('click', resetApiCounter);
     document.getElementById('startBtn').addEventListener('click', startScanner);
     document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);

@@ -1,11 +1,11 @@
 {
   "olivenöl": {
-    "aliases": ["olivenöl", "olive oil", "olea europaea fruit oil", "olea europaea oil"],
+    "aliases": ["olivenöl", "olive oil", "olea europaea fruit oil", "olea europaea oil", "zeytinyagi", "zeytinyagi"],
     "desc": "Zellschutz / Hochwertige Lipide",
     "detail": "Kaltgepresstes Olivenöl liefert einfach ungesättigte Fettsäuren und Polyphenole. Schützt die Zellen vor Oxidation und unterstützt die Testosteron-Synthese."
   },
   "kokosöl": {
-    "aliases": ["kokosöl", "coconut oil", "cocos nucifera oil", "cocos nucifera"],
+    "aliases": ["kokosöl", "coconut oil", "cocos nucifera oil", "cocos nucifera", "hindistan cevizi yagi", "hindistan cevizi yagi"],
     "desc": "MCT-Fette / Kognitive Energie",
     "detail": "Besteht primär aus mittelkettigen Triglyceriden (MCTs). Liefert saubere Energie für das Gehirn ohne Insulin-Spike."
   },
@@ -15,7 +15,7 @@
     "detail": "Unraffiniertes Fett aus der Kariténuss. Enthält Allantoin und Vitamin E. Repariert die Hautbarriere, ohne in das Hormonsystem einzugreifen."
   },
   "meersalz": {
-    "aliases": ["meersalz", "sea salt", "maris sal", "sea salt extract"],
+    "aliases": ["meersalz", "sea salt", "maris sal", "sea salt extract", "deniz tuzu"],
     "desc": "Elektrolyt-Matrix / Zelluläre Hydration",
     "detail": "Unraffiniertes Salz enthält alle essenziellen Spurenelemente. Es optimiert die zelluläre Hydration, die Leitfähigkeit der Nervenbahnen und stabilisiert den Vril-Energiefluss."
   },
@@ -30,12 +30,12 @@
     "detail": "Bildet einen atmungsaktiven Schutzfilm auf der Haut, wirkt antibakteriell und zieht keine Toxine an."
   },
   "rohkakao": {
-    "aliases": ["rohkakao", "cacao", "theobroma cacao", "cacao seed butter", "kakaobutter"],
+    "aliases": ["rohkakao", "cacao", "theobroma cacao", "cacao seed butter", "kakaobutter", "kakao yagi", "kakao yagi", "ham kakao"],
     "desc": "Antioxidantien / Vril-Stimulanz",
     "detail": "Unerhitzter Kakao ist extrem reich an Magnesium und Theobromin. Erweitert die Blutgefäße und stimuliert das System."
   },
   "honig": {
-    "aliases": ["honig", "honey", "mel"],
+    "aliases": ["honig", "honey", "mel", "bal"],
     "desc": "Antimikrobiell / Natürliches Enzym-Profil",
     "detail": "Roher Honig ist präbiotisch und antimikrobiell. Er enthält die nötigen Enzyme zur eigenen Verstoffwechselung."
   },
@@ -45,7 +45,7 @@
     "detail": "Ein genetisch intaktes Urgetreide. Enthält weniger Reizproteine als Weizen und unterstützt die physische Stärke."
   },
   "sauerteig": {
-    "aliases": ["sauerteig", "sourdough"],
+    "aliases": ["sauerteig", "sourdough", "eksi maya", "eksi maya"],
     "desc": "Fermentation / Darmfreundlich",
     "detail": "Milchsäurebakterien bauen Antinährstoffe ab. Maximiert die Mineralstoffaufnahme und schützt das Mikrobiom."
   },
@@ -90,7 +90,7 @@
     "detail": "Enthält essenzielle fettlösliche Vitamine und Cholesterin. Dies ist das exakte fundamentale Rohmaterial für eine maximale Testosteron-Synthese."
   },
   "rohmilch": {
-    "aliases": ["rohmilch", "raw milk"],
+    "aliases": ["rohmilch", "raw milk", "cig sut", "cig sut"],
     "desc": "Unpasteurisiert / Erhaltene Enzymstruktur",
     "detail": "Milch im Originalzustand. Die intakten Laktase-Enzyme machen sie verträglich. Stärkt Knochen und Immunsystem massiv."
   },
@@ -105,7 +105,7 @@
     "detail": "Organische Mineralien-Verbindung. Transportiert Nährstoffe direkt in die Zellen und reinigt das Gefäß von Schwermetallen."
   },
   "knochenbrühe": {
-    "aliases": ["knochenbrühe", "bone broth"],
+    "aliases": ["knochenbrühe", "bone broth", "kemik suyu"],
     "desc": "Kollagen / Reparatur der Darmbarriere",
     "detail": "Die extrahierten Aminosäuren (Glycin, Prolin) sind die Bausteine für die Reparatur des Darms."
   },
