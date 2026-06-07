@@ -103,6 +103,7 @@ function normalizeHistoryItem(item) {
         category,
         rawIngredients: String(item.rawIngredients || '').slice(0, 20000),
         imageUrl: isSafeImageUrl(item.imageUrl) ? String(item.imageUrl) : '',
+        kiSummary: item.kiSummary ? String(item.kiSummary).slice(0, 5000) : '',
         date: getDisplayDate(dateIso),
         dateIso
     };
@@ -196,12 +197,17 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     }
 
     let foundToxins = [], foundGood = [], score = 100;
-    // Severity-Gewichtung: high=-30, medium=-20, low=-10
     const severityPenalty = { high: 30, medium: 20, low: 10 };
+    const benefitReward = { high: 20, medium: 10, low: 5 };
+    
+    let rawToxinsNames = [];
+    let rawGoodNames = [];
+    let hasHighToxin = false;
+    let kiSummary = p.ki_summary || "";
+
     let collectedAlts = new Set();
     let contextMatch = false;
 
-    // Custom Toxine mergen
     let effectiveBlacklist = Object.assign({}, blacklist);
     try {
         let customToxins = readJsonStorage('op_custom_toxins', {});
@@ -215,8 +221,12 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
             let item = effectiveBlacklist[mainKey];
             if (!item || !Array.isArray(item.aliases)) continue;
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
-                foundToxins.push(`<li class="list-toxin" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, true)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
+                foundToxins.push(`<li class="list-toxin" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, ${jsArg(item.severity || 'medium')})">${escapeHTML(mainKey.toUpperCase())}</li>`); 
                 score -= (severityPenalty[item.severity] || 20);
+                rawToxinsNames.push(mainKey.toUpperCase());
+                if (item.severity === 'high') {
+                    hasHighToxin = true;
+                }
                 if (!contextMatch) {
                     for (let key in fallbackAlternatives) {
                         if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
@@ -228,8 +238,11 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
             let item = whitelist[mainKey];
             if (!item || !Array.isArray(item.aliases)) continue;
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
-                foundGood.push(`<li class="list-good" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, false)">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                score += 5;
+                foundGood.push(`<li class="list-good" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, 'good')">${escapeHTML(mainKey.toUpperCase())}</li>`); 
+                let benefit = item.benefit || "low";
+                let reward = benefitReward[benefit] || 5;
+                score += reward;
+                rawGoodNames.push(mainKey.toUpperCase());
             }
         }
 
@@ -250,22 +263,47 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     }
 
-    // Score floor = 0, cap = 100
     score = Math.max(0, Math.min(100, score));
-    if (foundToxins.length > 0 && score > 50) { score = 50; }
+    if (foundToxins.length > 0) {
+        let maxCap = 50;
+        if (!hasHighToxin) {
+            let totalReward = 0;
+            for (let mainKey in whitelist) {
+                let item = whitelist[mainKey];
+                if (item && Array.isArray(item.aliases) && item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
+                    let benefit = item.benefit || "low";
+                    totalReward += (benefitReward[benefit] || 5);
+                }
+            }
+            maxCap = Math.min(75, 50 + totalReward);
+        }
+        if (score > maxCap) {
+            score = maxCap;
+        }
+    }
 
     let suggestedAltsHtml = [];
     collectedAlts.forEach(alt => {
         let lookupKey = Object.keys(alternativeDeepDiveMatrix).find(k => alt.toLowerCase().includes(k));
         if (lookupKey) {
-            suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal(${jsArg(alt.toUpperCase())}, 'BIOLOGISCHER SCHUTZSCHILD', ${jsArg(alternativeDeepDiveMatrix[lookupKey])}, false)">${escapeHTML(alt)}</li>`);
+            suggestedAltsHtml.push(`<li class="list-alt-clickable" onclick="openModal(${jsArg(alt.toUpperCase())}, 'BIOLOGISCHER SCHUTZSCHILD', ${jsArg(alternativeDeepDiveMatrix[lookupKey])}, 'alternative')">${escapeHTML(alt)}</li>`);
         } else {
             suggestedAltsHtml.push(`<li>${escapeHTML(alt)}</li>`);
         }
     });
 
+    if (keyActive && !isExtracted && !category.includes("KI") && ingredientsRaw.trim() !== "") {
+        let promptToxins = rawToxinsNames.join(", ");
+        let promptGood = rawGoodNames.join(", ");
+        showLoading("Generiere System-Zusammenfassung via KI...");
+        let summaryResult = await generateProductSummaryViaKI(productName, ingredientsRaw, promptToxins, promptGood);
+        if (summaryResult) {
+            kiSummary = summaryResult;
+        }
+    }
+
     let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? 'var(--warn)' : 'var(--alert)');
-    saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal);
+    saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal, kiSummary);
 
     let resultHtml = `
         <div class="res-card">
@@ -274,9 +312,19 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
                 <div class="res-info"><span class="res-badge">${escapeHTML(category)}</span><h3 class="res-title">${escapeHTML(productName)}</h3></div>
                 <div class="res-score-circle" style="color:${scoreColor}; border-color:${scoreColor};">${score}</div>
             </div>
-            <div class="status-bar ${foundToxins.length > 0 ? 'st-alert' : 'st-clean'}">${foundToxins.length > 0 ? 'ANGRIFF DETEKTIERT' : 'STATUS REIN'}</div>
+            <div class="status-bar ${foundToxins.length > 0 ? 'st-alert' : 'st-clean'}">${foundToxins.length > 0 ? 'ANGRIFF DETEKTIERT' : 'STATUS REIN'}</div>`;
+            
+    if (kiSummary) {
+        resultHtml += `
+            <div class="status-bar st-gemini" style="letter-spacing:1px; font-size:10px; padding:6px;">System-Analyse (KI)</div>
+            <div style="padding:15px 20px; font-size:13px; line-height:1.5; color:var(--text-main); border-bottom:1px solid var(--border-color); background:rgba(99,102,241,0.03); font-style:italic;">
+                "${escapeHTML(kiSummary)}"
+            </div>`;
+    }
+            
+    resultHtml += `
             <div class="res-body">`;
-
+            
     if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische Toxine (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
     if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
     if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;

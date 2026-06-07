@@ -127,6 +127,7 @@ function saveApiKey() {
         document.getElementById('geminiApiKey').value = '';
         document.getElementById('keyWarningGemini').style.display = 'block';
         setTimeout(() => { document.getElementById('keyWarningGemini').style.display = 'none'; }, 4000);
+        if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
     }
 }
 
@@ -138,6 +139,7 @@ function saveDeepSeekKey() {
         document.getElementById('deepseekApiKey').value = '';
         document.getElementById('keyWarningDeepSeek').style.display = 'block';
         setTimeout(() => { document.getElementById('keyWarningDeepSeek').style.display = 'none'; }, 4000);
+        if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
     }
 }
 
@@ -161,6 +163,7 @@ function clearGeminiKey() {
     sessionStorage.removeItem('op_gemini_key_session');
     localStorage.removeItem('op_gemini_key');
     document.getElementById('geminiApiKey').value = '';
+    if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
 }
 
 function clearDeepSeekKey() {
@@ -168,6 +171,7 @@ function clearDeepSeekKey() {
     sessionStorage.removeItem('op_deepseek_key_session');
     localStorage.removeItem('op_deepseek_key');
     document.getElementById('deepseekApiKey').value = '';
+    if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
 }
 
 function clearGoogleSearchKey() {
@@ -232,6 +236,25 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format (ohne Markdown-Formatierung, o
         console.error("Translation error:", e);
     }
     return null;
+}
+
+async function generateProductSummaryViaKI(productName, ingredientsText, foundToxins, foundGood) {
+    let prompt = `Du bist ein Biohacking- und Toxikologie-Experte. 
+Analysiere das Produkt "${productName}" mit den folgenden Zutaten: "${ingredientsText}".
+Unsere Systemanalyse hat folgende kritische Toxine gefunden: [${foundToxins || "Keine"}]
+Und folgende gesundheitsfördernde Zutaten: [${foundGood || "Keine"}]
+
+Erstelle eine kurze, prägnante Zusammenfassung (maximal 2-3 Sätze, im rauen, direkten und kognitiven Ton eines hochentwickelten Terminals). Erkläre biologisch und zellulär, warum das Produkt gut, neutral oder schädlich für den Körper ist und worauf der Fokus liegt. 
+Antworte AUSSCHLIESSLICH im folgenden JSON-Format (ohne Markdown-Formatierung, ohne zusätzliche Erklärungen):
+{"summary": "Deine Zusammenfassung hier"}`;
+
+    try {
+        let resultJson = await executeKIEngine(prompt);
+        return resultJson?.summary || null;
+    } catch(e) {
+        console.error("Summary generation error:", e);
+        return null;
+    }
 }
 
 async function callGeminiAPI(prompt, base64Image = null) {

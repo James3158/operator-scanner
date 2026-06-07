@@ -2,136 +2,163 @@
   "olivenöl": {
     "aliases": ["olivenöl", "olive oil", "olea europaea fruit oil", "olea europaea oil", "zeytinyagi", "zeytinyagi"],
     "desc": "Zellschutz / Hochwertige Lipide",
-    "detail": "Kaltgepresstes Olivenöl liefert einfach ungesättigte Fettsäuren und Polyphenole. Schützt die Zellen vor Oxidation und unterstützt die Testosteron-Synthese."
+    "detail": "Kaltgepresstes Olivenöl liefert einfach ungesättigte Fettsäuren und Polyphenole. Schützt die Zellen vor Oxidation und unterstützt die Testosteron-Synthese.",
+    "benefit": "high"
   },
   "kokosöl": {
     "aliases": ["kokosöl", "coconut oil", "cocos nucifera oil", "cocos nucifera", "hindistan cevizi yagi", "hindistan cevizi yagi"],
     "desc": "MCT-Fette / Kognitive Energie",
-    "detail": "Besteht primär aus mittelkettigen Triglyceriden (MCTs). Liefert saubere Energie für das Gehirn ohne Insulin-Spike."
+    "detail": "Besteht primär aus mittelkettigen Triglyceriden (MCTs). Liefert saubere Energie für das Gehirn ohne Insulin-Spike.",
+    "benefit": "high"
   },
   "sheabutter": {
     "aliases": ["sheabutter", "shea butter", "butyrospermum parkii", "butyrospermum parkii butter"],
     "desc": "Natürliche Hautbarriere",
-    "detail": "Unraffiniertes Fett aus der Kariténuss. Enthält Allantoin und Vitamin E. Repariert die Hautbarriere, ohne in das Hormonsystem einzugreifen."
+    "detail": "Unraffiniertes Fett aus der Kariténuss. Enthält Allantoin und Vitamin E. Repariert die Hautbarriere, ohne in das Hormonsystem einzugreifen.",
+    "benefit": "medium"
   },
   "meersalz": {
     "aliases": ["meersalz", "sea salt", "maris sal", "sea salt extract", "deniz tuzu"],
     "desc": "Elektrolyt-Matrix / Zelluläre Hydration",
-    "detail": "Unraffiniertes Salz enthält alle essenziellen Spurenelemente. Es optimiert die zelluläre Hydration, die Leitfähigkeit der Nervenbahnen und stabilisiert den Vril-Energiefluss."
+    "detail": "Unraffiniertes Salz enthält alle essenziellen Spurenelemente. Es optimiert die zelluläre Hydration, die Leitfähigkeit der Nervenbahnen und stabilisiert den Vril-Energiefluss.",
+    "benefit": "high"
   },
   "aloe_vera": {
     "aliases": ["aloe vera", "aloe barbadensis", "aloe barbadensis leaf juice", "aloe extract"],
     "desc": "Regenerativ / Entzündungshemmend",
-    "detail": "Ihre Enzyme und Polysaccharide reparieren Gewebeschäden auf zellulärer Ebene und kühlen systemische Entzündungen."
+    "detail": "Ihre Enzyme und Polysaccharide reparieren Gewebeschäden auf zellulärer Ebene und kühlen systemische Entzündungen.",
+    "benefit": "medium"
   },
   "bienenwachs": {
     "aliases": ["bienenwachs", "beeswax", "cera alba"],
     "desc": "Natürlicher Schutzfilm",
-    "detail": "Bildet einen atmungsaktiven Schutzfilm auf der Haut, wirkt antibakteriell und zieht keine Toxine an."
+    "detail": "Bildet einen atmungsaktiven Schutzfilm auf der Haut, wirkt antibakteriell und zieht keine Toxine an.",
+    "benefit": "low"
   },
   "rohkakao": {
     "aliases": ["rohkakao", "cacao", "theobroma cacao", "cacao seed butter", "kakaobutter", "kakao yagi", "kakao yagi", "ham kakao"],
     "desc": "Antioxidantien / Vril-Stimulanz",
-    "detail": "Unerhitzter Kakao ist extrem reich an Magnesium und Theobromin. Erweitert die Blutgefäße und stimuliert das System."
+    "detail": "Unerhitzter Kakao ist extrem reich an Magnesium und Theobromin. Erweitert die Blutgefäße und stimuliert das System.",
+    "benefit": "high"
   },
   "honig": {
     "aliases": ["honig", "honey", "mel", "bal"],
     "desc": "Antimikrobiell / Natürliches Enzym-Profil",
-    "detail": "Roher Honig ist präbiotisch und antimikrobiell. Er enthält die nötigen Enzyme zur eigenen Verstoffwechselung."
+    "detail": "Roher Honig ist präbiotisch und antimikrobiell. Er enthält die nötigen Enzyme zur eigenen Verstoffwechselung.",
+    "benefit": "high"
   },
   "dinkel": {
     "aliases": ["dinkel", "spelt", "dinkelmehl", "spelt flour"],
     "desc": "Urgetreide / Bessere Verträglichkeit",
-    "detail": "Ein genetisch intaktes Urgetreide. Enthält weniger Reizproteine als Weizen und unterstützt die physische Stärke."
+    "detail": "Ein genetisch intaktes Urgetreide. Enthält weniger Reizproteine als Weizen und unterstützt die physische Stärke.",
+    "benefit": "low"
   },
   "sauerteig": {
     "aliases": ["sauerteig", "sourdough", "eksi maya", "eksi maya"],
     "desc": "Fermentation / Darmfreundlich",
-    "detail": "Milchsäurebakterien bauen Antinährstoffe ab. Maximiert die Mineralstoffaufnahme und schützt das Mikrobiom."
+    "detail": "Milchsäurebakterien bauen Antinährstoffe ab. Maximiert die Mineralstoffaufnahme und schützt das Mikrobiom.",
+    "benefit": "high"
   },
   "jojoba": {
     "aliases": ["jojoba", "simmondsia chinensis", "simmondsia chinensis seed oil", "jojoba esters"],
     "desc": "Haut-Identisches Wachs",
-    "detail": "Strukturell fast identisch mit menschlichem Talg. Versiegelt die Hautbarriere gegen Matrix-Toxine."
+    "detail": "Strukturell fast identisch mit menschlichem Talg. Versiegelt die Hautbarriere gegen Matrix-Toxine.",
+    "benefit": "medium"
   },
   "arganöl": {
     "aliases": ["arganöl", "argan oil", "argania spinosa", "argania spinosa kernel oil"],
     "desc": "Vitamin E / Zellregeneration",
-    "detail": "Ein stabile Lipidprofil mit hohem Antioxidantien-Anteil. Schützt die Zellen vor oxidativem Stress und liefert Rohstoffe für die Hormonproduktion."
+    "detail": "Ein stabile Lipidprofil mit hohem Antioxidantien-Anteil. Schützt die Zellen vor oxidativem Stress und liefert Rohstoffe für die Hormonproduktion.",
+    "benefit": "medium"
   },
   "rindertalg": {
     "aliases": ["rindertalg", "beef tallow", "tallow", "adeps bovis"],
     "desc": "Bio-identische Lipide / Zellstruktur",
-    "detail": "Das Profil ähnelt dem menschlichen Sebum. Wird perfekt resorbiert und nährt die Zellen tiefgreifend."
+    "detail": "Das Profil ähnelt dem menschlichen Sebum. Wird perfekt resorbiert und nährt die Zellen tiefgreifend.",
+    "benefit": "high"
   },
   "lanolin": {
     "aliases": ["lanolin", "wool fat"],
     "desc": "Wollwachs / Natürliche Barriere",
-    "detail": "Repariert Risse in der physischen Hülle und verhindert das Eindringen von synthetischen Chemikalien."
+    "detail": "Repariert Risse in der physischen Hülle und verhindert das Eindringen von synthetischen Chemikalien.",
+    "benefit": "medium"
   },
   "tocopherol": {
     "aliases": ["tocopherol", "vitamin e", "tocopheryl acetate"],
     "desc": "Vitamin E / Zelluläres Antioxidans",
-    "detail": "Ein potenten Antioxidans. Es schützt die Lipidmembranen der Zellen vor Zerstörung durch freie Radikale."
+    "detail": "Ein potenten Antioxidans. Es schützt die Lipidmembranen der Zellen vor Zerstörung durch freie Radikale.",
+    "benefit": "medium"
   },
   "squalane": {
     "aliases": ["squalane", "squalene"],
     "desc": "Hautidentisches Lipid / Schutz",
-    "detail": "Ein biologischer Kohlenwasserstoff, der natürlich im Körper vorkommt. Fungiert als Isolator gegen Umweltstressoren."
+    "detail": "Ein biologischer Kohlenwasserstoff, der natürlich im Körper vorkommt. Fungiert als Isolator gegen Umweltstressoren.",
+    "benefit": "medium"
   },
   "heilerde": {
     "aliases": ["bentonite", "kaolin", "rhassoul", "lavaerde", "tonerde", "solum fullonum"],
     "desc": "Heilerde / Schwermetall-Entgiftung",
-    "detail": "Besitzen eine forte negative Ionenladung. Binden toxische Schwermetalle und Matrix-Chemikalien physisch an sich und leiten sie aus."
+    "detail": "Besitzen eine forte negative Ionenladung. Binden toxische Schwermetalle und Matrix-Chemikalien physisch an sich und leiten sie aus.",
+    "benefit": "medium"
   },
   "weidebutter": {
     "aliases": ["weidebutter", "grass-fed butter", "ghee", "butterfat"],
     "desc": "Bio-identische Fette / Hormon-Baustein",
-    "detail": "Enthält essenzielle fettlösliche Vitamine und Cholesterin. Dies ist das exakte fundamentale Rohmaterial für eine maximale Testosteron-Synthese."
+    "detail": "Enthält essenzielle fettlösliche Vitamine und Cholesterin. Dies ist das exakte fundamentale Rohmaterial für eine maximale Testosteron-Synthese.",
+    "benefit": "high"
   },
   "rohmilch": {
     "aliases": ["rohmilch", "raw milk", "cig sut", "cig sut"],
     "desc": "Unpasteurisiert / Erhaltene Enzymstruktur",
-    "detail": "Milch im Originalzustand. Die intakten Laktase-Enzyme machen sie verträglich. Stärkt Knochen und Immunsystem massiv."
+    "detail": "Milch im Originalzustand. Die intakten Laktase-Enzyme machen sie verträglich. Stärkt Knochen und Immunsystem massiv.",
+    "benefit": "high"
   },
   "maca": {
     "aliases": ["maca", "lepidium meyenii"],
     "desc": "Adaptogen / Hormonelle Balance",
-    "detail": "Gleicht das endokrine System aus, steigert die physische Resilienz und hebt die Vril-Kraft ohne künstliche Stimulation an."
+    "detail": "Gleicht das endokrine System aus, steigert die physische Resilienz und hebt die Vril-Kraft ohne künstliche Stimulation an.",
+    "benefit": "high"
   },
   "shilajit": {
     "aliases": ["shilajit", "mumijo", "mineral pitch"],
     "desc": "Fulvinsäure / Mineralstoff-Matrix",
-    "detail": "Organische Mineralien-Verbindung. Transportiert Nährstoffe direkt in die Zellen und reinigt das Gefäß von Schwermetallen."
+    "detail": "Organische Mineralien-Verbindung. Transportiert Nährstoffe direkt in die Zellen und reinigt das Gefäß von Schwermetallen.",
+    "benefit": "high"
   },
   "knochenbrühe": {
     "aliases": ["knochenbrühe", "bone broth", "kemik suyu"],
     "desc": "Kollagen / Reparatur der Darmbarriere",
-    "detail": "Die extrahierten Aminosäuren (Glycin, Prolin) sind die Bausteine für die Reparatur des Darms."
+    "detail": "Die extrahierten Aminosäuren (Glycin, Prolin) sind die Bausteine für die Reparatur des Darms.",
+    "benefit": "high"
   },
   "ceramide": {
     "aliases": ["ceramide", "ceramides", "ceramide np", "ceramide ap", "ceramide eop"],
     "desc": "Zellulärer Mörtel / Barriere-Reparatur",
-    "detail": "Bio-identische Lipide, die den 'Mörtel' zwischen den Hautzellen bilden. Verhindern das Eindringen toxischer Moleküle."
+    "detail": "Bio-identische Lipide, die den 'Mörtel' zwischen den Hautzellen bilden. Verhindern das Eindringen toxischer Moleküle.",
+    "benefit": "medium"
   },
   "niacinamide": {
     "aliases": ["niacinamide", "vitamin b3", "nicotinamide"],
     "desc": "Zell-Kommunikation / Barriereschutz",
-    "detail": "Stärkt die Hautbarriere, mindert Entzündungen und repariert DNA-Schäden durch systemische Toxine."
+    "detail": "Stärkt die Hautbarriere, mindert Entzündungen und repariert DNA-Schäden durch systemische Toxine.",
+    "benefit": "medium"
   },
   "hyaluron": {
     "aliases": ["hyaluron", "hyaluronic acid", "sodium hyaluronate"],
     "desc": "Zelluläre Hydratation",
-    "detail": "Ein körpereigenes Molekül. Bindet Feuchtigkeit in der Zelle, hält das Gewebe funktional und transportiert Nährstoffe."
+    "detail": "Ein körpereigenes Molekül. Bindet Feuchtigkeit in der Delfare, hält das Gewebe funktional und transportiert Nährstoffe.",
+    "benefit": "medium"
   },
   "bakuchiol": {
     "aliases": ["bakuchiol"],
     "desc": "Phyto-Regeneration",
-    "detail": "Eine Matrix-freie, pflanzliche Alternative zu synthetischem Retinol. Beschleunigt den Zellumsatz ohne toxische Reizung."
+    "detail": "Eine Matrix-freie, pflanzliche Alternative zu synthetischem Retinol. Beschleunigt den Zellumsatz ohne toxische Reizung.",
+    "benefit": "low"
   },
   "centella": {
     "aliases": ["centella asiatica", "tiger grass", "cica", "madecassoside"],
     "desc": "Gewebe-Reparatur / Wundheilung",
-    "detail": "Beschleunigt die Kollagensynthese und unterdrückt systemische Entzündungsfaktoren in der Dermis."
+    "detail": "Beschleunigt die Kollagensynthese und unterdrückt systemische Entzündungsfaktoren in der Dermis.",
+    "benefit": "medium"
   }
 }

@@ -32,16 +32,84 @@ function initTheme() {
     }
 }
 
-function openModal(title, desc, detail, isAlert) {
+function openModal(title, desc, detail, isAlertOrSeverity) {
     document.getElementById('mod-title').innerText = title;
     document.getElementById('mod-desc').innerText = desc;
-    document.getElementById('mod-desc').style.color = isAlert ? "var(--alert)" : "var(--matrix-green)";
+    
+    let severity = "";
+    let isGood = false;
+    let isAlternative = false;
+    
+    if (typeof isAlertOrSeverity === 'boolean') {
+        if (isAlertOrSeverity) severity = "medium";
+        else isGood = true;
+    } else if (typeof isAlertOrSeverity === 'string') {
+        if (['high', 'medium', 'low'].includes(isAlertOrSeverity)) {
+            severity = isAlertOrSeverity;
+        } else if (isAlertOrSeverity === 'good') {
+            isGood = true;
+        } else if (isAlertOrSeverity === 'alternative') {
+            isAlternative = true;
+        }
+    }
+    
+    const hazardContainer = document.getElementById('mod-hazard-container');
+    const hazardFill = document.getElementById('mod-hazard-fill');
+    const hazardLabel = document.getElementById('mod-hazard-label');
+    
+    if (severity) {
+        hazardContainer.style.display = 'block';
+        hazardFill.className = 'hazard-bar-fill';
+        if (severity === 'high') {
+            document.getElementById('mod-desc').style.color = "var(--alert)";
+            hazardLabel.innerText = "Kritisch (Neurotoxin / Karzinogen)";
+            hazardLabel.style.color = "var(--alert)";
+            hazardFill.classList.add('hazard-high');
+            hazardFill.style.width = '100%';
+        } else if (severity === 'medium') {
+            document.getElementById('mod-desc').style.color = "var(--warn)";
+            hazardLabel.innerText = "Mittel (Entzündung / Hormon-Gefahr)";
+            hazardLabel.style.color = "var(--warn)";
+            hazardFill.classList.add('hazard-medium');
+            hazardFill.style.width = '60%';
+        } else if (severity === 'low') {
+            document.getElementById('mod-desc').style.color = "var(--matrix-green)";
+            hazardLabel.innerText = "Niedrig (Füllstoff / Milde Belastung)";
+            hazardLabel.style.color = "var(--matrix-green)";
+            hazardFill.classList.add('hazard-low');
+            hazardFill.style.width = '30%';
+        }
+    } else {
+        hazardContainer.style.display = 'none';
+        if (isGood) {
+            document.getElementById('mod-desc').style.color = "var(--matrix-green)";
+        } else if (isAlternative) {
+            document.getElementById('mod-desc').style.color = "var(--gemini-blue)";
+        } else {
+            document.getElementById('mod-desc').style.color = "var(--text-muted)";
+        }
+    }
+    
     document.getElementById('mod-detail').innerText = detail;
     document.getElementById('detailModalOverlay').style.display = 'block';
     setTimeout(() => {
         document.getElementById('detailModalOverlay').style.opacity = '1';
         document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(0)';
     }, 10);
+}
+
+function updateCoreStatusBadge() {
+    let keyActive = typeof getSecretKey === 'function' && (getSecretKey('gemini') || getSecretKey('deepseek'));
+    let badge = document.getElementById('coreStatusBadge');
+    if (badge) {
+        if (keyActive) {
+            badge.innerText = "KI-CORE ACTIVE";
+            badge.className = "core-status-badge core-status-ki";
+        } else {
+            badge.innerText = "OFFLINE-CORE ACTIVE";
+            badge.className = "core-status-badge core-status-offline";
+        }
+    }
 }
 
 function closeModal() {
@@ -162,13 +230,22 @@ function triggerArchiveImageInject(event, barcode) {
     document.getElementById('archiveImageInjectorInput').click();
 }
 
-function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl) {
+function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, kiSummary = "") {
     let history = getHistory();
     history = history.filter(item => item.barcode !== barcode);
     let mainCategory = "Nahrung";
     if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
     if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
-    history.unshift({ barcode, name, score, category: mainCategory, rawIngredients, imageUrl: imgUrl, dateIso: new Date().toISOString() });
+    history.unshift({ 
+        barcode, 
+        name, 
+        score, 
+        category: mainCategory, 
+        rawIngredients, 
+        imageUrl: imgUrl, 
+        kiSummary: kiSummary, 
+        dateIso: new Date().toISOString() 
+    });
     if (history.length > 100) history.pop();
     saveHistory(history);
 }
@@ -223,8 +300,18 @@ function loadFromArchive(barcode) {
     showLoading('Lade Archiv...');
     let history = getHistory();
     let item = history.find(i => i.barcode === barcode);
-    if (item && item.rawIngredients) analyzeProduct({ product: { product_name: item.name, ingredients_text: item.rawIngredients, image_url: item.imageUrl } }, item.category, barcode, true);
-    else fetchDataCascade(barcode);
+    if (item && item.rawIngredients) {
+        analyzeProduct({ 
+            product: { 
+                product_name: item.name, 
+                ingredients_text: item.rawIngredients, 
+                image_url: item.imageUrl,
+                ki_summary: item.kiSummary || "" 
+            } 
+        }, item.category, barcode, true);
+    } else {
+        fetchDataCascade(barcode);
+    }
 }
 
 function renderFallbackUI(barcode, productName = "", searchTerm = "") {
@@ -261,8 +348,12 @@ function executeQuickScan() {
 // ─── FEATURE: Export / Import ───
 function exportHistory() {
     let history = getHistory();
-    if (history.length === 0) { alert('Archiv ist leer.'); return; }
-    let blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    let customToxins = typeof getCustomToxins === 'function' ? getCustomToxins() : {};
+    let exportData = {
+        history: history,
+        customToxins: customToxins
+    };
+    let blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     let url = URL.createObjectURL(blob);
     let a = document.createElement('a');
     a.href = url;
@@ -275,19 +366,37 @@ function importHistory(file) {
     let reader = new FileReader();
     reader.onload = function(e) {
         try {
-            let data = JSON.parse(e.target.result);
-            if (!Array.isArray(data)) throw new Error('Ungültiges Format');
+            let parsed = JSON.parse(e.target.result);
+            let importList = [];
+            let importCustom = {};
+            
+            if (Array.isArray(parsed)) {
+                importList = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+                importList = parsed.history || [];
+                importCustom = parsed.customToxins || {};
+            } else {
+                throw new Error('Ungültiges Format');
+            }
+            
             let existing = getHistory();
-            // Mergen: Neuere Einträge überschreiben alte mit gleichem Barcode
-            let merged = data.map(normalizeHistoryItem).filter(Boolean);
+            let merged = importList.map(normalizeHistoryItem).filter(Boolean);
             existing.forEach(item => {
                 if (!merged.find(m => m.barcode === item.barcode)) merged.push(item);
             });
             merged = merged.slice(0, 100);
             saveHistory(merged);
+            
+            if (Object.keys(importCustom).length > 0) {
+                let currentCustom = typeof getCustomToxins === 'function' ? getCustomToxins() : {};
+                let mergedCustom = Object.assign({}, currentCustom, importCustom);
+                writeJsonStorage('op_custom_toxins', mergedCustom);
+                if (typeof renderCustomToxinList === 'function') renderCustomToxinList();
+            }
+            
             renderHistory();
-            alert(`${merged.length} Einträge importiert.`);
-        } catch (err) { alert('Import fehlgeschlagen: Ungültige JSON-Datei.'); }
+            alert(`${merged.length} Einträge und ${Object.keys(importCustom).length} Custom-Toxine importiert.`);
+        } catch (err) { alert('Import fehlgeschlagen: Ungültige JSON-Datei oder falsches Format.'); }
     };
     reader.readAsText(file);
 }
@@ -565,11 +674,13 @@ Promise.all([
     blacklist = data[0]; whitelist = data[1]; dbActive = true;
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'none';
     initTheme();
+    updateCoreStatusBadge();
 }).catch(() => {
     blacklist = blacklist || {};
     whitelist = whitelist || {};
     dbActive = false;
     initTheme();
+    updateCoreStatusBadge();
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'block';
 });
 

@@ -16,6 +16,7 @@
         <div class="header-title">
             Operator Interface
             <span class="version-tag">SYSTEM EXECUTION V13.5 (DYNAMIC CORES)</span>
+            <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -239,6 +240,15 @@
         <div class="modal-handle"></div>
         <h3 id="mod-title">Toxin</h3>
         <p id="mod-desc">Kategorie</p>
+        <div id="mod-hazard-container" style="display:none; margin:10px 0 16px 0;">
+            <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; text-transform:uppercase; margin-bottom:4px;">
+                <span>Risikostufe</span>
+                <span id="mod-hazard-label">Mittel</span>
+            </div>
+            <div class="hazard-bar-track">
+                <div id="mod-hazard-fill" class="hazard-bar-fill"></div>
+            </div>
+        </div>
         <p id="mod-detail">Detailbeschreibung...</p>
     </div>
 
