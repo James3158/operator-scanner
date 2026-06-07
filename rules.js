@@ -152,12 +152,38 @@ function matchIngredient(text, alias, itemPattern) {
     return cleanText.includes(cleanAlias);
 }
 
-function analyzeProduct(data, category, barcode, isExtracted = false) {
+async function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (!data || !data.product) {
         renderFallbackUI(barcode);
         return;
     }
     let p = data.product;
+
+    // Global KI Translation step
+    let keyActive = typeof getSecretKey === 'function' && (getSecretKey('gemini') || getSecretKey('deepseek'));
+    if (keyActive && !isExtracted && !category.includes("KI")) {
+        let rawIngredientsText = p.ingredients_text_de || p.ingredients_text_en || p.ingredients_text || "";
+        let currentName = p.product_name || "Unbekanntes Objekt";
+        
+        let needsTranslation = false;
+        if (category.includes("OCR") || category.includes("Optisch") || category.includes("Offline-Analyse")) {
+            needsTranslation = true;
+        } else if (!p.ingredients_text_de || p.ingredients_text_de.trim().length === 0) {
+            needsTranslation = true;
+        }
+        
+        if (needsTranslation && rawIngredientsText.trim().length > 0) {
+            showLoading("Übersetze Produktdaten ins Deutsche via KI...");
+            let translatedData = await translateProductDataViaKI(currentName, rawIngredientsText);
+            if (translatedData) {
+                p.product_name_original = currentName;
+                p.ingredients_text_original = rawIngredientsText;
+                p.product_name = translatedData.name;
+                p.ingredients_text_de = translatedData.ingredients;
+            }
+        }
+    }
+
     let imgUrlFinal = isSafeImageUrl(p.image_url || p.image_front_small_url || "") ? (p.image_url || p.image_front_small_url || "") : "";
     let ingredientsRawOriginal = [p.ingredients_text_de || "", p.ingredients_text_en || "", p.ingredients_text || "", p.ingredients_tags ? p.ingredients_tags.join(" ") : ""].join(" ");
     let ingredientsRaw = normalizeIngredientText(ingredientsRawOriginal);
@@ -255,6 +281,10 @@ function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
     if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
     
-    resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRawOriginal || ingredientsRaw)}</div></div></div>`;
+    let rawTextToShow = escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRawOriginal || ingredientsRaw);
+    if (p.ingredients_text_original) {
+        rawTextToShow = `<strong>Deutsch (KI-Übersetzt):</strong><br>${escapeHTML(p.ingredients_text_de)}<br><br><strong>Original (${escapeHTML(p.product_name_original || productName)}):</strong><br>${escapeHTML(p.ingredients_text_original)}`;
+    }
+    resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${rawTextToShow}</div></div></div>`;
     document.getElementById('result-content').innerHTML = resultHtml;
 }

@@ -53,7 +53,8 @@
     "aliases": [
       "carrageen",
       "carrageenan",
-      "e407"
+      "e407",
+      "karajenan"
     ],
     "desc": "Entzündungsfördernder Emulgator",
     "detail": "Ein aus Rotalgen isoliertes Verdickungsmittel. Löst starke Immunreaktionen und Entzündungen im Magen-Darm-Trakt aus.",
@@ -118,7 +119,8 @@
       "misir surubu",
       "fruktoz",
       "glukoz",
-      "sakkaroz"
+      "sakkaroz",
+      "maltodekstrin"
     ],
     "desc": "Insulin-Spike / Frequenz-Senker",
     "detail": "Industriell isolierte Fruktose und Saccharose. Erzeugt brutale Blutzuckerschwankungen und fördert viszerales Fett.",
@@ -126,7 +128,9 @@
   },
   "palmöl": {
     "aliases": [
-      "palm"
+      "palm",
+      "palmiye yagi",
+      "palmiye"
     ],
     "desc": "Endokriner Disruptor / Toxische Verarbeitung",
     "detail": "Durch extreme Hitze und chemische Reinigung oxidiertes Fett. Fördert systemische Entzündungen.",
@@ -294,7 +298,14 @@
       "aycicek yagi",
       "aycicegi yagi",
       "kanola yagi",
-      "aspir yagi"
+      "aspir yagi",
+      "misir ozu yagi",
+      "pamuk yagi",
+      "corn oil",
+      "cottonseed oil",
+      "grape seed oil",
+      "traubenkernöl",
+      "uzum cekirdegi yagi"
     ],
     "desc": "Industriefett / Entzündungsfördernd",
     "detail": "Hochverarbeitete Fette. Sie schwächen die Zellmembranen und drosseln die mitochondriale ATP-Produktion.",

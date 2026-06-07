@@ -86,7 +86,7 @@ function openView(viewName, isBackAction = false) {
     const showBack = viewStack.length > 1;
     document.getElementById('backBtn').style.display = showBack ? 'block' : 'none';
     if (document.getElementById('burgerBtn')) {
-        document.getElementById('burgerBtn').style.display = showBack ? 'none' : 'block';
+        document.getElementById('burgerBtn').style.display = 'flex';
     }
     
     document.getElementById('view-' + viewName).classList.add('active');

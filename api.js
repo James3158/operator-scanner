@@ -206,10 +206,38 @@ async function executeKIEngine(prompt, base64Image = null) {
     }
 }
 
+async function translateProductDataViaKI(productName, ingredientsText) {
+    let promptText = `Du bist ein hochentwickeltes Übersetzungs- und Bereinigungs-Modul für Inhaltsstoffe (Zutaten) und Produktnamen von Lebensmitteln und Kosmetika.
+Deine Aufgabe ist es, den Produktnamen und die Zutatenliste vollständig und präzise ins Deutsche zu übersetzen.
+Analysiere die Sprache (z. B. Türkisch, Englisch, Französisch) und übersetze jede Zutat fachlich korrekt ins Deutsche (z. B. "şeker" -> "Zucker", "ayçiçek yağı" -> "Sonnenblumenöl").
+Korrigiere Tippfehler und typische OCR-Erkennungsfehler.
+Gib die bereinigten Zutaten als kommagetrennte Liste zurück.
+Falls die Liste oder der Name bereits komplett auf Deutsch sind, korrigiere nur Rechtschreibfehler, entferne nichtssagende Zeichen und optimiere die Formatierung.
+
+Produktname: "${productName}"
+Zutatenliste: "${ingredientsText}"
+
+Antworte AUSSCHLIESSLICH im folgenden JSON-Format (ohne Markdown-Formatierung, ohne zusätzliche Erklärungen):
+{"translated_name": "übersetzter Produktname", "translated_ingredients": "übersetzte und bereinigte Zutatenliste"}`;
+
+    try {
+        let resultJson = await executeKIEngine(promptText);
+        if (resultJson) {
+            return {
+                name: resultJson.translated_name || productName,
+                ingredients: resultJson.translated_ingredients || ingredientsText
+            };
+        }
+    } catch (e) {
+        console.error("Translation error:", e);
+    }
+    return null;
+}
+
 async function callGeminiAPI(prompt, base64Image = null) {
     let key = getSecretKey('gemini');
     if(!key) { alert("Gemini API Key fehlt."); return null; }
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent`;
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent`;
     let parts = [{ text: prompt }];
     if(base64Image) {
         let mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/);
@@ -454,10 +482,10 @@ async function fetchDuckDuckGoScrape(query) {
     let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
     try {
         let response = await fetch(proxyUrl);
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error("Primary proxy failed");
         let json = await response.json();
         let html = json.contents;
-        if (!html) return [];
+        if (!html) throw new Error("Empty contents from primary proxy");
         
         let parser = new DOMParser();
         let doc = parser.parseFromString(html, "text/html");
@@ -469,8 +497,27 @@ async function fetchDuckDuckGoScrape(query) {
         });
         return snippets.slice(0, 8);
     } catch (e) {
-        console.error("DuckDuckGo fetch failed:", e);
-        return [];
+        console.warn("Primary proxy failed, trying fallback...", e);
+        let fallbackProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        try {
+            let response = await fetch(fallbackProxyUrl);
+            if (!response.ok) return [];
+            let html = await response.text();
+            if (!html) return [];
+            
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(html, "text/html");
+            let results = doc.querySelectorAll('.result__snippet');
+            let snippets = [];
+            results.forEach(el => {
+                let text = el.textContent.trim();
+                if (text) snippets.push(text);
+            });
+            return snippets.slice(0, 8);
+        } catch (err) {
+            console.error("Fallback proxy failed as well:", err);
+            return [];
+        }
     }
 }
 

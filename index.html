@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal v13.3</title>
+    <title>Operator Terminal v13.5</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -12,16 +12,14 @@
 </head>
 <body>
     <div class="header-container">
-        <div style="display:flex; gap:10px; align-items:center;">
-            <button id="burgerBtn" aria-label="Menü öffnen">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-            <button id="backBtn">&#10094; ZURÜCK</button>
-        </div>
+        <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag">SYSTEM EXECUTION V13.3 (DYNAMIC CORES)</span>
+            <span class="version-tag">SYSTEM EXECUTION V13.5 (DYNAMIC CORES)</span>
         </div>
+        <button id="burgerBtn" aria-label="Menü öffnen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
     </div>
     
     <div id="db-status">⚠️ DATENBANKEN KONNTEN NICHT GELADEN WERDEN. ANALYSE-FUNKTIONEN EINGESCHRÄNKT.</div>
@@ -171,7 +169,7 @@
             
             <div class="sec-title">Aktive KI Extraktions-Engine</div>
             <select id="activeModelSelect" class="std-input" style="margin-bottom:15px;">
-                <option value="gemini">Gemini 3.1 Flash-Lite (Grounding)</option>
+                <option value="gemini">Gemini 3 Flash (Grounding)</option>
                 <option value="deepseek">DeepSeek V4 (Chat Pipeline)</option>
             </select>
             <div class="key-mode-box">
