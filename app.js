@@ -780,6 +780,39 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('activeModelSelect').addEventListener('change', (e) => {
         localStorage.setItem('op_active_model', e.target.value);
     });
+
+    const versionTagBtn = document.getElementById('versionTagBtn');
+    if (versionTagBtn) {
+        versionTagBtn.addEventListener('click', () => {
+            const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V13.7 ===\n` +
+                `- Multimodale RAG Kamera-Pipeline: Höhere Genauigkeit beim Scannen. Die KI identifiziert erst den Namen aus Fotos, führt eine Websuche durch und analysiert dann die präzisen Zutaten.\n` +
+                `- Setup-Anleitung: Schritt-für-Schritt-Guide für Gemini 3.5 Flash & DeepSeek in den Einstellungen integriert.\n` +
+                `- System-Reset: Neue Funktion zum Zurücksetzen aller API-Keys, des Cache-Speichers und der benutzerdefinierten Toxine auf Werkseinstellungen.\n` +
+                `- Version-Tag Changelog: Interaktiver Versions-Knopf zum schnellen Aufrufen dieser Update-Protokolle.\n\n` +
+                `=== SYSTEM V13.6 ===\n` +
+                `- Lokaler Import/Export: Backup- und Wiederherstellungsfunktion für das gesamte Offline-Archiv sowie Custom Toxine im JSON-Format.\n` +
+                `- Custom Toxin-Definition: Benutzerdefinierte Spezifikation von Toxinen direkt über das Interface.\n` +
+                `- Erweiterter Offline-Abgleich mit intelligenter Regex-Mustererkennung.\n\n` +
+                `=== SYSTEM V13.5 ===\n` +
+                `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
+                `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
+                `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
+            openModal("PATCH NOTES v13.7", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+        });
+    }
+
+    const resetAppSettingsBtn = document.getElementById('resetAppSettingsBtn');
+    if (resetAppSettingsBtn) {
+        resetAppSettingsBtn.addEventListener('click', () => {
+            if (confirm("Möchtest du wirklich alle Werkseinstellungen zurücksetzen?\n\nDies löscht alle gespeicherten API-Schlüssel, das gesamte Archiv und deine benutzerdefinierten Toxin-Definitionen unwiderruflich!")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                alert("System zurückgesetzt. Anwendung wird neu geladen...");
+                location.reload();
+            }
+        });
+    }
     document.getElementById('sessionKeyToggle')?.addEventListener('change', (e) => {
         localStorage.setItem('op_key_session_mode', e.target.checked ? '1' : '0');
         if (!e.target.checked) {

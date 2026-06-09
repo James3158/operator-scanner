@@ -1269,3 +1269,69 @@ body {
     background: var(--matrix-green);
     box-shadow: 0 0 8px var(--matrix-green);
 }
+
+/* Version Tag Changelog Link */
+#versionTagBtn:hover {
+    text-decoration: underline;
+    color: var(--text-main);
+    opacity: 1;
+}
+
+/* Collapsible Help Sektion in Settings Drawer */
+.help-details {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    transition: none; /* Details native transitions can be glitchy */
+}
+.light-theme .help-details {
+    background: rgba(0, 0, 0, 0.02);
+}
+.help-details summary {
+    font-weight: 700;
+    color: var(--text-main);
+    cursor: pointer;
+    outline: none;
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+.help-content {
+    margin-top: 10px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.help-content p {
+    margin: 6px 0;
+}
+.help-content a {
+    color: var(--matrix-green);
+    text-decoration: none;
+    font-weight: 700;
+}
+.help-content a:hover {
+    text-decoration: underline;
+}
+.help-content ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+.help-content li {
+    margin-bottom: 6px;
+}
+
+/* Settings Reset Button */
+.btn-reset {
+    background: rgba(244, 63, 94, 0.08);
+    color: var(--alert);
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    font-size: 11px;
+    padding: 12px;
+}
+.btn-reset:active {
+    background: rgba(244, 63, 94, 0.25) !important;
+}

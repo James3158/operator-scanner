@@ -361,19 +361,53 @@ async function triggerKIExtraktion(barcode, prefilledTerm = "") {
 }
 
 function processKIVision(file, barcode) {
-    showLoading('Verarbeite Bildmatrix über aktive KI...');
+    showLoading('Identifiziere Produkt aus Foto...');
     let reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async function () {
-        let promptText = `Analysiere dieses Bild. Erkenne das Produkt und ermittle die exakten Inhaltsstoffe. 
-        Übersetze alle Zutaten und den Produktnamen immer vollständig und präzise ins Deutsche (z.B. "şeker" -> "Zucker", "ayçiçek yağı" -> "Sonnenblumenöl").
-        Antworte AUSSCHLIESSLICH im JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category auf "Nahrung" oder "Kosmetik".`;
-        let resultJson = await executeKIEngine(promptText, reader.result);
-        if(resultJson) {
-            let cat = resultJson.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
-            analyzeProduct({ product: { product_name: resultJson.product_name, ingredients_text: resultJson.ingredients_text, image_url: reader.result } }, cat, barcode, true);
-        } else {
-            renderFallbackUI(barcode);
+        let base64Image = reader.result;
+        let identifyPrompt = `Analysiere dieses Produktfoto. Identifiziere den Markennamen und den genauen Produktnamen. 
+Antworte AUSSCHLIESSLICH im JSON-Format: {"product_name": "Marke & Produktname"}`;
+        
+        try {
+            let identifyResult = await executeKIEngine(identifyPrompt, base64Image);
+            let productName = identifyResult?.product_name;
+            if (!productName || productName.toLowerCase().includes("unbekannt") || productName.trim() === "") {
+                throw new Error("Produktname konnte nicht identifiziert werden.");
+            }
+            
+            showLoading(`Suche Inhaltsstoffe im Web für "${productName}"...`);
+            let snippets = await fetchWebSearchSnippets(productName);
+            
+            showLoading(`Analysiere Inhaltsstoffe für "${productName}"...`);
+            let searchContext = snippets.length > 0
+                ? `Websuch-Ergebnisse:\n${snippets.join("\n\n")}`
+                : "Nutze dein internes Wissen zur Ermittlung der Zutaten.";
+                
+            let extractPrompt = `Du bist ein toxikologisches Analyse-Terminal. Ermittle die präzisen Inhaltsstoffe für das Produkt: "${productName}" anhand der folgenden Suchergebnisse. 
+Übersetze alle gefundenen Zutaten und den Produktnamen immer vollständig und präzise ins Deutsche (z.B. "şeker" -> "Zucker", "ayçiçek yağı" -> "Sonnenblumenöl").
+
+${searchContext}
+
+Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingredients_text": "Zutat 1, Zutat 2...", "category": "Nahrung"}. Setze category strikt auf "Nahrung" oder "Kosmetik".`;
+            
+            let analyzeResult = await executeKIEngine(extractPrompt);
+            if (analyzeResult && analyzeResult.ingredients_text) {
+                let cat = analyzeResult.category === "Kosmetik" ? "Kosmetik (KI)" : "Nahrung (KI)";
+                analyzeProduct({
+                    product: {
+                        product_name: analyzeResult.product_name || productName,
+                        ingredients_text: analyzeResult.ingredients_text,
+                        image_url: base64Image
+                    }
+                }, cat, barcode, true);
+            } else {
+                throw new Error("Fehler bei der Zutatenextraktion durch die KI.");
+            }
+        } catch (error) {
+            console.error("KIVision error:", error);
+            showLoading('Automatisches Fallback: Führe direkte Bild-Textextraktion (OCR) durch...');
+            processLocalOCR(file, "Foto-Analyse", barcode, "Optisch (OCR)");
         }
     };
 }

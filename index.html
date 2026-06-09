@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal v13.5</title>
+    <title>Operator Terminal v13.7</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag">SYSTEM EXECUTION V13.5 (DYNAMIC CORES)</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.7 (DYNAMIC CORES) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -173,6 +173,18 @@
                 <option value="gemini">Gemini 3.5 Flash (Grounding)</option>
                 <option value="deepseek">DeepSeek V4 (Chat Pipeline)</option>
             </select>
+            
+            <details class="help-details">
+                <summary>Anleitung zur API-Key Einrichtung ⓘ</summary>
+                <div class="help-content">
+                    <p>Um die intelligenten Funktionen (Übersetzung, KI-Zusammenfassung, RAG-Websuche) zu nutzen, benötigst du einen API-Key:</p>
+                    <ol>
+                        <li><strong>Gemini 3.5 Flash (Empfohlen):</strong> Gehe auf <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Erstelle einen kostenlosen API-Key. Dieser ist im Free Tier komplett gebührenfrei (bis zu 1.500 Aufrufe täglich) und erfordert keine Kreditkarte.</li>
+                        <li><strong>DeepSeek V4:</strong> Gehe auf die <a href="https://platform.deepseek.com/" target="_blank" rel="noopener noreferrer">DeepSeek Platform</a>, registriere dich und erstelle einen API-Key (kostenpflichtiges Pay-per-Token Modell).</li>
+                    </ol>
+                    <p>Kopiere den API-Key, füge ihn unten in das entsprechende Feld ein und klicke auf <strong>Key Aktivieren</strong>.</p>
+                </div>
+            </details>
             <div class="key-mode-box">
                 <label class="toggle-container" for="sessionKeyToggle">
                     <span>Keys für diese Browser-Sitzung merken</span>
@@ -226,6 +238,9 @@
             <textarea id="customToxinDetail" class="std-input" placeholder="Detaillierte Beschreibung..." style="height:60px; resize:vertical; margin-bottom:8px;"></textarea>
             <button class="gemini-btn" id="addCustomToxinBtn">Toxin Hinzufügen</button>
             <div id="customToxinList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:5px;"></div>
+            
+            <hr style="border:0; border-top:1px solid var(--border-color); margin:25px 0 20px 0;">
+            <button class="action-btn btn-reset" id="resetAppSettingsBtn">⚠️ Werkseinstellungen Zurücksetzen</button>
         </div>
     </div>
 
