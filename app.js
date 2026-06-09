@@ -813,6 +813,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
             const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V13.8.1 ===\n` +
+                `- Hotfix für Syntax-Fehler: Behebung eines Klammerfehlers bei der Key-Speicherung, der das Laden der Event-Listener verhinderte (Buttons funktionierten nicht).\n\n` +
                 `=== SYSTEM V13.8 ===\n` +
                 `- Master-PIN Verschlüsselung: Sicheres Speichern der API-Keys im Browser. Schützt vor unbefugter Nutzung bei physischem Zugriff durch eine 4-stellige PIN.\n` +
                 `- Schließen-Optimierungen: Schließen des Changelogs auf Mobilgeräten über dedizierten Button und native Wischgeste (Swipe-down) behoben.\n\n` +
@@ -829,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
                 `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
                 `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES v13.8", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openModal("PATCH NOTES v13.8.1", "System-Aktualisierungsprotokoll", changelogText, "alternative");
         });
     }
 
@@ -880,6 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.target.checked = true;
             }
         }
+    });
     document.getElementById('archiveImageInjectorInput').onchange = function(e) {
         if(e.target.files.length === 0 || !activeArchiveInjectBarcode) return;
         let file = e.target.files[0];
@@ -909,7 +912,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     checkPinStorage();
-};
 });
 
 // ─── PIN MODAL DIALOG FLOW ───
