@@ -292,7 +292,7 @@ async function callGeminiAPI(prompt, base64Image = null) {
         let response = await fetch(url, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, 
-            body: JSON.stringify({ contents: [{ parts }], tools: [{ "googleSearch": {} }] }) 
+            body: JSON.stringify({ contents: [{ parts }] }) 
         });
         let data = await response.json();
         if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);

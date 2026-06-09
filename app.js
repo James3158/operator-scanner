@@ -813,6 +813,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
             const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V13.8.2 ===\n` +
+                `- Behebung von Quoten-Fehlern: Google Search Grounding-Tool aus Gemini-API-Aufruf entfernt. Da die App eine eigene Websuch-Pipeline besitzt, ist das Grounding redundant. Anfragen im kostenlosen Free-Tier funktionieren nun wieder einwandfrei ohne Billing-Konto.\n\n` +
                 `=== SYSTEM V13.8.1 ===\n` +
                 `- Hotfix für Syntax-Fehler: Behebung eines Klammerfehlers bei der Key-Speicherung, der das Laden der Event-Listener verhinderte (Buttons funktionierten nicht).\n\n` +
                 `=== SYSTEM V13.8 ===\n` +
@@ -831,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
                 `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
                 `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES v13.8.1", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openModal("PATCH NOTES v13.8.2", "System-Aktualisierungsprotokoll", changelogText, "alternative");
         });
     }
 
