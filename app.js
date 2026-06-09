@@ -781,10 +781,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // PIN Modal Events
-    document.getElementById('pinModalConfirm').addEventListener('click', confirmPinModal);
-    document.getElementById('pinModalCancel').addEventListener('click', cancelPinModal);
-    document.getElementById('pinModalOverlay').addEventListener('click', cancelPinModal);
-    document.getElementById('pinModalInput').addEventListener('keydown', (e) => {
+    document.getElementById('pinModalConfirm')?.addEventListener('click', confirmPinModal);
+    document.getElementById('pinModalCancel')?.addEventListener('click', cancelPinModal);
+    document.getElementById('pinModalOverlay')?.addEventListener('click', cancelPinModal);
+    document.getElementById('pinModalInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') confirmPinModal();
         if (e.key === 'Escape') cancelPinModal();
     });
@@ -792,9 +792,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Globale Escape-Taste für Modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            if (document.getElementById('kiModalBox').classList.contains('active')) cancelKIInputModal();
-            if (document.getElementById('pinModalBox').style.display === 'block') cancelPinModal();
-            if (document.getElementById('detailModalOverlay').style.display === 'block') closeModal();
+            if (document.getElementById('kiModalBox')?.classList.contains('active')) cancelKIInputModal();
+            if (document.getElementById('pinModalBox')?.style.display === 'block') cancelPinModal();
+            if (document.getElementById('detailModalOverlay')?.style.display === 'block') closeModal();
         }
     });
     
@@ -925,21 +925,26 @@ function showPinModal(mode) {
         
         const overlay = document.getElementById('pinModalOverlay');
         const box = document.getElementById('pinModalBox');
+        if (!overlay || !box) {
+            reject("PIN Modal elements not found in DOM");
+            return;
+        }
+        
         const title = box.querySelector('h3');
         const desc = box.querySelector('p');
         const input = document.getElementById('pinModalInput');
         const confirmBtn = document.getElementById('pinModalConfirm');
         
-        input.value = "";
+        if (input) input.value = "";
         
         if (mode === 'create') {
-            title.innerText = "🔒 Master-PIN erstellen";
-            desc.innerText = "Erstelle eine 4-stellige Master-PIN, um deine API-Schlüssel dauerhaft verschlüsselt auf diesem Gerät zu speichern:";
-            confirmBtn.innerText = "Erstellen";
+            if (title) title.innerText = "🔒 Master-PIN erstellen";
+            if (desc) desc.innerText = "Erstelle eine 4-stellige Master-PIN, um deine API-Schlüssel dauerhaft verschlüsselt auf diesem Gerät zu speichern:";
+            if (confirmBtn) confirmBtn.innerText = "Erstellen";
         } else {
-            title.innerText = "🔒 Master-PIN erforderlich";
-            desc.innerText = "Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:";
-            confirmBtn.innerText = "Entsperren";
+            if (title) title.innerText = "🔒 Master-PIN erforderlich";
+            if (desc) desc.innerText = "Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:";
+            if (confirmBtn) confirmBtn.innerText = "Entsperren";
         }
         
         overlay.style.display = "block";
@@ -947,13 +952,14 @@ function showPinModal(mode) {
         setTimeout(() => {
             box.style.transform = "translate(-50%, -50%) scale(1)";
             box.style.opacity = "1";
-            input.focus();
+            if (input) input.focus();
         }, 10);
     });
 }
 
 function confirmPinModal() {
     const input = document.getElementById('pinModalInput');
+    if (!input) return;
     const val = input.value.trim();
     if (!/^\d{4}$/.test(val)) {
         alert("Die PIN muss genau 4 Ziffern enthalten.");
@@ -980,11 +986,13 @@ function cancelPinModal() {
 function closePinModal() {
     const overlay = document.getElementById('pinModalOverlay');
     const box = document.getElementById('pinModalBox');
-    box.style.transform = "translate(-50%, -50%) scale(0.95)";
-    box.style.opacity = "0";
+    if (box) {
+        box.style.transform = "translate(-50%, -50%) scale(0.95)";
+        box.style.opacity = "0";
+    }
     setTimeout(() => {
-        overlay.style.display = "none";
-        box.style.display = "none";
+        if (overlay) overlay.style.display = "none";
+        if (box) box.style.display = "none";
     }, 250);
 }
 
