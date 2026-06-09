@@ -260,7 +260,7 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format (ohne Markdown-Formatierung, o
 async function callGeminiAPI(prompt, base64Image = null) {
     let key = getSecretKey('gemini');
     if(!key) { alert("Gemini API Key fehlt."); return null; }
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent`;
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`;
     let parts = [{ text: prompt }];
     if(base64Image) {
         let mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/);
