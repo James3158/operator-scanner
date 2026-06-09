@@ -700,6 +700,10 @@ body {
     transform: translateX(-50%) translateY(100%); 
     width: 100%; 
     max-width: 480px; 
+    max-height: 80vh;
+    max-height: 80dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: rgba(22, 23, 29, 0.95); 
     backdrop-filter: blur(25px); 
     -webkit-backdrop-filter: blur(25px); 
@@ -1334,4 +1338,22 @@ body {
 }
 .btn-reset:active {
     background: rgba(244, 63, 94, 0.25) !important;
+}
+
+/* Detail Modal Close Button */
+.close-detail-btn {
+    position: absolute;
+    right: 20px;
+    top: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    z-index: 10000;
+}
+.close-detail-btn:active {
+    color: var(--text-main);
 }

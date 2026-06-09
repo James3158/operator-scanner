@@ -752,6 +752,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('startBtn').addEventListener('click', startScanner);
     document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
     document.getElementById('detailModalOverlay').addEventListener('click', closeModal);
+    document.getElementById('closeDetailModalBtn')?.addEventListener('click', closeModal);
+    
+    // Swipe-down to close für das Bottom-Sheet Detail-Modal (mit Scroll-Schutz)
+    const detailModal = document.getElementById('detailModal');
+    if (detailModal) {
+        let touchStartY = 0;
+        let touchEndY = 0;
+        detailModal.addEventListener('touchstart', (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+        detailModal.addEventListener('touchend', (e) => {
+            touchEndY = e.changedTouches[0].screenY;
+            // Nur schließen, wenn nach unten gewischt wurde (> 80px) und der Modal-Inhalt ganz oben ist
+            if (touchEndY - touchStartY > 80 && detailModal.scrollTop <= 0) {
+                closeModal();
+            }
+        }, { passive: true });
+    }
     
     // KI Modal
     document.getElementById('kiModalConfirm').addEventListener('click', confirmKIInputModal);
@@ -761,11 +779,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') confirmKIInputModal();
         if (e.key === 'Escape') cancelKIInputModal();
     });
+
+    // PIN Modal Events
+    document.getElementById('pinModalConfirm').addEventListener('click', confirmPinModal);
+    document.getElementById('pinModalCancel').addEventListener('click', cancelPinModal);
+    document.getElementById('pinModalOverlay').addEventListener('click', cancelPinModal);
+    document.getElementById('pinModalInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmPinModal();
+        if (e.key === 'Escape') cancelPinModal();
+    });
     
     // Globale Escape-Taste für Modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (document.getElementById('kiModalBox').classList.contains('active')) cancelKIInputModal();
+            if (document.getElementById('pinModalBox').style.display === 'block') cancelPinModal();
             if (document.getElementById('detailModalOverlay').style.display === 'block') closeModal();
         }
     });
@@ -785,6 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
             const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V13.8 ===\n` +
+                `- Master-PIN Verschlüsselung: Sicheres Speichern der API-Keys im Browser. Schützt vor unbefugter Nutzung bei physischem Zugriff durch eine 4-stellige PIN.\n` +
+                `- Schließen-Optimierungen: Schließen des Changelogs auf Mobilgeräten über dedizierten Button und native Wischgeste (Swipe-down) behoben.\n\n` +
                 `=== SYSTEM V13.7 ===\n` +
                 `- Multimodale RAG Kamera-Pipeline: Höhere Genauigkeit beim Scannen. Die KI identifiziert erst den Namen aus Fotos, führt eine Websuche durch und analysiert dann die präzisen Zutaten.\n` +
                 `- Setup-Anleitung: Schritt-für-Schritt-Guide für Gemini 3.5 Flash & DeepSeek in den Einstellungen integriert.\n` +
@@ -798,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
                 `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
                 `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES v13.7", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openModal("PATCH NOTES v13.8", "System-Aktualisierungsprotokoll", changelogText, "alternative");
         });
     }
 
@@ -821,6 +852,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    document.getElementById('persistKeyToggle')?.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            showPinModal('create').then(pin => {
+                runtimePin = pin;
+                localStorage.setItem('op_keys_are_encrypted', '1');
+                
+                // Verschlüssele aktuell geladene Schlüssel
+                if (runtimeGeminiKey) localStorage.setItem('op_gemini_key_enc', encryptWithPin(runtimeGeminiKey, pin));
+                if (runtimeDeepSeekKey) localStorage.setItem('op_deepseek_key_enc', encryptWithPin(runtimeDeepSeekKey, pin));
+                if (runtimeGoogleSearchKey) localStorage.setItem('op_google_key_enc', encryptWithPin(runtimeGoogleSearchKey, pin));
+                if (runtimeGoogleSearchCx) localStorage.setItem('op_google_cx_enc', encryptWithPin(runtimeGoogleSearchCx, pin));
+                
+                alert("System-Core verschlüsselt dauerhaft auf diesem Gerät gesichert.");
+            }).catch(() => {
+                e.target.checked = false;
+            });
+        } else {
+            if (confirm("Möchtest du die dauerhafte Speicherung deaktivieren?\n\nDies löscht die verschlüsselten API-Schlüssel von diesem Gerät.")) {
+                localStorage.removeItem('op_gemini_key_enc');
+                localStorage.removeItem('op_deepseek_key_enc');
+                localStorage.removeItem('op_google_key_enc');
+                localStorage.removeItem('op_google_cx_enc');
+                localStorage.removeItem('op_keys_are_encrypted');
+                runtimePin = "";
+            } else {
+                e.target.checked = true;
+            }
+        }
     document.getElementById('archiveImageInjectorInput').onchange = function(e) {
         if(e.target.files.length === 0 || !activeArchiveInjectBarcode) return;
         let file = e.target.files[0];
@@ -848,4 +907,135 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         };
     };
+
+    checkPinStorage();
+};
 });
+
+// ─── PIN MODAL DIALOG FLOW ───
+let _pinModalResolve = null;
+let _pinModalReject = null;
+
+function showPinModal(mode) {
+    return new Promise((resolve, reject) => {
+        _pinModalResolve = resolve;
+        _pinModalReject = reject;
+        
+        const overlay = document.getElementById('pinModalOverlay');
+        const box = document.getElementById('pinModalBox');
+        const title = box.querySelector('h3');
+        const desc = box.querySelector('p');
+        const input = document.getElementById('pinModalInput');
+        const confirmBtn = document.getElementById('pinModalConfirm');
+        
+        input.value = "";
+        
+        if (mode === 'create') {
+            title.innerText = "🔒 Master-PIN erstellen";
+            desc.innerText = "Erstelle eine 4-stellige Master-PIN, um deine API-Schlüssel dauerhaft verschlüsselt auf diesem Gerät zu speichern:";
+            confirmBtn.innerText = "Erstellen";
+        } else {
+            title.innerText = "🔒 Master-PIN erforderlich";
+            desc.innerText = "Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:";
+            confirmBtn.innerText = "Entsperren";
+        }
+        
+        overlay.style.display = "block";
+        box.style.display = "block";
+        setTimeout(() => {
+            box.style.transform = "translate(-50%, -50%) scale(1)";
+            box.style.opacity = "1";
+            input.focus();
+        }, 10);
+    });
+}
+
+function confirmPinModal() {
+    const input = document.getElementById('pinModalInput');
+    const val = input.value.trim();
+    if (!/^\d{4}$/.test(val)) {
+        alert("Die PIN muss genau 4 Ziffern enthalten.");
+        input.focus();
+        return;
+    }
+    closePinModal();
+    if (_pinModalResolve) {
+        _pinModalResolve(val);
+        _pinModalResolve = null;
+        _pinModalReject = null;
+    }
+}
+
+function cancelPinModal() {
+    closePinModal();
+    if (_pinModalReject) {
+        _pinModalReject();
+        _pinModalResolve = null;
+        _pinModalReject = null;
+    }
+}
+
+function closePinModal() {
+    const overlay = document.getElementById('pinModalOverlay');
+    const box = document.getElementById('pinModalBox');
+    box.style.transform = "translate(-50%, -50%) scale(0.95)";
+    box.style.opacity = "0";
+    setTimeout(() => {
+        overlay.style.display = "none";
+        box.style.display = "none";
+    }, 250);
+}
+
+function checkPinStorage() {
+    if (localStorage.getItem('op_keys_are_encrypted') === '1') {
+        let geminiSession = sessionStorage.getItem('op_gemini_key_session');
+        let deepseekSession = sessionStorage.getItem('op_deepseek_key_session');
+        let googleSession = sessionStorage.getItem('op_google_key_session');
+        
+        if (geminiSession || deepseekSession || googleSession) {
+            runtimeGeminiKey = geminiSession || "";
+            runtimeDeepSeekKey = deepseekSession || "";
+            runtimeGoogleSearchKey = googleSession || "";
+            runtimeGoogleSearchCx = localStorage.getItem('op_google_cx') || "";
+            updateCoreStatusBadge();
+            loadSettings();
+            return;
+        }
+        
+        showPinModal('unlock').then(pin => {
+            let keysFound = ['op_gemini_key_enc', 'op_deepseek_key_enc', 'op_google_key_enc', 'op_google_cx_enc'].some(k => localStorage.getItem(k));
+            let isCorrect = false;
+            if (keysFound) {
+                let testKey = ['op_gemini_key_enc', 'op_deepseek_key_enc', 'op_google_key_enc', 'op_google_cx_enc'].find(k => localStorage.getItem(k));
+                let testDecrypted = decryptWithPin(localStorage.getItem(testKey), pin);
+                if (testDecrypted !== null) {
+                    isCorrect = true;
+                }
+            } else {
+                isCorrect = true;
+            }
+            
+            if (isCorrect) {
+                runtimePin = pin;
+                runtimeGeminiKey = decryptWithPin(localStorage.getItem('op_gemini_key_enc'), pin) || "";
+                runtimeDeepSeekKey = decryptWithPin(localStorage.getItem('op_deepseek_key_enc'), pin) || "";
+                runtimeGoogleSearchKey = decryptWithPin(localStorage.getItem('op_google_key_enc'), pin) || "";
+                runtimeGoogleSearchCx = decryptWithPin(localStorage.getItem('op_google_cx_enc'), pin) || "";
+                
+                sessionStorage.setItem('op_gemini_key_session', runtimeGeminiKey);
+                sessionStorage.setItem('op_deepseek_key_session', runtimeDeepSeekKey);
+                sessionStorage.setItem('op_google_key_session', runtimeGoogleSearchKey);
+                localStorage.setItem('op_google_cx', runtimeGoogleSearchCx);
+                
+                updateCoreStatusBadge();
+                loadSettings();
+            } else {
+                alert("Ungültige Master-PIN. Zugriff verweigert.");
+                loadSettings();
+            }
+        }).catch(() => {
+            console.log("PIN freischalten abgebrochen.");
+            loadSettings();
+        });
+    }
+}

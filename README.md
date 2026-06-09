@@ -1,4 +1,4 @@
-# 🧬 Operator Terminal v13.6 — Biohacking & Toxin Scanner
+# 🧬 Operator Terminal v13.8 — Biohacking & Toxin Scanner
 
 A highly advanced, purely client-side web terminal designed for the optical capture, translation, and toxicological evaluation of consumer goods (food & cosmetics). Specially optimized for mobile usage on iOS (Safari/GitHub Pages) to enable rapid scanning directly in supermarkets.
 
@@ -84,4 +84,6 @@ Then navigate to `http://localhost:8000` in your web browser.
 
 ## 🔒 Security and Privacy
 *   **No Backend Servers:** All personal data (history, custom toxins, preferences) is stored locally within the browser (`localStorage` and `sessionStorage`).
-*   **Secure Keys:** API keys for Gemini, DeepSeek, or Google CSE are handled strictly in-browser. If "Remember keys" is disabled, they are stored only in memory and disappear once you close the tab. Keys are never sent to third-party servers or uploaded to GitHub.
+*   **Secure Keys:** API keys for Gemini, DeepSeek, or Google CSE are handled strictly in-browser. By default, they are stored in-memory (or in `sessionStorage` for page reloads).
+*   **Master-PIN Local Encryption:** You can choose to save your keys permanently on your device. To protect them against unauthorized physical access, the keys are encrypted with a user-defined **4-digit Master PIN** using a salt-derived XOR key. They are decrypted in-memory only when you enter the correct PIN at startup.
+*   **Origin Sandboxing:** Because browser storage is partitioned per domain and device, nobody visiting your hosted URL has access to your stored keys. Your credentials never leave your browser.

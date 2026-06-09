@@ -336,3 +336,48 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${rawTextToShow}</div></div></div>`;
     document.getElementById('result-content').innerHTML = resultHtml;
 }
+
+// ─── PIN ENCRYPTION HELPERS ───
+function hashPin(pin, salt, iterations = 2000) {
+    let hash = pin + salt;
+    for (let i = 0; i < iterations; i++) {
+        let h = 0;
+        for (let j = 0; j < hash.length; j++) {
+            h = (h << 5) - h + hash.charCodeAt(j);
+            h |= 0;
+        }
+        hash = h.toString(16) + hash;
+    }
+    return hash.substring(0, 32);
+}
+
+function encryptWithPin(text, pin, salt = "op_salt_99") {
+    if (!text) return "";
+    let key = hashPin(pin, salt);
+    let preparedText = "OK_DEC_" + text;
+    let result = "";
+    for (let i = 0; i < preparedText.length; i++) {
+        let charCode = preparedText.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        result += String.fromCharCode(charCode);
+    }
+    return btoa(unescape(encodeURIComponent(result)));
+}
+
+function decryptWithPin(encoded, pin, salt = "op_salt_99") {
+    if (!encoded) return "";
+    try {
+        let key = hashPin(pin, salt);
+        let text = decodeURIComponent(escape(atob(encoded)));
+        let result = "";
+        for (let i = 0; i < text.length; i++) {
+            let charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+            result += String.fromCharCode(charCode);
+        }
+        if (result.startsWith("OK_DEC_")) {
+            return result.substring(7);
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal v13.7</title>
+    <title>Operator Terminal v13.8</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.7 (DYNAMIC CORES) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.8 (DYNAMIC CORES) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -192,6 +192,13 @@
                 </label>
                 <p>Keys werden standardmäßig im Arbeitsspeicher gehalten; mit aktiver Sitzung bleiben sie in der sessionStorage.</p>
             </div>
+            <div class="key-mode-box" style="margin-top:10px;">
+                <label class="toggle-container" for="persistKeyToggle">
+                    <span>Keys dauerhaft speichern (verschlüsselt mit PIN)</span>
+                    <input type="checkbox" id="persistKeyToggle" style="width:20px; height:20px;">
+                </label>
+                <p>Speichert die API-Schlüssel verschlüsselt im Browser. Erfordert beim App-Start eine 4-stellige Master-PIN.</p>
+            </div>
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
             <div class="sec-title">Google Custom Search (CSE)</div>
@@ -253,6 +260,7 @@
     <div id="detailModalOverlay"></div>
     <div id="detailModal" role="dialog" aria-modal="true" aria-labelledby="mod-title">
         <div class="modal-handle"></div>
+        <button id="closeDetailModalBtn" class="close-detail-btn" aria-label="Modal schließen">&times;</button>
         <h3 id="mod-title">Toxin</h3>
         <p id="mod-desc">Kategorie</p>
         <div id="mod-hazard-container" style="display:none; margin:10px 0 16px 0;">
@@ -275,6 +283,18 @@
         <div class="ki-modal-actions">
             <button class="ki-modal-cancel" id="kiModalCancel">Abbrechen</button>
             <button class="ki-modal-confirm" id="kiModalConfirm">Analysieren</button>
+        </div>
+    </div>
+
+    <!-- PIN Eingabe-Modal -->
+    <div id="pinModalOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10060; display: none;"></div>
+    <div id="pinModalBox" role="dialog" aria-modal="true" aria-label="PIN eingeben" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); width: calc(100% - 32px); max-width: 380px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; z-index: 10061; display: none; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;">
+        <h3 style="color:var(--text-main); margin: 0 0 10px 0; font-family:'Space Grotesk', sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">🔒 Master-PIN erforderlich</h3>
+        <p style="color:var(--text-muted); font-size:12px; margin: 0 0 16px 0; line-height:1.45;">Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:</p>
+        <input type="password" id="pinModalInput" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="PIN..." autocomplete="off" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border-color); background:rgba(0,0,0,0.1); color:var(--text-main); font-family:inherit; font-size:18px; letter-spacing:8px; text-align:center; margin-bottom:16px; outline:none;">
+        <div class="ki-modal-actions">
+            <button class="ki-modal-cancel" id="pinModalCancel">Abbrechen</button>
+            <button class="ki-modal-confirm" id="pinModalConfirm" style="background:var(--gemini-blue); color:#fff;">Entsperren</button>
         </div>
     </div>
 

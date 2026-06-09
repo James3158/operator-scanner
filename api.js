@@ -81,6 +81,7 @@ let runtimeGeminiKey = "";
 let runtimeDeepSeekKey = "";
 let runtimeGoogleSearchKey = "";
 let runtimeGoogleSearchCx = "";
+let runtimePin = "";
 
 function shouldKeepKeyForSession() {
     return Boolean(document.getElementById('sessionKeyToggle')?.checked);
@@ -107,11 +108,21 @@ function setSecretKey(provider, key) {
     
     sessionStorage.removeItem(sessionKey);
     if (shouldKeepKeyForSession()) sessionStorage.setItem(sessionKey, key);
+
+    // Wenn permanente PIN-Speicherung aktiv ist und PIN vorliegt, verschlüsseln und speichern
+    if (localStorage.getItem('op_keys_are_encrypted') === '1' && runtimePin) {
+        let storageKey = provider === 'gemini' ? 'op_gemini_key_enc' : 
+                         (provider === 'deepseek' ? 'op_deepseek_key_enc' : 'op_google_key_enc');
+        localStorage.setItem(storageKey, encryptWithPin(key, runtimePin));
+    }
 }
 
 function setGoogleCx(cx) {
     runtimeGoogleSearchCx = cx;
     localStorage.setItem('op_google_cx', cx);
+    if (localStorage.getItem('op_keys_are_encrypted') === '1' && runtimePin) {
+        localStorage.setItem('op_google_cx_enc', encryptWithPin(cx, runtimePin));
+    }
 }
 
 function clearLegacyStoredKeys() {
@@ -162,6 +173,7 @@ function clearGeminiKey() {
     runtimeGeminiKey = '';
     sessionStorage.removeItem('op_gemini_key_session');
     localStorage.removeItem('op_gemini_key');
+    localStorage.removeItem('op_gemini_key_enc');
     document.getElementById('geminiApiKey').value = '';
     if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
 }
@@ -170,6 +182,7 @@ function clearDeepSeekKey() {
     runtimeDeepSeekKey = '';
     sessionStorage.removeItem('op_deepseek_key_session');
     localStorage.removeItem('op_deepseek_key');
+    localStorage.removeItem('op_deepseek_key_enc');
     document.getElementById('deepseekApiKey').value = '';
     if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
 }
@@ -179,6 +192,8 @@ function clearGoogleSearchKey() {
     runtimeGoogleSearchCx = '';
     sessionStorage.removeItem('op_google_key_session');
     localStorage.removeItem('op_google_cx');
+    localStorage.removeItem('op_google_key_enc');
+    localStorage.removeItem('op_google_cx_enc');
     document.getElementById('googleSearchApiKey').value = '';
     document.getElementById('googleSearchCx').value = '';
 }
@@ -191,6 +206,9 @@ function loadSettings() {
     document.getElementById('googleSearchCx').value = getGoogleCx();
     if (document.getElementById('sessionKeyToggle')) {
         document.getElementById('sessionKeyToggle').checked = localStorage.getItem('op_key_session_mode') === '1';
+    }
+    if (document.getElementById('persistKeyToggle')) {
+        document.getElementById('persistKeyToggle').checked = localStorage.getItem('op_keys_are_encrypted') === '1';
     }
     if(localStorage.getItem('op_active_model')) {
         document.getElementById('activeModelSelect').value = localStorage.getItem('op_active_model');
