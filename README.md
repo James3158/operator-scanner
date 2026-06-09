@@ -1,4 +1,4 @@
-# 🧬 Operator Terminal v13.6 — Biohacking & Toxin Scanner
+# 🧬 Operator Terminal v13.7 — Biohacking & Toxin Scanner
 
 A highly advanced, purely client-side web terminal designed for the optical capture, translation, and toxicological evaluation of consumer goods (food & cosmetics). Specially optimized for mobile usage on iOS (Safari/GitHub Pages) to enable rapid scanning directly in supermarkets.
 
