@@ -1,4 +1,4 @@
-# 🧬 Operator Terminal v13.8.2 — Biohacking & Toxin Scanner
+# 🧬 Operator Terminal v13.8.3 — Biohacking & Toxin Scanner
 
 A highly advanced, purely client-side web terminal designed for the optical capture, translation, and toxicological evaluation of consumer goods (food & cosmetics). Specially optimized for mobile usage on iOS (Safari/GitHub Pages) to enable rapid scanning directly in supermarkets.
 
@@ -18,7 +18,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Hardware Sensor:** Integrated barcode scanner (`html5-qrcode`) with a zuschaltbar flashlight (camera flash) toggle for capturing EAN/UPC codes.
 *   **Offline OCR (Tesseract.js):** Client-side optical character recognition to digitize printed ingredient lists via photo upload or camera snap directly in the browser.
 *   **Web Search Cascade (Zero-Config):** If a product is not listed in the primary databases, the app initiates an automated web search via a CORS proxy cascade (`allorigins.win` with automatic fallback to `corsproxy.io`) to extract ingredients.
-*   **Google Custom Search (CSE):** Optional configuration of the official Google Search API via JSONP (completely CORS-free and resilient).
+*   **Google Custom Search (CSE):** Optional configuration of the official Google Search API via JSONP. This is resilient for static hosting, but the API key is necessarily used in the browser request.
 
 ### 2. Global AI Translation Pipeline
 *   **Automatic Language Detection:** Identifies foreign ingredients (e.g. Turkish, English, or French on vacation) and translates both the product name and the ingredient list fully into German before evaluation.
@@ -58,7 +58,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   [Html5-Qrcode](https://github.com/mebjas/html5-qrcode) (Camera barcode scanning)
     *   [Tesseract.js](https://github.com/naptha/tesseract.js) (Offline client-side OCR)
 *   **API Integrations:**
-    *   **Gemini 3 Flash (AI Studio API):** Primary model used for web search grounding and ingredient extraction (free tier / zero billing method configuration).
+*   **Gemini 3.5 Flash (AI Studio API):** Primary model used for ingredient extraction, OCR cleanup, translation, and product summaries. Provider quota and billing rules can change, so check the provider console before relying on a free tier.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
     *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
 
@@ -83,5 +83,16 @@ Then navigate to `http://localhost:8000` in your web browser.
 ---
 
 ## 🔒 Security and Privacy
-*   **No Backend Servers:** All personal data (history, custom toxins, preferences) is stored locally within the browser (`localStorage` and `sessionStorage`).
-*   **Secure Keys:** API keys for Gemini, DeepSeek, or Google CSE are handled strictly in-browser. If "Remember keys" is disabled, they are stored only in memory and disappear once you close the tab. Keys are never sent to third-party servers or uploaded to GitHub.
+*   **No Backend Servers:** History, custom toxins, and preferences are stored locally within the browser (`localStorage` and `sessionStorage`).
+*   **API Keys:** If "Remember keys" is disabled, keys are kept only for the current tab/session. If persistent key storage is enabled, keys are encrypted in the browser with WebCrypto AES-GCM and a PBKDF2-derived key from your Master-Passphrase. This is safer than plaintext storage, but it is not equivalent to a backend secret store because a static web app must still use API keys in browser requests.
+*   **External Requests:** Gemini, DeepSeek, Google CSE, OpenFoodFacts, OpenBeautyFacts, and optional CORS proxy requests receive the data required for the selected operation. Google CSE uses JSONP, so the Google key is part of the browser request URL. Proxy fallback providers can see the product/search query routed through them.
+*   **No Repository Uploads:** The app does not upload your keys, archive, custom toxins, or preferences to GitHub.
+
+---
+
+## ✅ v13.8.3 Fixes
+*   Replaced weak custom XOR/PIN key storage with WebCrypto AES-GCM plus PBKDF2-derived passphrase keys while keeping legacy unlock compatibility.
+*   Fixed OCR/QuickScan analysis so extracted data can still receive AI cleanup, translation, and summaries.
+*   Hardened toxin matching against negated phrases such as "ohne Zucker", "zuckerfrei", and "ohne Parfum".
+*   Changed system reset to remove only app-owned `op_` storage keys instead of clearing the whole browser origin.
+*   Corrected privacy documentation for API providers, Google CSE JSONP, and CORS proxy fallback behavior.

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal v13.8.2</title>
+    <title>Operator Terminal v13.8.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.8.2 (DYNAMIC CORES) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.8.3 (DYNAMIC CORES) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -179,7 +179,7 @@
                 <div class="help-content">
                     <p>Um die intelligenten Funktionen (Übersetzung, KI-Zusammenfassung, RAG-Websuche) zu nutzen, benötigst du einen API-Key:</p>
                     <ol>
-                        <li><strong>Gemini 3.5 Flash (Empfohlen):</strong> Gehe auf <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Erstelle einen kostenlosen API-Key. Dieser ist im Free Tier komplett gebührenfrei (bis zu 1.500 Aufrufe täglich) und erfordert keine Kreditkarte.</li>
+                        <li><strong>Gemini 3.5 Flash (Empfohlen):</strong> Gehe auf <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Erstelle einen API-Key und prüfe die aktuell gültigen Quoten und Kosten direkt in der Provider-Konsole.</li>
                         <li><strong>DeepSeek V4:</strong> Gehe auf die <a href="https://platform.deepseek.com/" target="_blank" rel="noopener noreferrer">DeepSeek Platform</a>, registriere dich und erstelle einen API-Key (kostenpflichtiges Pay-per-Token Modell).</li>
                     </ol>
                     <p>Kopiere den API-Key, füge ihn unten in das entsprechende Feld ein und klicke auf <strong>Key Aktivieren</strong>.</p>
@@ -194,10 +194,10 @@
             </div>
             <div class="key-mode-box" style="margin-top:10px;">
                 <label class="toggle-container" for="persistKeyToggle">
-                    <span>Keys dauerhaft speichern (verschlüsselt mit PIN)</span>
+                    <span>Keys dauerhaft speichern (WebCrypto)</span>
                     <input type="checkbox" id="persistKeyToggle" style="width:20px; height:20px;">
                 </label>
-                <p>Speichert die API-Schlüssel verschlüsselt im Browser. Erfordert beim App-Start eine 4-stellige Master-PIN.</p>
+                <p>Speichert API-Schlüssel verschlüsselt mit AES-GCM/PBKDF2 im Browser. Erfordert beim App-Start eine Master-Passphrase.</p>
             </div>
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
@@ -207,7 +207,7 @@
             <button class="gemini-btn" id="saveGoogleSearchKeyBtn" style="background:#222; color:#fff; border:1px solid var(--border-color);">Google Search Aktivieren</button>
             <button class="key-clear-btn" id="clearGoogleSearchKeyBtn" style="margin-left:5px;">Key Löschen</button>
             <div id="keyWarningGoogle" class="key-warning">Google CSE Key aktiv. Er wurde nicht dauerhaft im Browser gespeichert.</div>
-            <p style="font-size:10px; color:var(--text-muted); margin-top:5px; line-height:1.3;">Bietet 100% stabile Suchen direkt im Browser. Optional (ohne Key wird DuckDuckGo als keyless Fallback genutzt).</p>
+            <p style="font-size:10px; color:var(--text-muted); margin-top:5px; line-height:1.3;">Offizielle Google-Suche direkt im Browser. Optional (ohne Key wird DuckDuckGo über einen CORS-Proxy als Fallback genutzt).</p>
 
             <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
             <div class="sec-title">Gemini API Key</div>
@@ -225,7 +225,7 @@
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin:20px 0;">
             <div class="sec-title">Lokaler Traffic-Monitor (Gemini)</div>
-            <div style="font-size:24px; font-weight:900; color:var(--text-main); text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:var(--text-muted);">/ 1500 (Free RPD)</span></div>
+            <div style="font-size:24px; font-weight:900; color:var(--text-main); text-align:center;"><span id="apiUsageCount">0</span> <span style="font-size:14px; color:var(--text-muted);">Requests heute</span></div>
             
             <div class="sec-title" style="margin-top:15px;">Traffic-Monitor (DeepSeek)</div>
             <div style="font-size:20px; font-weight:900; color:var(--text-main); text-align:center;"><span id="deepseekUsageCount">0</span> <span style="font-size:12px; color:var(--text-muted);">Calls heute (Pay-per-Token)</span></div>
@@ -286,12 +286,12 @@
         </div>
     </div>
 
-    <!-- PIN Eingabe-Modal -->
+    <!-- Passphrase Eingabe-Modal -->
     <div id="pinModalOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10060; display: none;"></div>
-    <div id="pinModalBox" role="dialog" aria-modal="true" aria-label="PIN eingeben" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); width: calc(100% - 32px); max-width: 380px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; z-index: 10061; display: none; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;">
-        <h3 style="color:var(--text-main); margin: 0 0 10px 0; font-family:'Space Grotesk', sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">🔒 Master-PIN erforderlich</h3>
-        <p style="color:var(--text-muted); font-size:12px; margin: 0 0 16px 0; line-height:1.45;">Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:</p>
-        <input type="password" id="pinModalInput" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="PIN..." autocomplete="off" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border-color); background:rgba(0,0,0,0.1); color:var(--text-main); font-family:inherit; font-size:18px; letter-spacing:8px; text-align:center; margin-bottom:16px; outline:none;">
+    <div id="pinModalBox" role="dialog" aria-modal="true" aria-label="Passphrase eingeben" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); width: calc(100% - 32px); max-width: 380px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; z-index: 10061; display: none; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;">
+        <h3 style="color:var(--text-main); margin: 0 0 10px 0; font-family:'Space Grotesk', sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">🔒 Master-Passphrase erforderlich</h3>
+        <p style="color:var(--text-muted); font-size:12px; margin: 0 0 16px 0; line-height:1.45;">Gib deine Master-Passphrase ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:</p>
+        <input type="password" id="pinModalInput" placeholder="Passphrase..." autocomplete="off" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border-color); background:rgba(0,0,0,0.1); color:var(--text-main); font-family:inherit; font-size:16px; letter-spacing:0; text-align:left; margin-bottom:16px; outline:none;">
         <div class="ki-modal-actions">
             <button class="ki-modal-cancel" id="pinModalCancel">Abbrechen</button>
             <button class="ki-modal-confirm" id="pinModalConfirm" style="background:var(--gemini-blue); color:#fff;">Entsperren</button>

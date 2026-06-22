@@ -128,6 +128,14 @@ function hasUnicodeBoundary(text, token) {
     return pattern.test(text);
 }
 
+function isNegatedIngredientMatch(text, index, aliasLength) {
+    let before = text.slice(Math.max(0, index - 28), index).trim();
+    let after = text.slice(index + aliasLength, index + aliasLength + 14).trim();
+    if (/(^|[\s,;:])(?:ohne|kein|keine|frei von|without|no)\s*$/iu.test(before)) return true;
+    if (/^(?:frei|free|less)(?=$|[^a-z0-9])/iu.test(after)) return true;
+    return false;
+}
+
 function matchIngredient(text, alias, itemPattern) {
     // Wenn ein explizites Regex-Pattern in der JSON definiert ist, nutze dieses
     if (itemPattern) {
@@ -149,8 +157,13 @@ function matchIngredient(text, alias, itemPattern) {
     if (cleanAlias.length < 4) {
         return hasUnicodeBoundary(cleanText, cleanAlias);
     }
-    // Für längere Begriffe (z.B. fructose, glukose, samenöl, seker) erlauben wir Teilwort-Matching (deutsche Komposita)
-    return cleanText.includes(cleanAlias);
+    // Für längere Begriffe erlauben wir Komposita, vermeiden aber Negationen wie "zuckerfrei" oder "ohne parfum".
+    let index = cleanText.indexOf(cleanAlias);
+    while (index !== -1) {
+        if (!isNegatedIngredientMatch(cleanText, index, cleanAlias.length)) return true;
+        index = cleanText.indexOf(cleanAlias, index + cleanAlias.length);
+    }
+    return false;
 }
 
 async function analyzeProduct(data, category, barcode, isExtracted = false) {
@@ -162,7 +175,8 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
 
     // Global KI Translation step
     let keyActive = typeof getSecretKey === 'function' && (getSecretKey('gemini') || getSecretKey('deepseek'));
-    if (keyActive && !isExtracted && !category.includes("KI")) {
+    let extractedNeedsKiCleanup = isExtracted && !p.ki_summary && (category.includes("OCR") || category.includes("Optisch") || category.includes("Offline-Analyse"));
+    if (keyActive && (!isExtracted || extractedNeedsKiCleanup) && !category.includes("KI")) {
         let rawIngredientsText = p.ingredients_text_de || p.ingredients_text_en || p.ingredients_text || "";
         let currentName = p.product_name || "Unbekanntes Objekt";
         
@@ -292,7 +306,7 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     });
 
-    if (keyActive && !isExtracted && !category.includes("KI") && ingredientsRaw.trim() !== "") {
+    if (keyActive && (!isExtracted || extractedNeedsKiCleanup) && !category.includes("KI") && !kiSummary && ingredientsRaw.trim() !== "") {
         let promptToxins = rawToxinsNames.join(", ");
         let promptGood = rawGoodNames.join(", ");
         showLoading("Generiere System-Zusammenfassung via KI...");
@@ -337,47 +351,99 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     document.getElementById('result-content').innerHTML = resultHtml;
 }
 
-// ─── PIN ENCRYPTION HELPERS ───
-function hashPin(pin, salt, iterations = 2000) {
-    let hash = pin + salt;
-    for (let i = 0; i < iterations; i++) {
-        let h = 0;
-        for (let j = 0; j < hash.length; j++) {
-            h = (h << 5) - h + hash.charCodeAt(j);
-            h |= 0;
-        }
-        hash = h.toString(16) + hash;
-    }
-    return hash.substring(0, 32);
+// ─── PASSPHRASE ENCRYPTION HELPERS ───
+function bytesToBase64(bytes) {
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary);
 }
 
-function encryptWithPin(text, pin, salt = "op_salt_99") {
+function base64ToBytes(base64) {
+    let binary = atob(base64);
+    let bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+async function derivePassphraseKey(passphrase, salt) {
+    const webCrypto = globalThis.crypto;
+    if (!webCrypto?.subtle) throw new Error('WebCrypto ist auf diesem Gerät nicht verfügbar.');
+    let material = await webCrypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(passphrase),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+    return webCrypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+        material,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function encryptWithPin(text, passphrase) {
     if (!text) return "";
-    let key = hashPin(pin, salt);
-    let preparedText = "OK_DEC_" + text;
-    let result = "";
-    for (let i = 0; i < preparedText.length; i++) {
-        let charCode = preparedText.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-        result += String.fromCharCode(charCode);
-    }
-    return btoa(unescape(encodeURIComponent(result)));
+    const webCrypto = globalThis.crypto;
+    if (!webCrypto?.subtle) throw new Error('WebCrypto ist auf diesem Gerät nicht verfügbar.');
+    let salt = webCrypto.getRandomValues(new Uint8Array(16));
+    let iv = webCrypto.getRandomValues(new Uint8Array(12));
+    let key = await derivePassphraseKey(passphrase, salt);
+    let ciphertext = await webCrypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        new TextEncoder().encode("OK_DEC_" + text)
+    );
+    return JSON.stringify({
+        v: 2,
+        alg: 'PBKDF2-SHA256-AES-GCM',
+        salt: bytesToBase64(salt),
+        iv: bytesToBase64(iv),
+        data: bytesToBase64(new Uint8Array(ciphertext))
+    });
 }
 
-function decryptWithPin(encoded, pin, salt = "op_salt_99") {
-    if (!encoded) return "";
+function legacyDecryptWithPin(encoded, pin, salt = "op_salt_99") {
     try {
-        let key = hashPin(pin, salt);
+        let hash = pin + salt;
+        for (let i = 0; i < 2000; i++) {
+            let h = 0;
+            for (let j = 0; j < hash.length; j++) {
+                h = (h << 5) - h + hash.charCodeAt(j);
+                h |= 0;
+            }
+            hash = h.toString(16) + hash;
+        }
+        let key = hash.substring(0, 32);
         let text = decodeURIComponent(escape(atob(encoded)));
         let result = "";
         for (let i = 0; i < text.length; i++) {
-            let charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-            result += String.fromCharCode(charCode);
+            result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
         }
-        if (result.startsWith("OK_DEC_")) {
-            return result.substring(7);
-        }
-        return null;
+        return result.startsWith("OK_DEC_") ? result.substring(7) : null;
     } catch (e) {
         return null;
+    }
+}
+
+async function decryptWithPin(encoded, passphrase) {
+    if (!encoded) return "";
+    try {
+        let payload = JSON.parse(encoded);
+        if (payload?.v !== 2) return null;
+        let salt = base64ToBytes(payload.salt);
+        let iv = base64ToBytes(payload.iv);
+        let key = await derivePassphraseKey(passphrase, salt);
+        let plaintext = await globalThis.crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            base64ToBytes(payload.data)
+        );
+        let result = new TextDecoder().decode(plaintext);
+        return result.startsWith("OK_DEC_") ? result.substring(7) : null;
+    } catch (e) {
+        return legacyDecryptWithPin(encoded, passphrase);
     }
 }

@@ -98,7 +98,7 @@ function getGoogleCx() {
     return runtimeGoogleSearchCx || localStorage.getItem('op_google_cx') || '';
 }
 
-function setSecretKey(provider, key) {
+async function setSecretKey(provider, key) {
     let sessionKey = provider === 'gemini' ? 'op_gemini_key_session' : 
                      (provider === 'deepseek' ? 'op_deepseek_key_session' : 'op_google_key_session');
     
@@ -109,19 +109,19 @@ function setSecretKey(provider, key) {
     sessionStorage.removeItem(sessionKey);
     if (shouldKeepKeyForSession()) sessionStorage.setItem(sessionKey, key);
 
-    // Wenn permanente PIN-Speicherung aktiv ist und PIN vorliegt, verschlüsseln und speichern
+    // Wenn permanente Passphrase-Speicherung aktiv ist, verschlüsseln und speichern.
     if (localStorage.getItem('op_keys_are_encrypted') === '1' && runtimePin) {
         let storageKey = provider === 'gemini' ? 'op_gemini_key_enc' : 
                          (provider === 'deepseek' ? 'op_deepseek_key_enc' : 'op_google_key_enc');
-        localStorage.setItem(storageKey, encryptWithPin(key, runtimePin));
+        localStorage.setItem(storageKey, await encryptWithPin(key, runtimePin));
     }
 }
 
-function setGoogleCx(cx) {
+async function setGoogleCx(cx) {
     runtimeGoogleSearchCx = cx;
     localStorage.setItem('op_google_cx', cx);
     if (localStorage.getItem('op_keys_are_encrypted') === '1' && runtimePin) {
-        localStorage.setItem('op_google_cx_enc', encryptWithPin(cx, runtimePin));
+        localStorage.setItem('op_google_cx_enc', await encryptWithPin(cx, runtimePin));
     }
 }
 
@@ -130,42 +130,58 @@ function clearLegacyStoredKeys() {
     localStorage.removeItem('op_deepseek_key');
 }
 
-function saveApiKey() {
+function showKeyStorageError(err) {
+    alert("Key konnte nicht verschlüsselt gespeichert werden: " + (err?.message || err));
+}
+
+async function saveApiKey() {
     let key = document.getElementById('geminiApiKey').value.trim();
     if(key) { 
-        setSecretKey('gemini', key);
-        clearLegacyStoredKeys();
-        document.getElementById('geminiApiKey').value = '';
-        document.getElementById('keyWarningGemini').style.display = 'block';
-        setTimeout(() => { document.getElementById('keyWarningGemini').style.display = 'none'; }, 4000);
-        if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
+        try {
+            await setSecretKey('gemini', key);
+            clearLegacyStoredKeys();
+            document.getElementById('geminiApiKey').value = '';
+            document.getElementById('keyWarningGemini').style.display = 'block';
+            setTimeout(() => { document.getElementById('keyWarningGemini').style.display = 'none'; }, 4000);
+            if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
+        } catch (err) {
+            showKeyStorageError(err);
+        }
     }
 }
 
-function saveDeepSeekKey() {
+async function saveDeepSeekKey() {
     let key = document.getElementById('deepseekApiKey').value.trim();
     if(key) { 
-        setSecretKey('deepseek', key);
-        clearLegacyStoredKeys();
-        document.getElementById('deepseekApiKey').value = '';
-        document.getElementById('keyWarningDeepSeek').style.display = 'block';
-        setTimeout(() => { document.getElementById('keyWarningDeepSeek').style.display = 'none'; }, 4000);
-        if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
+        try {
+            await setSecretKey('deepseek', key);
+            clearLegacyStoredKeys();
+            document.getElementById('deepseekApiKey').value = '';
+            document.getElementById('keyWarningDeepSeek').style.display = 'block';
+            setTimeout(() => { document.getElementById('keyWarningDeepSeek').style.display = 'none'; }, 4000);
+            if (typeof updateCoreStatusBadge === 'function') updateCoreStatusBadge();
+        } catch (err) {
+            showKeyStorageError(err);
+        }
     }
 }
 
-function saveGoogleSearchKey() {
+async function saveGoogleSearchKey() {
     let key = document.getElementById('googleSearchApiKey').value.trim();
     let cx = document.getElementById('googleSearchCx').value.trim();
-    if(key) { 
-        setSecretKey('google', key);
-        document.getElementById('googleSearchApiKey').value = '';
-        document.getElementById('keyWarningGoogle').style.display = 'block';
-        setTimeout(() => { document.getElementById('keyWarningGoogle').style.display = 'none'; }, 4000);
-    }
-    if(cx) {
-        setGoogleCx(cx);
-        document.getElementById('googleSearchCx').value = '';
+    try {
+        if(key) {
+            await setSecretKey('google', key);
+            document.getElementById('googleSearchApiKey').value = '';
+            document.getElementById('keyWarningGoogle').style.display = 'block';
+            setTimeout(() => { document.getElementById('keyWarningGoogle').style.display = 'none'; }, 4000);
+        }
+        if(cx) {
+            await setGoogleCx(cx);
+            document.getElementById('googleSearchCx').value = '';
+        }
+    } catch (err) {
+        showKeyStorageError(err);
     }
 }
 

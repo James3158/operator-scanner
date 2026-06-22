@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') cancelKIInputModal();
     });
 
-    // PIN Modal Events
+    // Passphrase Modal Events
     document.getElementById('pinModalConfirm')?.addEventListener('click', confirmPinModal);
     document.getElementById('pinModalCancel')?.addEventListener('click', cancelPinModal);
     document.getElementById('pinModalOverlay')?.addEventListener('click', cancelPinModal);
@@ -813,12 +813,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
             const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V13.8.3 ===\n` +
+                `- Key-Sicherheit verbessert: Dauerhaft gespeicherte API-Keys werden jetzt per WebCrypto AES-GCM mit PBKDF2-Key-Ableitung und Master-Passphrase verschlüsselt. Alte PIN-Altbestände werden beim Entsperren weiterhin gelesen.\n\n` +
+                `- Datenschutztexte korrigiert: Die App unterscheidet jetzt klar zwischen lokaler Speicherung, API-Anfragen an gewählte Anbieter und der optionalen Websuche über Google CSE bzw. Proxy-Fallback.\n\n` +
+                `- Analysequalität verbessert: OCR- und QuickScan-Ergebnisse können nun ebenfalls durch KI bereinigt, übersetzt und zusammengefasst werden.\n\n` +
+                `- Ingredient-Matching gehärtet: Negierte Treffer wie "ohne Zucker", "zuckerfrei" oder "ohne Parfum" werden nicht mehr als echte Schadstofftreffer gewertet.\n\n` +
+                `- Reset-Verhalten korrigiert: Der System-Reset löscht nur noch App-eigene Speicherwerte mit op_-Prefix und lässt andere Daten derselben Domain unangetastet.\n\n` +
                 `=== SYSTEM V13.8.2 ===\n` +
                 `- Behebung von Quoten-Fehlern: Google Search Grounding-Tool aus Gemini-API-Aufruf entfernt. Da die App eine eigene Websuch-Pipeline besitzt, ist das Grounding redundant. Anfragen im kostenlosen Free-Tier funktionieren nun wieder einwandfrei ohne Billing-Konto.\n\n` +
                 `=== SYSTEM V13.8.1 ===\n` +
                 `- Hotfix für Syntax-Fehler: Behebung eines Klammerfehlers bei der Key-Speicherung, der das Laden der Event-Listener verhinderte (Buttons funktionierten nicht).\n\n` +
                 `=== SYSTEM V13.8 ===\n` +
-                `- Master-PIN Verschlüsselung: Sicheres Speichern der API-Keys im Browser. Schützt vor unbefugter Nutzung bei physischem Zugriff durch eine 4-stellige PIN.\n` +
+                `- Legacy-Key-Speicherung: Verschlüsseltes Speichern der API-Keys im Browser.\n` +
                 `- Schließen-Optimierungen: Schließen des Changelogs auf Mobilgeräten über dedizierten Button und native Wischgeste (Swipe-down) behoben.\n\n` +
                 `=== SYSTEM V13.7 ===\n` +
                 `- Multimodale RAG Kamera-Pipeline: Höhere Genauigkeit beim Scannen. Die KI identifiziert erst den Namen aus Fotos, führt eine Websuche durch und analysiert dann die präzisen Zutaten.\n` +
@@ -833,7 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
                 `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
                 `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES v13.8.2", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openModal("PATCH NOTES v13.8.3", "System-Aktualisierungsprotokoll", changelogText, "alternative");
         });
     }
 
@@ -841,8 +847,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resetAppSettingsBtn) {
         resetAppSettingsBtn.addEventListener('click', () => {
             if (confirm("Möchtest du wirklich alle Werkseinstellungen zurücksetzen?\n\nDies löscht alle gespeicherten API-Schlüssel, das gesamte Archiv und deine benutzerdefinierten Toxin-Definitionen unwiderruflich!")) {
-                localStorage.clear();
-                sessionStorage.clear();
+                Object.keys(localStorage).filter(key => key.startsWith('op_')).forEach(key => localStorage.removeItem(key));
+                Object.keys(sessionStorage).filter(key => key.startsWith('op_')).forEach(key => sessionStorage.removeItem(key));
                 alert("System zurückgesetzt. Anwendung wird neu geladen...");
                 location.reload();
             }
@@ -853,22 +859,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!e.target.checked) {
             sessionStorage.removeItem('op_gemini_key_session');
             sessionStorage.removeItem('op_deepseek_key_session');
+            sessionStorage.removeItem('op_google_key_session');
         }
     });
 
-    document.getElementById('persistKeyToggle')?.addEventListener('change', (e) => {
+    document.getElementById('persistKeyToggle')?.addEventListener('change', async (e) => {
         if (e.target.checked) {
-            showPinModal('create').then(pin => {
-                runtimePin = pin;
-                localStorage.setItem('op_keys_are_encrypted', '1');
-                
-                // Verschlüssele aktuell geladene Schlüssel
-                if (runtimeGeminiKey) localStorage.setItem('op_gemini_key_enc', encryptWithPin(runtimeGeminiKey, pin));
-                if (runtimeDeepSeekKey) localStorage.setItem('op_deepseek_key_enc', encryptWithPin(runtimeDeepSeekKey, pin));
-                if (runtimeGoogleSearchKey) localStorage.setItem('op_google_key_enc', encryptWithPin(runtimeGoogleSearchKey, pin));
-                if (runtimeGoogleSearchCx) localStorage.setItem('op_google_cx_enc', encryptWithPin(runtimeGoogleSearchCx, pin));
-                
-                alert("System-Core verschlüsselt dauerhaft auf diesem Gerät gesichert.");
+            showPinModal('create').then(async pin => {
+                try {
+                    // Verschlüssele aktuell geladene Schlüssel, bevor das Persistenz-Flag gesetzt wird.
+                    if (runtimeGeminiKey) localStorage.setItem('op_gemini_key_enc', await encryptWithPin(runtimeGeminiKey, pin));
+                    if (runtimeDeepSeekKey) localStorage.setItem('op_deepseek_key_enc', await encryptWithPin(runtimeDeepSeekKey, pin));
+                    if (runtimeGoogleSearchKey) localStorage.setItem('op_google_key_enc', await encryptWithPin(runtimeGoogleSearchKey, pin));
+                    if (runtimeGoogleSearchCx) localStorage.setItem('op_google_cx_enc', await encryptWithPin(runtimeGoogleSearchCx, pin));
+
+                    runtimePin = pin;
+                    localStorage.setItem('op_keys_are_encrypted', '1');
+                    alert("System-Core mit WebCrypto verschlüsselt dauerhaft auf diesem Gerät gesichert.");
+                } catch (err) {
+                    localStorage.removeItem('op_gemini_key_enc');
+                    localStorage.removeItem('op_deepseek_key_enc');
+                    localStorage.removeItem('op_google_key_enc');
+                    localStorage.removeItem('op_google_cx_enc');
+                    localStorage.removeItem('op_keys_are_encrypted');
+                    runtimePin = "";
+                    alert("Verschlüsselung konnte nicht aktiviert werden: " + (err?.message || err));
+                    e.target.checked = false;
+                }
             }).catch(() => {
                 e.target.checked = false;
             });
@@ -916,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkPinStorage();
 });
 
-// ─── PIN MODAL DIALOG FLOW ───
+// ─── PASSPHRASE MODAL DIALOG FLOW ───
 let _pinModalResolve = null;
 let _pinModalReject = null;
 
@@ -928,7 +945,7 @@ function showPinModal(mode) {
         const overlay = document.getElementById('pinModalOverlay');
         const box = document.getElementById('pinModalBox');
         if (!overlay || !box) {
-            reject("PIN Modal elements not found in DOM");
+            reject("Passphrase modal elements not found in DOM");
             return;
         }
         
@@ -940,12 +957,12 @@ function showPinModal(mode) {
         if (input) input.value = "";
         
         if (mode === 'create') {
-            if (title) title.innerText = "🔒 Master-PIN erstellen";
-            if (desc) desc.innerText = "Erstelle eine 4-stellige Master-PIN, um deine API-Schlüssel dauerhaft verschlüsselt auf diesem Gerät zu speichern:";
+            if (title) title.innerText = "🔒 Master-Passphrase erstellen";
+            if (desc) desc.innerText = "Erstelle eine Passphrase mit mindestens 6 Zeichen, um deine API-Schlüssel verschlüsselt auf diesem Gerät zu speichern:";
             if (confirmBtn) confirmBtn.innerText = "Erstellen";
         } else {
-            if (title) title.innerText = "🔒 Master-PIN erforderlich";
-            if (desc) desc.innerText = "Gib deine 4-stellige Master-PIN ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:";
+            if (title) title.innerText = "🔒 Master-Passphrase erforderlich";
+            if (desc) desc.innerText = "Gib deine Master-Passphrase ein, um die verschlüsselten System-Core-Schlüssel freizuschalten:";
             if (confirmBtn) confirmBtn.innerText = "Entsperren";
         }
         
@@ -963,8 +980,8 @@ function confirmPinModal() {
     const input = document.getElementById('pinModalInput');
     if (!input) return;
     const val = input.value.trim();
-    if (!/^\d{4}$/.test(val)) {
-        alert("Die PIN muss genau 4 Ziffern enthalten.");
+    if (val.length < 6) {
+        alert("Die Passphrase muss mindestens 6 Zeichen enthalten.");
         input.focus();
         return;
     }
@@ -1014,12 +1031,12 @@ function checkPinStorage() {
             return;
         }
         
-        showPinModal('unlock').then(pin => {
+        showPinModal('unlock').then(async pin => {
             let keysFound = ['op_gemini_key_enc', 'op_deepseek_key_enc', 'op_google_key_enc', 'op_google_cx_enc'].some(k => localStorage.getItem(k));
             let isCorrect = false;
             if (keysFound) {
                 let testKey = ['op_gemini_key_enc', 'op_deepseek_key_enc', 'op_google_key_enc', 'op_google_cx_enc'].find(k => localStorage.getItem(k));
-                let testDecrypted = decryptWithPin(localStorage.getItem(testKey), pin);
+                let testDecrypted = await decryptWithPin(localStorage.getItem(testKey), pin);
                 if (testDecrypted !== null) {
                     isCorrect = true;
                 }
@@ -1029,10 +1046,10 @@ function checkPinStorage() {
             
             if (isCorrect) {
                 runtimePin = pin;
-                runtimeGeminiKey = decryptWithPin(localStorage.getItem('op_gemini_key_enc'), pin) || "";
-                runtimeDeepSeekKey = decryptWithPin(localStorage.getItem('op_deepseek_key_enc'), pin) || "";
-                runtimeGoogleSearchKey = decryptWithPin(localStorage.getItem('op_google_key_enc'), pin) || "";
-                runtimeGoogleSearchCx = decryptWithPin(localStorage.getItem('op_google_cx_enc'), pin) || "";
+                runtimeGeminiKey = await decryptWithPin(localStorage.getItem('op_gemini_key_enc'), pin) || "";
+                runtimeDeepSeekKey = await decryptWithPin(localStorage.getItem('op_deepseek_key_enc'), pin) || "";
+                runtimeGoogleSearchKey = await decryptWithPin(localStorage.getItem('op_google_key_enc'), pin) || "";
+                runtimeGoogleSearchCx = await decryptWithPin(localStorage.getItem('op_google_cx_enc'), pin) || "";
                 
                 sessionStorage.setItem('op_gemini_key_session', runtimeGeminiKey);
                 sessionStorage.setItem('op_deepseek_key_session', runtimeDeepSeekKey);
@@ -1042,11 +1059,11 @@ function checkPinStorage() {
                 updateCoreStatusBadge();
                 loadSettings();
             } else {
-                alert("Ungültige Master-PIN. Zugriff verweigert.");
+                alert("Ungültige Master-Passphrase. Zugriff verweigert.");
                 loadSettings();
             }
         }).catch(() => {
-            console.log("PIN freischalten abgebrochen.");
+            console.log("Passphrase-Freischaltung abgebrochen.");
             loadSettings();
         });
     }

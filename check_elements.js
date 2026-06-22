@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const dir = 'c:/Users/49157/Desktop/Projekte/Websites/operator-scanner/operator-scanner';
+const dir = process.argv[2] ? path.resolve(process.argv[2]) : __dirname;
 const htmlSrc = fs.readFileSync(path.join(dir, 'index.html'), 'utf-8');
 const apiSrc = fs.readFileSync(path.join(dir, 'api.js'), 'utf-8');
 const appSrc = fs.readFileSync(path.join(dir, 'app.js'), 'utf-8');
@@ -37,8 +37,13 @@ for (const id of queriedIds) {
         continue;
     }
     
-    // Ignore dynamic view/nav constructions
-    if (id.startsWith('view-') || id.startsWith('nav-') || id.startsWith('compareSlot')) {
+    // Ignore dynamic view/nav constructions and dynamically created modal IDs.
+    if (
+        id.startsWith('view-') ||
+        id.startsWith('nav-') ||
+        id.startsWith('compareSlot') ||
+        id === 'compareArchiveModal'
+    ) {
         continue;
     }
 
