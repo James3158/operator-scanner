@@ -97,6 +97,8 @@ function normalizeHistoryItem(item) {
     if (Number.isNaN(score)) score = 0;
     let dateIso = item.dateIso || item.date || new Date().toISOString();
     return {
+        schemaVersion: 14,
+        productId: String(item.productId || barcode).slice(0, 120),
         barcode,
         name: String(item.name || 'Unbekanntes Objekt').slice(0, 180),
         score: Math.max(0, Math.min(100, score)),
@@ -104,9 +106,50 @@ function normalizeHistoryItem(item) {
         rawIngredients: String(item.rawIngredients || '').slice(0, 20000),
         imageUrl: isSafeImageUrl(item.imageUrl) ? String(item.imageUrl) : '',
         kiSummary: item.kiSummary ? String(item.kiSummary).slice(0, 5000) : '',
+        summaryStatus: item.kiSummary ? 'ready' : 'missing',
+        captureMethod: ['barcode', 'photo', 'ocr', 'manual', 'archive'].includes(item.captureMethod) ? item.captureMethod : 'archive',
+        packaging: normalizePackagingAssessment(item.packaging),
+        foundToxins: Array.isArray(item.foundToxins) ? item.foundToxins.map(String).slice(0, 80) : [],
+        foundGood: Array.isArray(item.foundGood) ? item.foundGood.map(String).slice(0, 80) : [],
+        analysisVersion: Number.parseInt(item.analysisVersion, 10) || 14,
         date: getDisplayDate(dateIso),
         dateIso
     };
+}
+
+function normalizePackagingAssessment(value) {
+    let source = value && typeof value === 'object' ? value : {};
+    let score = Number.parseInt(source.score, 10);
+    if (Number.isNaN(score)) score = 50;
+    let risk = ['low', 'moderate', 'high', 'unknown'].includes(source.risk) ? source.risk : 'unknown';
+    let confidence = ['high', 'medium', 'low'].includes(source.confidence) ? source.confidence : 'low';
+    return {
+        material: String(source.material || 'Nicht verifiziert').slice(0, 160),
+        score: Math.max(0, Math.min(100, score)),
+        risk,
+        confidence,
+        reason: String(source.reason || 'Verpackungsmaterial konnte nicht sicher bestimmt werden.').slice(0, 1200),
+        disposal: String(source.disposal || 'Lokale Entsorgungshinweise prüfen.').slice(0, 500)
+    };
+}
+
+function assessPackaging(product) {
+    if (product?._packaging_assessment) return normalizePackagingAssessment(product._packaging_assessment);
+    let text = normalizeIngredientText([
+        product?.packaging,
+        product?.packaging_text,
+        product?.packaging_tags?.join?.(' '),
+        product?.packaging_materials_tags?.join?.(' ')
+    ].filter(Boolean).join(' '));
+
+    const match = (pattern) => pattern.test(text);
+    if (match(/pvc|polyvinylchlorid|polystyrol|styrofoam|\bps\b/)) return normalizePackagingAssessment({ material: 'PVC / Polystyrol', score: 12, risk: 'high', confidence: 'medium', reason: 'Problematischer Kunststoff erkannt. Kontakt, Hitze und lange Lagerung erhöhen die Unsicherheit.', disposal: 'Nicht wiederverwenden; lokale Kunststoffentsorgung prüfen.' });
+    if (match(/\bpet\b|polyethylenterephthalat/)) return normalizePackagingAssessment({ material: 'PET', score: 38, risk: 'moderate', confidence: 'medium', reason: 'PET ist leicht und recycelbar, bleibt aber eine Einweg-Kunststoffverpackung mit möglicher Partikelabgabe.', disposal: 'Pfand- oder Wertstoffsystem verwenden.' });
+    if (match(/polypropylen|\bpp\b|hdpe|polyethylen|\bpe\b/)) return normalizePackagingAssessment({ material: match(/polypropylen|\bpp\b/) ? 'Polypropylen (PP)' : 'Polyethylen (PE/HDPE)', score: 56, risk: 'moderate', confidence: 'medium', reason: 'Vergleichsweise stabiler Kunststoff, dessen Eignung von Temperatur, Nutzung und Produktkontakt abhängt.', disposal: 'Nur bestimmungsgemäß wiederverwenden und lokal recyceln.' });
+    if (match(/aluminium|aluminum|metal|dose|can\b/)) return normalizePackagingAssessment({ material: 'Metall / Aluminium', score: 62, risk: 'moderate', confidence: 'medium', reason: 'Gut recycelbar; Innenbeschichtungen und direkter Kontakt sind ohne weitere Angaben nicht bewertbar.', disposal: 'Metall- oder Wertstoffsammlung verwenden.' });
+    if (match(/glas|glass|jar\b/)) return normalizePackagingAssessment({ material: 'Glas', score: 92, risk: 'low', confidence: 'high', reason: 'Inertes, gut wiederverwendbares Material mit geringem Leaching-Risiko bei intakter Verpackung.', disposal: 'Wiederverwenden oder nach Farben im Altglas entsorgen.' });
+    if (match(/papier|paper|karton|cardboard/)) return normalizePackagingAssessment({ material: 'Papier / Karton', score: 78, risk: 'low', confidence: 'medium', reason: 'Faserbasierte Verpackung; mögliche Beschichtungen sind ohne Materialangabe nicht verifizierbar.', disposal: 'Sauber und unbeschichtet im Altpapier entsorgen.' });
+    return normalizePackagingAssessment(null);
 }
 
 function getHistory() {
@@ -218,6 +261,7 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     let rawGoodNames = [];
     let hasHighToxin = false;
     let kiSummary = p.ki_summary || "";
+    let packagingAssessment = assessPackaging(p);
 
     let collectedAlts = new Set();
     let contextMatch = false;
@@ -317,7 +361,12 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     }
 
     let scoreColor = score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? 'var(--warn)' : 'var(--alert)');
-    saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal, kiSummary);
+    saveToHistory(barcode, productName, score, category, ingredientsRaw, imgUrlFinal, kiSummary, {
+        packaging: packagingAssessment,
+        foundToxins: rawToxinsNames,
+        foundGood: rawGoodNames,
+        captureMethod: p._capture_method || (isExtracted ? 'photo' : 'barcode')
+    });
 
     let resultHtml = `
         <div class="res-card">
@@ -334,6 +383,12 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
             <div style="padding:15px 20px; font-size:13px; line-height:1.5; color:var(--text-main); border-bottom:1px solid var(--border-color); background:rgba(99,102,241,0.03); font-style:italic;">
                 "${escapeHTML(kiSummary)}"
             </div>`;
+    } else {
+        resultHtml += `
+            <div class="summary-empty">
+                <div><strong>KI-Systemanalyse fehlt</strong><span>Einmal erzeugen und dauerhaft im Archiv speichern.</span></div>
+                <button class="summary-generate-btn" onclick="generateArchiveSummary(${jsArg(barcode)})">Analyse erstellen</button>
+            </div>`;
     }
             
     resultHtml += `
@@ -342,6 +397,19 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische Toxine (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
     if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
     if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
+
+    let packagingColor = packagingAssessment.score >= 75 ? 'var(--matrix-green)' : (packagingAssessment.score >= 40 ? 'var(--warn)' : 'var(--alert)');
+    resultHtml += `
+        <div class="packaging-panel">
+            <div class="packaging-heading">
+                <div><span class="packaging-kicker">Packaging</span><strong>${escapeHTML(packagingAssessment.material)}</strong></div>
+                <div class="packaging-score" style="color:${packagingColor};border-color:${packagingColor};">${packagingAssessment.score}</div>
+            </div>
+            <div class="packaging-meter"><span style="width:${packagingAssessment.score}%;background:${packagingColor};"></span></div>
+            <p>${escapeHTML(packagingAssessment.reason)}</p>
+            <div class="packaging-meta"><span>Risiko: ${escapeHTML(packagingAssessment.risk)}</span><span>Konfidenz: ${escapeHTML(packagingAssessment.confidence)}</span></div>
+            <small>${escapeHTML(packagingAssessment.disposal)}</small>
+        </div>`;
     
     let rawTextToShow = escapeHTML(p.ingredients_text_de || p.ingredients_text || ingredientsRawOriginal || ingredientsRaw);
     if (p.ingredients_text_original) {

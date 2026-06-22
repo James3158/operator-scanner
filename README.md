@@ -1,6 +1,6 @@
-# 🧬 Operator Terminal v13.8.3 — Biohacking & Toxin Scanner
+# Operator Terminal V14 - Product, Toxin & Packaging Scanner
 
-A highly advanced, purely client-side web terminal designed for the optical capture, translation, and toxicological evaluation of consumer goods (food & cosmetics). Specially optimized for mobile usage on iOS (Safari/GitHub Pages) to enable rapid scanning directly in supermarkets.
+A local-first web terminal for barcode capture, guided product photography, ingredient analysis and separate packaging assessment. The interface is optimized for mobile Safari and static deployment through GitHub Pages.
 
 > [!NOTE]  
 > **Language Indicator:** The application's user interface is currently in German, as it is the creator's native language. Full multi-language support (localization) is planned for future updates.
@@ -14,18 +14,23 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 
 ## ⚡ Key Features
 
-### 1. Hybrid Ingredient Extraction (Optical Sensor & OCR)
+### 1. V14 Guided Scanner
+*   **Two explicit modes:** Live barcode scanning and guided product photography are separated to reduce camera errors and unclear workflows.
+*   **Guided capture:** The photo flow requests a product front, an ingredient/material label and an optional packaging image.
+*   **Optimized local image:** The archived front image is compressed before local storage to reduce quota pressure.
+
+### 2. Hybrid Ingredient Extraction (Optical Sensor & OCR)
 *   **Hardware Sensor:** Integrated barcode scanner (`html5-qrcode`) with a zuschaltbar flashlight (camera flash) toggle for capturing EAN/UPC codes.
 *   **Offline OCR (Tesseract.js):** Client-side optical character recognition to digitize printed ingredient lists via photo upload or camera snap directly in the browser.
 *   **Web Search Cascade (Zero-Config):** If a product is not listed in the primary databases, the app initiates an automated web search via a CORS proxy cascade (`allorigins.win` with automatic fallback to `corsproxy.io`) to extract ingredients.
 *   **Google Custom Search (CSE):** Optional configuration of the official Google Search API via JSONP. This is resilient for static hosting, but the API key is necessarily used in the browser request.
 
-### 2. Global AI Translation Pipeline
+### 3. Global AI Translation Pipeline
 *   **Automatic Language Detection:** Identifies foreign ingredients (e.g. Turkish, English, or French on vacation) and translates both the product name and the ingredient list fully into German before evaluation.
 *   **OCR Error Correction:** Typical optical scanner typos and recognition errors are automatically cleaned up via AI prior to toxicological analysis.
 *   **Transparent Raw Data:** The terminal displays both the translated German text and the original input data in the "Zutaten-Rohdaten" view for full transparency.
 
-### 3. Intelligent Scoring & Dynamic Capping
+### 4. Intelligent Scoring & Dynamic Capping
 *   **Points Formula:** Every product starts at **100 points**. Toxins subtract points, biological amplifiers (whitelists) add points.
 *   **Toxin Severity Ratings:** Toxins in `blacklist.json` are weighted by severity:
     *   `high` (-30 points, e.g., fluoride, parabens, phenoxyethanol)
@@ -39,12 +44,18 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   If a toxin with `severity === 'high'` (e.g., neurotoxins) is detected, the product is **strictly capped at a maximum of 50 points**.
     *   Lighter toxins (e.g., fillers or sugar) can be compensated by positive ingredients: each whitelisted ingredient increases the dynamic score cap by its benefit value (up to a limit of **75 points**).
 
-### 4. AI Product Summaries & Archiving
+### 5. Persistent AI Summaries & V14 Archive
 *   **Biological Evaluations:** The AI (Gemini or DeepSeek) writes a concise, 2-3 sentence summary explaining the biological and cellular impact of the product on the human body.
-*   **Local Archive:** Summaries are stored persistently in the browser history under the `kiSummary` property. When loaded from the archive, the summary is displayed instantly without consuming API quotas.
+*   **Generate once:** Older archive entries without a summary expose an explicit action. A successful result is saved and reused without another API request.
+*   **Versioned records:** Legacy history objects are normalized into the V14 schema while preserving existing products, images and summaries.
 *   **Backup & Restore:** The export feature packages both your scan history and custom toxins into a single JSON file.
 
-### 5. Premium User Interface (Obsidian Glassmorphism)
+### 6. Packaging Core
+*   **Independent score:** Packaging receives its own 0-100 score and never silently modifies the product score.
+*   **Material assessment:** The result stores material, risk, confidence, reasoning and disposal guidance.
+*   **Honest fallback:** Unknown packaging is labeled as not verified rather than guessed.
+
+### 7. Premium User Interface (Obsidian Glassmorphism)
 *   **Cyberpunk Aesthetic:** Deep, dark obsidian theme with translucent glassmorphic components, tailored HSL color palettes, and fluid transitions.
 *   **iOS Safe-Area Support:** Optimized padding (`env(safe-area-inset-bottom)`) for iPhone displays and native Safari browser overlays.
 *   **Visual Modal Upgrades:** Toxin details in the bottom-sheet modal feature a glowing, color-coded hazard rating scale (Red/Yellow/Green).
@@ -58,7 +69,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   [Html5-Qrcode](https://github.com/mebjas/html5-qrcode) (Camera barcode scanning)
     *   [Tesseract.js](https://github.com/naptha/tesseract.js) (Offline client-side OCR)
 *   **API Integrations:**
-*   **Gemini 3.5 Flash (AI Studio API):** Primary model used for ingredient extraction, OCR cleanup, translation, and product summaries. Provider quota and billing rules can change, so check the provider console before relying on a free tier.
+*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging and product summaries. The exact configured model endpoint and provider quota must be checked before deployment.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
     *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
 
@@ -90,7 +101,16 @@ Then navigate to `http://localhost:8000` in your web browser.
 
 ---
 
-## ✅ v13.8.3 Fixes
+## V14 Changes
+
+*   Reworked the scanner into dedicated barcode and guided photo modes.
+*   Added front, label and packaging capture stages with Gemini Vision processing and OCR fallback.
+*   Added a separate packaging score with confidence and disposal metadata.
+*   Added backward-compatible V14 archive normalization.
+*   Added on-demand, single-generation summaries for legacy archive entries.
+*   Preserved existing summaries and images during later re-analysis.
+
+## v13.8.3 Fixes
 *   Replaced weak custom XOR/PIN key storage with WebCrypto AES-GCM plus PBKDF2-derived passphrase keys while keeping legacy unlock compatibility.
 *   Fixed OCR/QuickScan analysis so extracted data can still receive AI cleanup, translation, and summaries.
 *   Hardened toxin matching against negated phrases such as "ohne Zucker", "zuckerfrei", and "ohne Parfum".

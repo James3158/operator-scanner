@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal v13.8.3</title>
+    <title>Operator Terminal V14</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V13.8.3 (DYNAMIC CORES) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14 (PACKAGING CORE) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -89,13 +89,45 @@
 
     <!-- Scan View -->
     <div id="view-scan" class="view">
-        <div id="reader"></div>
-        <button id="startBtn" class="action-btn">Sensor Aktivieren</button>
-        <div style="display:flex; gap:10px; margin-top:10px;">
-            <button id="torchToggleBtn" class="action-btn" style="flex:1; font-size:12px; padding:12px; display:none;">🔦 Blitz Ein</button>
-            <button id="barcodePhotoBtn" class="action-btn" style="flex:1; font-size:12px; padding:12px;">📷 Barcode aus Foto</button>
+        <div class="scan-mode-switch" role="tablist" aria-label="Scan-Modus">
+            <button id="scanModeBarcode" class="scan-mode-btn active" role="tab" aria-selected="true">Barcode</button>
+            <button id="scanModePhoto" class="scan-mode-btn" role="tab" aria-selected="false">Produktfoto</button>
         </div>
-        <input type="file" accept="image/*" id="barcodePhotoInput" style="display:none;">
+
+        <section id="barcodeScanPane" class="scan-pane active">
+            <div class="scan-intro"><span>Live Sensor</span><h2>Barcode erfassen</h2><p>EAN oder UPC ruhig in den Kamerarahmen halten.</p></div>
+            <div id="reader"></div>
+            <button id="startBtn" class="action-btn scan-primary">Barcode-Kamera starten</button>
+            <div class="scan-action-row">
+                <button id="torchToggleBtn" class="action-btn" style="display:none;">Blitz ein</button>
+                <button id="barcodePhotoBtn" class="action-btn">Barcode-Foto wählen</button>
+            </div>
+            <input type="file" accept="image/*" id="barcodePhotoInput" style="display:none;">
+        </section>
+
+        <section id="photoScanPane" class="scan-pane" hidden>
+            <div class="scan-intro"><span>Guided Vision</span><h2>Produkt dokumentieren</h2><p>Je klarer Etikett und Verpackung sichtbar sind, desto zuverlässiger ist die Analyse.</p></div>
+            <div class="capture-step-list">
+                <button class="capture-step" id="captureFrontBtn">
+                    <span class="capture-index">1</span><span><strong>Vorderseite</strong><small>Marke und Produkt erkennen</small></span><b id="captureFrontState">Aufnehmen</b>
+                </button>
+                <button class="capture-step" id="captureLabelBtn">
+                    <span class="capture-index">2</span><span><strong>Inhalte / Material</strong><small>Zutaten oder Materialetikett</small></span><b id="captureLabelState">Aufnehmen</b>
+                </button>
+                <button class="capture-step" id="capturePackagingBtn">
+                    <span class="capture-index">3</span><span><strong>Packaging</strong><small>Materialcode und Kontaktfläche</small></span><b id="capturePackagingState">Optional</b>
+                </button>
+            </div>
+            <button id="guidedAnalyzeBtn" class="action-btn scan-primary" disabled>Fotoanalyse starten</button>
+            <p class="scan-privacy">Bilder werden nur für die gewählte KI-Anfrage verwendet. Eine komprimierte Vorderseite kann lokal im Archiv gespeichert werden.</p>
+            <input type="file" accept="image/*" capture="environment" id="guidedFrontInput" style="display:none;">
+            <input type="file" accept="image/*" capture="environment" id="guidedLabelInput" style="display:none;">
+            <input type="file" accept="image/*" capture="environment" id="guidedPackagingInput" style="display:none;">
+        </section>
+        <section class="scan-recents">
+            <div class="scan-recents-title"><span>Letzte Scans</span><button type="button" onclick="openView('history')">Archiv öffnen</button></div>
+            <div id="scanRecentList"></div>
+        </section>
     </div>
 
     <!-- Search View -->

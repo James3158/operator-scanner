@@ -5,6 +5,7 @@ const dir = process.argv[2] ? path.resolve(process.argv[2]) : __dirname;
 const htmlSrc = fs.readFileSync(path.join(dir, 'index.html'), 'utf-8');
 const apiSrc = fs.readFileSync(path.join(dir, 'api.js'), 'utf-8');
 const appSrc = fs.readFileSync(path.join(dir, 'app.js'), 'utf-8');
+const rulesSrc = fs.readFileSync(path.join(dir, 'rules.js'), 'utf-8');
 
 // Extract all ids from HTML using regex (id="...")
 const htmlIds = new Set();
@@ -22,6 +23,9 @@ while ((match = getElementRegex.exec(apiSrc)) !== null) {
     queriedIds.add(match[1]);
 }
 while ((match = getElementRegex.exec(appSrc)) !== null) {
+    queriedIds.add(match[1]);
+}
+while ((match = getElementRegex.exec(rulesSrc)) !== null) {
     queriedIds.add(match[1]);
 }
 

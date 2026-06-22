@@ -2,6 +2,62 @@ let html5QrCode;
 let currentHistoryFilter = 'Alle';
 let viewStack = ['home']; 
 let activeArchiveInjectBarcode = "";
+const summaryGenerationLocks = new Set();
+const guidedScanFiles = { front: null, label: null, packaging: null };
+
+function setScanMode(mode) {
+    let isBarcode = mode === 'barcode';
+    document.getElementById('scanModeBarcode').classList.toggle('active', isBarcode);
+    document.getElementById('scanModePhoto').classList.toggle('active', !isBarcode);
+    document.getElementById('scanModeBarcode').setAttribute('aria-selected', String(isBarcode));
+    document.getElementById('scanModePhoto').setAttribute('aria-selected', String(!isBarcode));
+    document.getElementById('barcodeScanPane').hidden = !isBarcode;
+    document.getElementById('photoScanPane').hidden = isBarcode;
+    document.getElementById('barcodeScanPane').classList.toggle('active', isBarcode);
+    document.getElementById('photoScanPane').classList.toggle('active', !isBarcode);
+    if (!isBarcode && html5QrCode?.isScanning) html5QrCode.stop().catch(() => {});
+}
+
+function setGuidedScanFile(kind, file) {
+    if (!file) return;
+    guidedScanFiles[kind] = file;
+    let stateId = { front: 'captureFrontState', label: 'captureLabelState', packaging: 'capturePackagingState' }[kind];
+    let state = document.getElementById(stateId);
+    state.textContent = 'Bereit';
+    state.closest('.capture-step').classList.add('complete');
+    document.getElementById('guidedAnalyzeBtn').disabled = !(guidedScanFiles.front || guidedScanFiles.label);
+}
+
+function resetGuidedScan() {
+    Object.keys(guidedScanFiles).forEach(kind => { guidedScanFiles[kind] = null; });
+    ['guidedFrontInput', 'guidedLabelInput', 'guidedPackagingInput'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('captureFrontState').textContent = 'Aufnehmen';
+    document.getElementById('captureLabelState').textContent = 'Aufnehmen';
+    document.getElementById('capturePackagingState').textContent = 'Optional';
+    document.querySelectorAll('.capture-step').forEach(step => step.classList.remove('complete'));
+    document.getElementById('guidedAnalyzeBtn').disabled = true;
+}
+
+function migrateArchiveToV14() {
+    if (localStorage.getItem('op_schema_version') === '14') return;
+    let history = getHistory();
+    if (saveHistory(history)) localStorage.setItem('op_schema_version', '14');
+}
+
+function renderScannerRecents() {
+    let container = document.getElementById('scanRecentList');
+    if (!container) return;
+    let recent = getHistory().slice(0, 3);
+    if (!recent.length) {
+        container.innerHTML = '<p class="scan-recents-empty">Noch keine lokalen Scans.</p>';
+        return;
+    }
+    container.innerHTML = recent.map(item => `
+        <button class="scan-recent-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
+            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14</span>'}
+            <span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.category)} · Score ${item.score}</small></span>
+        </button>`).join('');
+}
 
 function fetchJsonWithTimeout(url, timeoutMs = 15000) {
     let controller = new AbortController();
@@ -159,7 +215,7 @@ function openView(viewName, isBackAction = false) {
     
     document.getElementById('view-' + viewName).classList.add('active');
     if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
-    if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; }
+    if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; renderScannerRecents(); }
     if(viewName === 'history') renderHistory();
 }
 
@@ -230,24 +286,66 @@ function triggerArchiveImageInject(event, barcode) {
     document.getElementById('archiveImageInjectorInput').click();
 }
 
-function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, kiSummary = "") {
+function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, kiSummary = "", analysisMeta = {}) {
     let history = getHistory();
+    let existing = history.find(item => item.barcode === barcode);
     history = history.filter(item => item.barcode !== barcode);
-    let mainCategory = "Nahrung";
-    if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
-    if (category.includes("Optisch") || category.includes("OCR") || category.includes("KI")) mainCategory = "Optisch";
+    let mainCategory = "Optisch";
+    if (category.includes("Nahrung")) mainCategory = "Nahrung";
+    else if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
+    let nextPackaging = analysisMeta.packaging || existing?.packaging;
+    if (existing?.packaging?.risk !== 'unknown' && nextPackaging?.risk === 'unknown') nextPackaging = existing.packaging;
     history.unshift({ 
         barcode, 
         name, 
         score, 
         category: mainCategory, 
         rawIngredients, 
-        imageUrl: imgUrl, 
-        kiSummary: kiSummary, 
+        imageUrl: imgUrl || existing?.imageUrl || '',
+        kiSummary: kiSummary || existing?.kiSummary || '',
+        captureMethod: analysisMeta.captureMethod || existing?.captureMethod || 'barcode',
+        packaging: nextPackaging,
+        foundToxins: analysisMeta.foundToxins || existing?.foundToxins || [],
+        foundGood: analysisMeta.foundGood || existing?.foundGood || [],
+        analysisVersion: 14,
         dateIso: new Date().toISOString() 
     });
     if (history.length > 100) history.pop();
     saveHistory(history);
+}
+
+async function generateArchiveSummary(barcode) {
+    if (summaryGenerationLocks.has(barcode)) return;
+    let keyActive = typeof getSecretKey === 'function' && (getSecretKey('gemini') || getSecretKey('deepseek'));
+    if (!keyActive) {
+        alert('Für die einmalige KI-Systemanalyse wird ein aktiver Gemini- oder DeepSeek-Key benötigt.');
+        return;
+    }
+    let history = getHistory();
+    let item = history.find(entry => entry.barcode === barcode);
+    if (!item || item.kiSummary) {
+        if (item) loadFromArchive(barcode);
+        return;
+    }
+    summaryGenerationLocks.add(barcode);
+    document.querySelectorAll('.summary-generate-btn').forEach(button => {
+        button.disabled = true;
+        button.textContent = 'Analyse läuft...';
+    });
+    try {
+        let summary = await generateProductSummaryViaKI(item.name, item.rawIngredients, item.foundToxins.join(', '), item.foundGood.join(', '));
+        if (!summary) throw new Error('Die KI hat keine verwertbare Zusammenfassung geliefert.');
+        item.kiSummary = summary;
+        item.summaryStatus = 'ready';
+        item.analysisVersion = 14;
+        saveHistory(history);
+        loadFromArchive(barcode);
+    } catch (error) {
+        alert('Systemanalyse konnte nicht gespeichert werden: ' + error.message);
+        loadFromArchive(barcode);
+    } finally {
+        summaryGenerationLocks.delete(barcode);
+    }
 }
 
 function filterHistory(category, btnId) {
@@ -306,7 +404,9 @@ function loadFromArchive(barcode) {
                 product_name: item.name, 
                 ingredients_text: item.rawIngredients, 
                 image_url: item.imageUrl,
-                ki_summary: item.kiSummary || "" 
+                ki_summary: item.kiSummary || "",
+                _packaging_assessment: item.packaging,
+                _capture_method: item.captureMethod || 'archive'
             } 
         }, item.category, barcode, true);
     } else {
@@ -685,6 +785,7 @@ Promise.all([
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    migrateArchiveToV14();
     // Side-Drawer (Burger-Menü) Event-Binding
     if (document.getElementById('burgerBtn')) {
         document.getElementById('burgerBtn').addEventListener('click', openDrawer);
@@ -732,6 +833,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Barcode aus Foto
     document.getElementById('barcodePhotoBtn').addEventListener('click', () => document.getElementById('barcodePhotoInput').click());
     document.getElementById('barcodePhotoInput').onchange = (e) => { if(e.target.files.length > 0) processBarcodePhoto(e.target.files[0]); };
+
+    // V14 Guided Scanner
+    document.getElementById('scanModeBarcode').addEventListener('click', () => setScanMode('barcode'));
+    document.getElementById('scanModePhoto').addEventListener('click', () => setScanMode('photo'));
+    document.getElementById('captureFrontBtn').addEventListener('click', () => document.getElementById('guidedFrontInput').click());
+    document.getElementById('captureLabelBtn').addEventListener('click', () => document.getElementById('guidedLabelInput').click());
+    document.getElementById('capturePackagingBtn').addEventListener('click', () => document.getElementById('guidedPackagingInput').click());
+    document.getElementById('guidedFrontInput').onchange = (e) => setGuidedScanFile('front', e.target.files[0]);
+    document.getElementById('guidedLabelInput').onchange = (e) => setGuidedScanFile('label', e.target.files[0]);
+    document.getElementById('guidedPackagingInput').onchange = (e) => setGuidedScanFile('packaging', e.target.files[0]);
+    document.getElementById('guidedAnalyzeBtn').addEventListener('click', () => processGuidedProductScan(guidedScanFiles));
     
     // Compare
     document.getElementById('compareRunBtn').addEventListener('click', runCompare);
@@ -813,6 +925,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
             const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
+                `=== SYSTEM V14 ===\n` +
+                `- Scanner-Interface neu aufgebaut: getrennte Modi für Live-Barcode und geführte Produktfotos.\n` +
+                `- Guided Vision erfasst Vorderseite, Inhalts-/Materialetikett und optional die Verpackung.\n` +
+                `- Packaging Core ergänzt einen separaten 0-100 Teilscore mit Material, Risiko, Konfidenz und Entsorgungshinweis. Der Hauptscore bleibt davon unberührt.\n` +
+                `- Alte Archivobjekte werden automatisch in das versionierte V14-Datenmodell überführt.\n` +
+                `- Fehlende KI-Summaries können im Archiv exakt einmal erzeugt und anschließend dauerhaft wiederverwendet werden.\n` +
+                `- Bereits gespeicherte Summaries, Bilder und Packaging-Daten bleiben bei erneuter Analyse erhalten.\n\n` +
                 `=== SYSTEM V13.8.3 ===\n` +
                 `- Key-Sicherheit verbessert: Dauerhaft gespeicherte API-Keys werden jetzt per WebCrypto AES-GCM mit PBKDF2-Key-Ableitung und Master-Passphrase verschlüsselt. Alte PIN-Altbestände werden beim Entsperren weiterhin gelesen.\n\n` +
                 `- Datenschutztexte korrigiert: Die App unterscheidet jetzt klar zwischen lokaler Speicherung, API-Anfragen an gewählte Anbieter und der optionalen Websuche über Google CSE bzw. Proxy-Fallback.\n\n` +
@@ -839,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
                 `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
                 `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES v13.8.3", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openModal("PATCH NOTES V14", "System-Aktualisierungsprotokoll", changelogText, "alternative");
         });
     }
 

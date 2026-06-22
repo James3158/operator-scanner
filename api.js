@@ -446,6 +446,77 @@ Antworte AUSSCHLIESSLICH in diesem JSON-Format: {"product_name": "Name", "ingred
     };
 }
 
+function fileToOptimizedDataUrl(file, maxDimension = 1400, quality = 0.78) {
+    return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onerror = () => reject(new Error('Bild konnte nicht gelesen werden.'));
+        reader.onload = () => {
+            let image = new Image();
+            image.onerror = () => reject(new Error('Bildformat wird nicht unterstützt.'));
+            image.onload = () => {
+                let scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+                let canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function processGuidedProductScan(files) {
+    if (!files?.front && !files?.label) return;
+    let selectedModel = document.getElementById('activeModelSelect').value;
+    if (selectedModel !== 'gemini') {
+        alert('Die geführte Fotoanalyse benötigt Gemini Vision. Bitte in der System-Konfiguration Gemini auswählen.');
+        return;
+    }
+
+    openView('result');
+    try {
+        let frontImage = files.front ? await fileToOptimizedDataUrl(files.front) : null;
+        let labelImage = files.label ? await fileToOptimizedDataUrl(files.label) : frontImage;
+        let packagingImage = files.packaging ? await fileToOptimizedDataUrl(files.packaging) : frontImage;
+
+        showLoading('V14 Vision: Produkt und Kategorie werden identifiziert...');
+        let identity = await executeKIEngine(`Analysiere das Produktfoto. Identifiziere Marke, genauen Produktnamen und Produkttyp. Setze category ausschließlich auf "Nahrung" oder "Kosmetik". Wenn etwas nicht sicher lesbar ist, erfinde nichts. Antworte ausschließlich als JSON: {"product_name":"Name oder Unbekanntes Produkt","category":"Nahrung","confidence":"high|medium|low"}`, frontImage || labelImage);
+
+        showLoading('V14 Vision: Inhalte und Materialangaben werden extrahiert...');
+        let contents = await executeKIEngine(`Extrahiere alle sichtbaren Zutaten, Inhaltsstoffe oder Materialangaben exakt aus diesem Etikett und übersetze sie fachlich korrekt ins Deutsche. Korrigiere nur eindeutige OCR-Fehler und erfinde keine fehlenden Angaben. Antworte ausschließlich als JSON: {"ingredients_text":"kommagetrennte Angaben","confidence":"high|medium|low"}`, labelImage);
+
+        let packaging = null;
+        if (packagingImage) {
+            showLoading('V14 Packaging Core: Verpackung wird separat bewertet...');
+            packaging = await executeKIEngine(`Bewerte ausschließlich die sichtbare Produktverpackung. Identifiziere Material und Materialcode, ohne unbekannte Angaben zu erfinden. Der Score 0-100 bewertet Materialstabilität, Wiederverwendbarkeit und Entsorgung; er verändert nicht den Produktscore. Antworte ausschließlich als JSON: {"material":"Material oder Nicht verifiziert","score":50,"risk":"low|moderate|high|unknown","confidence":"high|medium|low","reason":"kurze direkte Begründung","disposal":"kurzer Entsorgungshinweis"}`, packagingImage);
+        }
+
+        let ingredients = contents?.ingredients_text?.trim();
+        if (!ingredients) throw new Error('Keine verwertbaren Inhalts- oder Materialangaben erkannt.');
+        let archiveImage = files.front ? await fileToOptimizedDataUrl(files.front, 720, 0.66) : '';
+        let barcode = 'PHOTO-' + Date.now();
+        let category = identity?.category === 'Kosmetik' ? 'Kosmetik (KI Foto)' : 'Nahrung (KI Foto)';
+        await analyzeProduct({ product: {
+            product_name: identity?.product_name || 'Foto-Analyse',
+            ingredients_text: ingredients,
+            image_url: archiveImage,
+            _packaging_assessment: packaging,
+            _capture_method: 'photo'
+        } }, category, barcode, true);
+        resetGuidedScan();
+    } catch (error) {
+        console.error('Guided scan error:', error);
+        if (files.label) {
+            showLoading('Vision nicht verfügbar. Lokaler OCR-Fallback wird gestartet...');
+            processLocalOCR(files.label, 'Foto-Analyse', 'PHOTO-' + Date.now(), 'Optisch (OCR)');
+        } else {
+            renderFallbackUI('PHOTO-' + Date.now(), 'Foto-Analyse');
+        }
+    }
+}
+
 // Offline OCR-Pipeline via Tesseract.js — extrahiert Zutatenliste aus Produktfotos
 function processLocalOCR(file, productName, barcode, category) {
     showLoading('Optische Texterkennung gestartet...');
@@ -467,7 +538,8 @@ function processLocalOCR(file, productName, barcode, category) {
             product: { 
                 product_name: productName, 
                 ingredients_text: text,
-                image_url: "" 
+                image_url: "",
+                _capture_method: 'ocr'
             } 
         }, category || "Optisch (OCR)", barcode, true);
     }).catch(() => {
