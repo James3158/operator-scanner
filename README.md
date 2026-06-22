@@ -61,6 +61,16 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Visual Modal Upgrades:** Toxin details in the bottom-sheet modal feature a glowing, color-coded hazard rating scale (Red/Yellow/Green).
 *   **Core Status Badge:** A live header badge indicating whether the app is running offline or with an active AI engine (`KI-CORE ACTIVE` in indigo vs. `OFFLINE-CORE ACTIVE` in emerald).
 
+### 8. Multi-Category Material Core
+*   **Dedicated profiles:** Clothing, household goods and furniture use separate hazard and benefit rules instead of the food ingredient database.
+*   **Category-aware capture:** Guided Vision and manual quick scans can classify and archive food, cosmetics, clothing, household goods and furniture.
+*   **Material summaries:** AI summaries switch to material contact, emissions, synthetic abrasion, durability and missing manufacturer data for non-food products.
+
+### 9. Fair Alternatives
+*   **Curated first:** Local entries provide a concrete product type, purchase criteria, reasoning and an optional certification directory.
+*   **Unconfirmed web layer:** On-demand web suggestions are stored separately and remain visibly marked as unconfirmed.
+*   **No invented certainty:** Web suggestions may not claim verified prices, certificates, links or local availability.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -71,7 +81,8 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **API Integrations:**
 *   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging and product summaries. The exact configured model endpoint and provider quota must be checked before deployment.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
-    *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
+*   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
+*   **Local rule data:** `category_profiles.json` contains category-specific material rules; `curated_alternatives.json` contains the reviewed alternative directory.
 
 ---
 
@@ -109,6 +120,10 @@ Then navigate to `http://localhost:8000` in your web browser.
 *   Added backward-compatible V14 archive normalization.
 *   Added on-demand, single-generation summaries for legacy archive entries.
 *   Preserved existing summaries and images during later re-analysis.
+*   Added dedicated Clothing, Household and Furniture material profiles.
+*   Added category filters and category selection for manual scans.
+*   Added curated fair alternatives with certification and purchase checks.
+*   Added separately labeled, cached and unconfirmed web alternatives.
 
 ## v13.8.3 Fixes
 *   Replaced weak custom XOR/PIN key storage with WebCrypto AES-GCM plus PBKDF2-derived passphrase keys while keeping legacy unlock compatibility.

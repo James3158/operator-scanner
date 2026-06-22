@@ -1,6 +1,8 @@
 // Globale Datenbehälter für die Laufzeit
 let blacklist = {}; 
 let whitelist = {}; 
+let categoryProfiles = {};
+let curatedAlternatives = [];
 let dbActive = false;
 
 const alternativeDeepDiveMatrix = {
@@ -92,7 +94,7 @@ function normalizeHistoryItem(item) {
     if (!item || typeof item !== 'object') return null;
     let barcode = String(item.barcode || '').slice(0, 80);
     if (!barcode) return null;
-    let category = ['Nahrung', 'Kosmetik', 'Optisch'].includes(item.category) ? item.category : 'Optisch';
+    let category = ['Nahrung', 'Kosmetik', 'Optisch', 'Kleidung', 'Haushalt', 'Möbel'].includes(item.category) ? item.category : 'Optisch';
     let score = Number.parseInt(item.score, 10);
     if (Number.isNaN(score)) score = 0;
     let dateIso = item.dateIso || item.date || new Date().toISOString();
@@ -111,10 +113,43 @@ function normalizeHistoryItem(item) {
         packaging: normalizePackagingAssessment(item.packaging),
         foundToxins: Array.isArray(item.foundToxins) ? item.foundToxins.map(String).slice(0, 80) : [],
         foundGood: Array.isArray(item.foundGood) ? item.foundGood.map(String).slice(0, 80) : [],
+        webAlternatives: normalizeWebAlternatives(item.webAlternatives),
         analysisVersion: Number.parseInt(item.analysisVersion, 10) || 14,
         date: getDisplayDate(dateIso),
         dateIso
     };
+}
+
+function normalizeWebAlternatives(items) {
+    if (!Array.isArray(items)) return [];
+    return items.slice(0, 6).map(item => ({
+        name: String(item?.name || '').slice(0, 180),
+        reason: String(item?.reason || '').slice(0, 600),
+        sourceHint: String(item?.sourceHint || '').slice(0, 240),
+        verified: false
+    })).filter(item => item.name);
+}
+
+function getBaseCategory(category) {
+    let value = String(category || '');
+    return ['Nahrung', 'Kosmetik', 'Kleidung', 'Haushalt', 'Möbel'].find(name => value.includes(name)) || 'Optisch';
+}
+
+function getCuratedAlternatives(category) {
+    if (!Array.isArray(curatedAlternatives)) return [];
+    return curatedAlternatives.filter(item => item?.category === category).slice(0, 4);
+}
+
+function renderCuratedAlternatives(category) {
+    let items = getCuratedAlternatives(category);
+    if (!items.length) return '';
+    return `<div class="sec-title">Kuratierte faire Alternativen</div><div class="curated-alternative-list">${items.map(item => {
+        let criteria = Array.isArray(item.criteria) ? item.criteria.slice(0, 4) : [];
+        let link = /^https:\/\//i.test(item.verificationUrl || '')
+            ? `<a href="${escapeHTML(item.verificationUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceLabel || 'Quelle prüfen')}</a>`
+            : `<span>${escapeHTML(item.sourceLabel || 'Lokal kuratiert')}</span>`;
+        return `<article class="curated-alternative"><strong>${escapeHTML(item.name)}</strong><p>${escapeHTML(item.reason || '')}</p><ul>${criteria.map(value => `<li>${escapeHTML(value)}</li>`).join('')}</ul><div>${link}</div></article>`;
+    }).join('')}</div>`;
 }
 
 function normalizePackagingAssessment(value) {
@@ -215,6 +250,9 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         return;
     }
     let p = data.product;
+    let baseCategory = getBaseCategory(category);
+    let categoryProfile = categoryProfiles?.[baseCategory] || null;
+    let isMaterialCategory = ['Kleidung', 'Haushalt', 'Möbel'].includes(baseCategory);
 
     // Global KI Translation step
     let keyActive = typeof getSecretKey === 'function' && (getSecretKey('gemini') || getSecretKey('deepseek'));
@@ -266,7 +304,8 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     let collectedAlts = new Set();
     let contextMatch = false;
 
-    let effectiveBlacklist = Object.assign({}, blacklist);
+    let effectiveBlacklist = Object.assign({}, isMaterialCategory ? (categoryProfile?.hazards || {}) : blacklist);
+    let effectiveWhitelist = Object.assign({}, isMaterialCategory ? (categoryProfile?.benefits || {}) : whitelist);
     try {
         let customToxins = readJsonStorage('op_custom_toxins', {});
         Object.keys(customToxins).forEach(key => {
@@ -290,10 +329,11 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
                         if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
                     }
                 }
+                if (Array.isArray(item.alternatives)) item.alternatives.forEach(alt => collectedAlts.add(alt));
             }
         }
-        for (let mainKey in whitelist) {
-            let item = whitelist[mainKey];
+        for (let mainKey in effectiveWhitelist) {
+            let item = effectiveWhitelist[mainKey];
             if (!item || !Array.isArray(item.aliases)) continue;
             if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 foundGood.push(`<li class="list-good" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, 'good')">${escapeHTML(mainKey.toUpperCase())}</li>`); 
@@ -304,7 +344,7 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
             }
         }
 
-        if (foundToxins.length > 0) {
+        if (foundToxins.length > 0 && !categoryProfile) {
             let tempContextAlts = new Set();
             for (let key in contextualAlternatives) {
                 if (key.split('|').some(kw => productContext.includes(kw))) {
@@ -326,8 +366,8 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         let maxCap = 50;
         if (!hasHighToxin) {
             let totalReward = 0;
-            for (let mainKey in whitelist) {
-                let item = whitelist[mainKey];
+            for (let mainKey in effectiveWhitelist) {
+                let item = effectiveWhitelist[mainKey];
                 if (item && Array.isArray(item.aliases) && item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                     let benefit = item.benefit || "low";
                     totalReward += (benefitReward[benefit] || 5);
@@ -354,7 +394,7 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         let promptToxins = rawToxinsNames.join(", ");
         let promptGood = rawGoodNames.join(", ");
         showLoading("Generiere System-Zusammenfassung via KI...");
-        let summaryResult = await generateProductSummaryViaKI(productName, ingredientsRaw, promptToxins, promptGood);
+        let summaryResult = await generateProductSummaryViaKI(productName, ingredientsRaw, promptToxins, promptGood, baseCategory);
         if (summaryResult) {
             kiSummary = summaryResult;
         }
@@ -365,7 +405,8 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         packaging: packagingAssessment,
         foundToxins: rawToxinsNames,
         foundGood: rawGoodNames,
-        captureMethod: p._capture_method || (isExtracted ? 'photo' : 'barcode')
+        captureMethod: p._capture_method || (isExtracted ? 'photo' : 'barcode'),
+        webAlternatives: p._web_alternatives || []
     });
 
     let resultHtml = `
@@ -394,9 +435,20 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     resultHtml += `
             <div class="res-body">`;
             
-    if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische Toxine (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
-    if (foundGood.length > 0) resultHtml += `<div class="sec-title">Biologische Verstärker</div><ul class="data-list">${foundGood.join('')}</ul>`;
+    let subjectLabel = categoryProfile?.subjectLabel || 'Inhaltsstoffe';
+    if (foundToxins.length > 0) resultHtml += `<div class="sec-title">Kritische ${escapeHTML(subjectLabel)} (Klicken für Analyse)</div><ul class="data-list">${foundToxins.join('')}</ul>`;
+    if (foundGood.length > 0) resultHtml += `<div class="sec-title">Positive ${escapeHTML(subjectLabel)}</div><ul class="data-list">${foundGood.join('')}</ul>`;
     if (suggestedAltsHtml.length > 0) resultHtml += `<div class="sec-title">Souveräne Alternativen (Klicken für Deep-Dive)</div><ul class="data-list">${suggestedAltsHtml.join('')}</ul>`;
+    if (categoryProfile) resultHtml += renderCuratedAlternatives(baseCategory);
+
+    if (categoryProfile) {
+        let webAlternatives = normalizeWebAlternatives(p._web_alternatives);
+        if (webAlternatives.length) {
+            resultHtml += `<div class="sec-title">Unbestätigte Webfunde</div><div class="web-alternative-list">${webAlternatives.map(item => `<article><span>Unbestätigt</span><strong>${escapeHTML(item.name)}</strong><p>${escapeHTML(item.reason)}</p><small>${escapeHTML(item.sourceHint || 'Vor dem Kauf Herstellerdaten und Verfügbarkeit prüfen.')}</small></article>`).join('')}</div>`;
+        } else {
+            resultHtml += `<button class="web-alternative-btn" onclick="generateWebAlternatives(${jsArg(barcode)})">Unbestätigte Web-Alternativen suchen</button>`;
+        }
+    }
 
     let packagingColor = packagingAssessment.score >= 75 ? 'var(--matrix-green)' : (packagingAssessment.score >= 40 ? 'var(--warn)' : 'var(--alert)');
     resultHtml += `
@@ -415,7 +467,7 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
     if (p.ingredients_text_original) {
         rawTextToShow = `<strong>Deutsch (KI-Übersetzt):</strong><br>${escapeHTML(p.ingredients_text_de)}<br><br><strong>Original (${escapeHTML(p.product_name_original || productName)}):</strong><br>${escapeHTML(p.ingredients_text_original)}`;
     }
-    resultHtml += `<div class="sec-title">Zutaten-Rohdaten</div><div class="raw-text">${rawTextToShow}</div></div></div>`;
+    resultHtml += `<div class="sec-title">${categoryProfile ? 'Material-Rohdaten' : 'Zutaten-Rohdaten'}</div><div class="raw-text">${rawTextToShow}</div></div></div>`;
     document.getElementById('result-content').innerHTML = resultHtml;
 }
 

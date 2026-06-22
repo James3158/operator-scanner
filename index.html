@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14 (PACKAGING CORE) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14 (MULTI-CATEGORY CORE) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -140,7 +140,16 @@
         <textarea id="quickScanInput" class="std-input" placeholder="Zutatenliste hier einfügen für Offline-Analyse..." style="height:100px; resize:vertical; font-size:14px;"></textarea>
         <div style="display:flex; gap:10px; margin-top:8px;">
             <input type="text" id="quickScanName" class="std-input" placeholder="Produktname (optional)" style="flex:1;">
-            <button id="quickScanBtn" class="btn-search" style="white-space:nowrap;">ANALYSIEREN</button>
+        </div>
+        <div class="quick-category-row">
+            <select id="quickScanCategory" class="std-input" aria-label="Produktkategorie">
+                <option value="Nahrung">Nahrung</option>
+                <option value="Kosmetik">Kosmetik</option>
+                <option value="Kleidung">Kleidung</option>
+                <option value="Haushalt">Haushalt</option>
+                <option value="Möbel">Möbel</option>
+            </select>
+            <button id="quickScanBtn" class="btn-search">ANALYSIEREN</button>
         </div>
         <div id="search-results"></div>
     </div>
@@ -151,6 +160,9 @@
             <button id="flt-alle" class="flt-btn active">Alle</button>
             <button id="flt-nahrung" class="flt-btn">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn">Kosmetik</button>
+            <button id="flt-kleidung" class="flt-btn">Kleidung</button>
+            <button id="flt-haushalt" class="flt-btn">Haushalt</button>
+            <button id="flt-moebel" class="flt-btn">Möbel</button>
             <button id="flt-optisch" class="flt-btn">Optisch</button>
         </div>
         <button class="hist-clear-all" id="clearHistoryBtn">Gesamtes Archiv Leeren</button>

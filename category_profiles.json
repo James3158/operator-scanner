@@ -1,0 +1,57 @@
+{
+  "Kleidung": {
+    "subjectLabel": "Materialien",
+    "hazards": {
+      "polyester": { "aliases": ["polyester", "recycled polyester", "recyceltes polyester"], "severity": "medium", "desc": "Synthetische Faser", "detail": "Erdölbasierte Faser, die beim Tragen und Waschen Mikrofasern freisetzen kann.", "alternatives": ["GOTS-zertifizierte Bio-Baumwolle", "Leinen", "Hanf", "mulesingfreie Wolle"] },
+      "polyamid nylon": { "aliases": ["polyamid", "polyamide", "nylon"], "severity": "medium", "desc": "Synthetische Faser", "detail": "Abriebfeste Kunstfaser mit Mikrofaserrisiko und energieintensiver Herstellung.", "alternatives": ["Leinen", "Hanf", "Lyocell mit nachvollziehbarer Herkunft"] },
+      "acryl": { "aliases": ["acryl", "acrylic", "polyacryl"], "severity": "high", "desc": "Stark fusselnde Kunstfaser", "detail": "Acryl kann besonders viele synthetische Mikrofasern freisetzen und ist biologisch nicht abbaubar.", "alternatives": ["Wolle", "Bio-Baumwolle", "Hanfstrick"] },
+      "elastan": { "aliases": ["elastan", "elasthan", "spandex", "lycra"], "severity": "low", "desc": "Elastische Kunstfaser", "detail": "Kleine Beimischungen erschweren Faserrecycling; hohe Anteile erhöhen den Kunststoffanteil.", "alternatives": ["Mechanisch dehnbare Strickstoffe", "Naturfaser mit geringem Elastananteil"] },
+      "pfas beschichtung": { "aliases": ["pfas", "pfc", "perfluor", "fluorocarbon", "fluorcarbon", "durable water repellent"], "severity": "high", "desc": "Persistente Beschichtung", "detail": "Fluorierte Ausrüstungen sind extrem langlebig in der Umwelt. PFAS-freie Imprägnierung bevorzugen.", "alternatives": ["PFAS-freie Imprägnierung", "Gewachste Bio-Baumwolle", "Dicht gewebte Naturfaser"] },
+      "formaldehyd ausrüstung": { "aliases": ["formaldehyd", "formaldehyde", "easy care", "bügelfrei", "wrinkle free"], "severity": "high", "desc": "Chemische Textilausrüstung", "detail": "Knitterarme Ausrüstungen können Formaldehydharze einsetzen. Ohne Labor- oder Herstellerangabe bleibt die Exposition unklar.", "alternatives": ["Unbehandelte Naturfaser", "GOTS-zertifizierte Textilien"] },
+      "flammhemmer": { "aliases": ["flame retardant", "flammhemmend", "flammhemmer", "brandschutz ausrüstung"], "severity": "high", "desc": "Flammhemmende Ausrüstung", "detail": "Die genaue Chemikalie ist häufig nicht deklariert. Material und Prüfstandard müssen verifiziert werden.", "alternatives": ["Naturfaser ohne chemische Flammschutzausrüstung", "Wolle"] }
+    },
+    "benefits": {
+      "bio baumwolle": { "aliases": ["bio-baumwolle", "organic cotton", "kbA baumwolle", "gots"], "benefit": "high", "desc": "Nachvollziehbare Naturfaser", "detail": "Zertifizierte Bio-Baumwolle reduziert synthetischen Faseranteil und schränkt problematische Prozesschemikalien ein." },
+      "leinen": { "aliases": ["leinen", "linen", "flachs"], "benefit": "high", "desc": "Robuste Naturfaser", "detail": "Langlebige Faser mit geringem Mikroplastikrisiko." },
+      "hanf": { "aliases": ["hanf", "hemp"], "benefit": "high", "desc": "Robuste Naturfaser", "detail": "Strapazierfähige Faser mit geringem synthetischem Abrieb." },
+      "wolle": { "aliases": ["wolle", "wool", "schurwolle", "merino"], "benefit": "medium", "desc": "Tierische Naturfaser", "detail": "Geringes Mikroplastikrisiko; Tierwohl und Ausrüstung separat prüfen." },
+      "lyocell": { "aliases": ["lyocell", "tencel"], "benefit": "medium", "desc": "Regenerierte Zellulosefaser", "detail": "Kann bei nachvollziehbarer Herkunft und geschlossenem Prozess eine gute Alternative zu Kunstfasern sein." }
+    }
+  },
+  "Haushalt": {
+    "subjectLabel": "Werkstoffe",
+    "hazards": {
+      "pvc": { "aliases": ["pvc", "polyvinylchlorid", "vinyl"], "severity": "high", "desc": "Problematischer Kunststoff", "detail": "PVC kann Additive und Weichmacher benötigen und ist schwer hochwertig zu recyceln.", "alternatives": ["Glas", "Edelstahl", "Silikon mit Lebensmittelstandard", "Polypropylen nur bei notwendigem Kunststoff"] },
+      "pfas ptfe": { "aliases": ["pfas", "pfoa", "ptfe", "teflon", "fluorpolymer"], "severity": "high", "desc": "Fluorierte Beschichtung", "detail": "Beschädigte oder überhitzte Beschichtungen vermeiden; Herstellerangaben und Nutzungsgrenzen prüfen.", "alternatives": ["Unbeschichteter Edelstahl", "Gusseisen", "Emaille"] },
+      "bisphenole": { "aliases": ["bpa", "bisphenol a", "bps", "bisphenol s"], "severity": "high", "desc": "Endokrin relevanter Ausgangsstoff", "detail": "Bei Lebensmittelkontakt sind transparente Material- und Temperaturangaben erforderlich.", "alternatives": ["Borosilikatglas", "Edelstahl", "BPA- und BPS-freie geprüfte Systeme"] },
+      "phthalate": { "aliases": ["phthalat", "phthalate", "dehp", "dbp", "bbp"], "severity": "high", "desc": "Weichmacher", "detail": "Weichmacher können aus flexiblen Kunststoffen migrieren. Kontakt und Temperatur beeinflussen das Risiko.", "alternatives": ["Glas", "Edelstahl", "Naturkautschuk mit Prüfnachweis"] },
+      "melamin": { "aliases": ["melamin", "melamine", "mf resin"], "severity": "medium", "desc": "Duroplastisches Geschirr", "detail": "Nicht für starke Hitze, Mikrowelle oder stark saure heiße Speisen verwenden.", "alternatives": ["Porzellan", "Glas", "Edelstahl"] },
+      "antibakterielle ausrüstung": { "aliases": ["antibacterial", "antibakteriell", "silver ions", "silberionen", "triclosan"], "severity": "medium", "desc": "Biozide Ausrüstung", "detail": "Dauerhafte antimikrobielle Ausrüstung ist für viele Alltagsprodukte nicht erforderlich.", "alternatives": ["Unbeschichtete, gut reinigbare Oberfläche", "Waschbare Naturmaterialien"] }
+    },
+    "benefits": {
+      "glas": { "aliases": ["glas", "glass", "borosilikat"], "benefit": "high", "desc": "Inertes Material", "detail": "Gut reinigbar, wiederverwendbar und bei intakter Oberfläche stabil." },
+      "edelstahl": { "aliases": ["edelstahl", "stainless steel", "18/10", "18/8"], "benefit": "high", "desc": "Langlebiger Werkstoff", "detail": "Robust, gut reinigbar und ohne Kunststoffbeschichtung nutzbar." },
+      "gusseisen": { "aliases": ["gusseisen", "cast iron"], "benefit": "high", "desc": "Langlebiges Kochmaterial", "detail": "Sehr langlebig und ohne synthetische Antihaftschicht einsetzbar." },
+      "emaille": { "aliases": ["emaille", "enamel"], "benefit": "medium", "desc": "Glasartige Oberfläche", "detail": "Bei unbeschädigter Oberfläche gut reinigbar und langlebig." },
+      "massivholz": { "aliases": ["massivholz", "solid wood"], "benefit": "medium", "desc": "Nachwachsender Werkstoff", "detail": "Unbeschichtet oder schadstoffarm behandelt bevorzugen." }
+    }
+  },
+  "Möbel": {
+    "subjectLabel": "Werkstoffe",
+    "hazards": {
+      "mdf spanplatte": { "aliases": ["mdf", "hdf", "spanplatte", "particle board", "faserplatte"], "severity": "medium", "desc": "Verleimter Holzwerkstoff", "detail": "Emissionen hängen von Bindemittel, Kantenversiegelung und Emissionsklasse ab.", "alternatives": ["Massivholz", "Emissionsarme Sperrholzplatte", "FSC-zertifiziertes Vollholz"] },
+      "formaldehyd": { "aliases": ["formaldehyd", "formaldehyde"], "severity": "high", "desc": "Flüchtige Emission", "detail": "Bei Holzwerkstoffen und Klebern Emissionsklasse, Prüfbericht und Raumlüftung beachten.", "alternatives": ["NAF/ULEF-Holzwerkstoff", "Massivholz mit emissionsarmer Oberfläche"] },
+      "polyurethan schaum": { "aliases": ["polyurethan", "pu foam", "polyurethane foam", "kaltschaum"], "severity": "medium", "desc": "Synthetischer Polsterschaum", "detail": "Alterung, Additive und Flammschutzbehandlung sind ohne Herstellerdaten nicht vollständig bewertbar.", "alternatives": ["Naturlatex mit Prüfnachweis", "Wolle", "Kokosfaser"] },
+      "pvc kunstleder": { "aliases": ["pvc", "vinyl", "kunstleder", "faux leather"], "severity": "high", "desc": "Beschichtetes Kunststoffmaterial", "detail": "Kann Weichmacher enthalten und ist bei Abrieb sowie Entsorgung problematisch.", "alternatives": ["Pflanzlich gegerbtes Leder", "Dicht gewebte Naturfaser", "Unbeschichtete Polsterstoffe"] },
+      "flammhemmer": { "aliases": ["flame retardant", "flammhemmend", "flammhemmer", "tb117"], "severity": "high", "desc": "Flammschutzbehandlung", "detail": "Konkrete Chemikalie und Prüfstandard müssen beim Hersteller verifiziert werden.", "alternatives": ["Wollpolster", "Möbel ohne zugesetzte chemische Flammschutzmittel"] },
+      "lösemittel lack": { "aliases": ["lösemittelhaltig", "solvent based", "nitro lack", "nitrocellulose lacquer"], "severity": "medium", "desc": "Emissionsstarke Oberfläche", "detail": "Frische Beschichtungen können flüchtige organische Verbindungen abgeben.", "alternatives": ["Wasserbasierter emissionsarmer Lack", "Hartwachsöl mit Volldeklaration"] }
+    },
+    "benefits": {
+      "massivholz": { "aliases": ["massivholz", "solid wood", "vollholz"], "benefit": "high", "desc": "Langlebiger Werkstoff", "detail": "Reparierbar und bei transparenter Oberflächenbehandlung gut bewertbar." },
+      "fsc pefc": { "aliases": ["fsc", "pefc"], "benefit": "medium", "desc": "Nachvollziehbare Forstherkunft", "detail": "Zertifizierung betrifft Herkunft; Kleber und Oberfläche weiterhin separat prüfen." },
+      "naturöl": { "aliases": ["leinöl", "linseed oil", "hartwachsöl", "natural oil"], "benefit": "medium", "desc": "Transparente Oberfläche", "detail": "Volldeklaration und Trocknungszeit prüfen; häufig reparierbarer als Kunststoffbeschichtungen." },
+      "wolle polster": { "aliases": ["wollpolster", "wool batting", "schafwolle"], "benefit": "medium", "desc": "Naturfaserpolster", "detail": "Flammschutz- und Mottenausrüstung weiterhin prüfen." },
+      "naturlatex": { "aliases": ["naturlatex", "natural latex"], "benefit": "medium", "desc": "Elastisches Naturmaterial", "detail": "Mischanteile, Allergien und Zertifizierung prüfen." }
+    }
+  }
+}

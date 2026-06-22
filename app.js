@@ -290,9 +290,7 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
     let history = getHistory();
     let existing = history.find(item => item.barcode === barcode);
     history = history.filter(item => item.barcode !== barcode);
-    let mainCategory = "Optisch";
-    if (category.includes("Nahrung")) mainCategory = "Nahrung";
-    else if (category.includes("Kosmetik")) mainCategory = "Kosmetik";
+    let mainCategory = getBaseCategory(category);
     let nextPackaging = analysisMeta.packaging || existing?.packaging;
     if (existing?.packaging?.risk !== 'unknown' && nextPackaging?.risk === 'unknown') nextPackaging = existing.packaging;
     history.unshift({ 
@@ -307,6 +305,7 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
         packaging: nextPackaging,
         foundToxins: analysisMeta.foundToxins || existing?.foundToxins || [],
         foundGood: analysisMeta.foundGood || existing?.foundGood || [],
+        webAlternatives: analysisMeta.webAlternatives || existing?.webAlternatives || [],
         analysisVersion: 14,
         dateIso: new Date().toISOString() 
     });
@@ -333,7 +332,7 @@ async function generateArchiveSummary(barcode) {
         button.textContent = 'Analyse läuft...';
     });
     try {
-        let summary = await generateProductSummaryViaKI(item.name, item.rawIngredients, item.foundToxins.join(', '), item.foundGood.join(', '));
+        let summary = await generateProductSummaryViaKI(item.name, item.rawIngredients, item.foundToxins.join(', '), item.foundGood.join(', '), item.category);
         if (!summary) throw new Error('Die KI hat keine verwertbare Zusammenfassung geliefert.');
         item.kiSummary = summary;
         item.summaryStatus = 'ready';
@@ -406,7 +405,8 @@ function loadFromArchive(barcode) {
                 image_url: item.imageUrl,
                 ki_summary: item.kiSummary || "",
                 _packaging_assessment: item.packaging,
-                _capture_method: item.captureMethod || 'archive'
+                _capture_method: item.captureMethod || 'archive',
+                _web_alternatives: item.webAlternatives || []
             } 
         }, item.category, barcode, true);
     } else {
@@ -438,11 +438,12 @@ function renderFallbackUI(barcode, productName = "", searchTerm = "") {
 // ─── FEATURE: Schnellbewertung Offline ───
 function executeQuickScan() {
     let ingredients = document.getElementById('quickScanInput').value.trim();
-    if (!ingredients) { alert('Zutatenliste eingeben.'); return; }
+    if (!ingredients) { alert('Zutaten- oder Materialliste eingeben.'); return; }
     let productName = document.getElementById('quickScanName').value.trim() || 'Schnellbewertung';
+    let category = document.getElementById('quickScanCategory').value || 'Nahrung';
     let fakeBarcode = 'QUICK-' + Date.now().toString().slice(-6);
     openView('result');
-    analyzeProduct({ product: { product_name: productName, ingredients_text: ingredients, image_url: '' } }, 'Offline-Analyse', fakeBarcode, true);
+    analyzeProduct({ product: { product_name: productName, ingredients_text: ingredients, image_url: '', _capture_method: 'manual' } }, category + ' (Schnellbewertung)', fakeBarcode, true);
 }
 
 // ─── FEATURE: Export / Import ───
@@ -632,17 +633,10 @@ function renderStats() {
         return !Number.isNaN(d.getTime()) && d > weekAgo;
     }).length;
     
-    // Häufigste Toxine (aus rawIngredients grob schätzen)
+    // Häufigste kritische Signaturen aus der gespeicherten Kategorieanalyse
     let toxinCounts = {};
-    let toxinKeys = Object.keys(blacklist);
     history.forEach(item => {
-        let ingr = normalizeIngredientText(item.rawIngredients || '');
-        toxinKeys.forEach(key => {
-            let toxin = blacklist[key];
-            if (toxin.aliases.some(a => matchIngredient(ingr, a, toxin.pattern || null))) {
-                toxinCounts[key] = (toxinCounts[key] || 0) + 1;
-            }
-        });
+        (item.foundToxins || []).forEach(key => { toxinCounts[key] = (toxinCounts[key] || 0) + 1; });
     });
     let topToxins = Object.entries(toxinCounts).sort((a,b) => b[1]-a[1]).slice(0, 5);
     
@@ -769,15 +763,19 @@ openView = function(viewName, isBackAction) {
 let dbTimestamp = new Date().getTime();
 Promise.all([
     fetchJsonWithTimeout('blacklist.json?v=' + dbTimestamp).then(r => r),
-    fetchJsonWithTimeout('whitelist.json?v=' + dbTimestamp).then(r => r)
+    fetchJsonWithTimeout('whitelist.json?v=' + dbTimestamp).then(r => r),
+    fetchJsonWithTimeout('category_profiles.json?v=' + dbTimestamp).catch(() => ({})),
+    fetchJsonWithTimeout('curated_alternatives.json?v=' + dbTimestamp).catch(() => ([]))
 ]).then(data => {
-    blacklist = data[0]; whitelist = data[1]; dbActive = true;
+    blacklist = data[0]; whitelist = data[1]; categoryProfiles = data[2] || {}; curatedAlternatives = data[3] || []; dbActive = true;
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'none';
     initTheme();
     updateCoreStatusBadge();
 }).catch(() => {
     blacklist = blacklist || {};
     whitelist = whitelist || {};
+    categoryProfiles = categoryProfiles || {};
+    curatedAlternatives = curatedAlternatives || [];
     dbActive = false;
     initTheme();
     updateCoreStatusBadge();
@@ -852,6 +850,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('flt-nahrung').addEventListener('click', () => filterHistory('Nahrung', 'flt-nahrung'));
     document.getElementById('flt-kosmetik').addEventListener('click', () => filterHistory('Kosmetik', 'flt-kosmetik'));
     document.getElementById('flt-optisch').addEventListener('click', () => filterHistory('Optisch', 'flt-optisch'));
+    document.getElementById('flt-kleidung').addEventListener('click', () => filterHistory('Kleidung', 'flt-kleidung'));
+    document.getElementById('flt-haushalt').addEventListener('click', () => filterHistory('Haushalt', 'flt-haushalt'));
+    document.getElementById('flt-moebel').addEventListener('click', () => filterHistory('Möbel', 'flt-moebel'));
 
     document.getElementById('themeToggleCheckbox').addEventListener('change', (e) => toggleTheme(e.target));
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
@@ -932,6 +933,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 `- Alte Archivobjekte werden automatisch in das versionierte V14-Datenmodell überführt.\n` +
                 `- Fehlende KI-Summaries können im Archiv exakt einmal erzeugt und anschließend dauerhaft wiederverwendet werden.\n` +
                 `- Bereits gespeicherte Summaries, Bilder und Packaging-Daten bleiben bei erneuter Analyse erhalten.\n\n` +
+                `- Multi-Category-Core ergänzt getrennte Materialregeln für Kleidung, Haushalt und Möbel. Lebensmittelregeln werden nicht auf diese Kategorien übertragen.\n` +
+                `- Fotoanalyse und Schnellbewertung erkennen und speichern fünf Hauptkategorien.\n` +
+                `- Kuratierte Alternativen zeigen konkrete Kaufkriterien und verifizierbare Zertifikatsquellen.\n` +
+                `- Optionale Web-Alternativen werden separat als unbestätigt gespeichert und niemals als kuratierte Empfehlung ausgegeben.\n\n` +
                 `=== SYSTEM V13.8.3 ===\n` +
                 `- Key-Sicherheit verbessert: Dauerhaft gespeicherte API-Keys werden jetzt per WebCrypto AES-GCM mit PBKDF2-Key-Ableitung und Master-Passphrase verschlüsselt. Alte PIN-Altbestände werden beim Entsperren weiterhin gelesen.\n\n` +
                 `- Datenschutztexte korrigiert: Die App unterscheidet jetzt klar zwischen lokaler Speicherung, API-Anfragen an gewählte Anbieter und der optionalen Websuche über Google CSE bzw. Proxy-Fallback.\n\n` +
