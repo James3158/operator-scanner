@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal V14</title>
+    <title>Operator Terminal V14.1</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14 (MULTI-CATEGORY CORE) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14.1 (ARCHIVE AI CORE) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -51,6 +51,12 @@
             </div>
             <span>Archiv</span>
         </div>
+        <div class="nav-item" id="nav-chat" role="button" aria-label="KI Chat" tabindex="0">
+            <div class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+            </div>
+            <span>KI Chat</span>
+        </div>
     </div>
 
     <!-- Home Dashboard -->
@@ -78,6 +84,12 @@
                 <svg viewBox="0 0 24 24"><path d="M12 3v17M12 5l-8 3h16zM4 8v5M20 8v5M7 13a3 3 0 0 0 3-3H4a3 3 0 0 0 3 3zM17 13a3 3 0 0 0 3-3h-6a3 3 0 0 0 3 3z"/></svg>
             </div>
             <div class="dash-text"><h3>Produkt-Vergleich</h3><p>Side-by-Side Analyse</p></div>
+        </div>
+        <div class="dash-card" id="card-chat">
+            <div class="dash-icon-lg" style="color:var(--gemini-blue);">
+                <svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+            </div>
+            <div class="dash-text"><h3>Archiv-KI Chat</h3><p>Fragen zu Scans, Kategorien & Alternativen</p></div>
         </div>
         <div id="stats-dashboard" class="res-card" style="margin-top:15px;">
             <div class="status-bar st-gemini">📊 Statistik-Dashboard</div>
@@ -197,6 +209,27 @@
         <div id="compare-result" style="margin-top:15px;"></div>
     </div>
 
+    <!-- Archive AI Chat View -->
+    <div id="view-chat" class="view">
+        <div class="chat-hero">
+            <span>Phase 3 Core</span>
+            <h2>Frag dein Archiv</h2>
+            <p>Die KI nutzt lokal gespeicherte Produkte, Kategorien, Scores, Packaging und Summaries als Kontext. API-Aufruf nur beim Absenden.</p>
+        </div>
+        <div class="chat-context-strip" id="chatContextStrip">Archiv wird geladen...</div>
+        <div class="chat-suggestions" aria-label="Beispiel-Fragen">
+            <button type="button" data-chat-prompt="Welche Produkte in meinem Archiv sind am kritischsten und warum?">Kritischste Produkte</button>
+            <button type="button" data-chat-prompt="Welche fairen Alternativen passen zu meinen schlechtesten Scans?">Faire Alternativen</button>
+            <button type="button" data-chat-prompt="Welche Verpackungen im Archiv sollte ich vermeiden?">Packaging prüfen</button>
+        </div>
+        <div class="chat-panel" id="archiveChatLog"></div>
+        <div class="chat-input-row">
+            <textarea id="archiveChatInput" class="std-input" placeholder="Frage zum Archiv stellen..." rows="2"></textarea>
+            <button id="archiveChatSendBtn" class="btn-search">SEND</button>
+        </div>
+        <button id="archiveChatClearBtn" class="flt-btn chat-clear-btn">Chatverlauf löschen</button>
+    </div>
+
     <!-- iOS Side-Drawer (Burger-Menü für Einstellungen) -->
     <div id="sideDrawerOverlay"></div>
     <div id="sideDrawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -214,7 +247,7 @@
             
             <div class="sec-title">Aktive KI Extraktions-Engine</div>
             <select id="activeModelSelect" class="std-input" style="margin-bottom:15px;">
-                <option value="gemini">Gemini 3.5 Flash (Grounding)</option>
+                <option value="gemini">Gemini Flash Auto-Fallback</option>
                 <option value="deepseek">DeepSeek V4 (Chat Pipeline)</option>
             </select>
             
@@ -223,7 +256,7 @@
                 <div class="help-content">
                     <p>Um die intelligenten Funktionen (Übersetzung, KI-Zusammenfassung, RAG-Websuche) zu nutzen, benötigst du einen API-Key:</p>
                     <ol>
-                        <li><strong>Gemini 3.5 Flash (Empfohlen):</strong> Gehe auf <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Erstelle einen API-Key und prüfe die aktuell gültigen Quoten und Kosten direkt in der Provider-Konsole.</li>
+                        <li><strong>Gemini Flash Auto-Fallback (Empfohlen):</strong> Gehe auf <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Die App versucht mehrere Flash-kompatible Modelle, wenn ein Modell temporär ausgelastet ist.</li>
                         <li><strong>DeepSeek V4:</strong> Gehe auf die <a href="https://platform.deepseek.com/" target="_blank" rel="noopener noreferrer">DeepSeek Platform</a>, registriere dich und erstelle einen API-Key (kostenpflichtiges Pay-per-Token Modell).</li>
                     </ol>
                     <p>Kopiere den API-Key, füge ihn unten in das entsprechende Feld ein und klicke auf <strong>Key Aktivieren</strong>.</p>
@@ -316,7 +349,7 @@
                 <div id="mod-hazard-fill" class="hazard-bar-fill"></div>
             </div>
         </div>
-        <p id="mod-detail">Detailbeschreibung...</p>
+        <div id="mod-detail">Detailbeschreibung...</div>
     </div>
 
     <!-- KI Eingabe-Modal (prompt()-Ersatz) -->

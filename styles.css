@@ -162,7 +162,7 @@ body {
     padding: 8px 0; 
     border-radius: 18px; 
     flex: 1;
-    max-width: 75px;
+    max-width: 78px;
 }
 .nav-item.active { 
     color: var(--matrix-green); 
@@ -175,8 +175,8 @@ body {
     justify-content: center;
 }
 .nav-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 21px;
+    height: 21px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
@@ -388,6 +388,166 @@ body {
 .scan-recent-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .scan-recent-item small { margin-top: 3px; color: var(--text-muted); font-size: 9px; }
 .scan-recents-empty { margin: 0; color: var(--text-muted); font-size: 10px; }
+
+/* Archive AI Chat */
+.chat-hero {
+    padding: 18px 4px 4px;
+}
+.chat-hero span {
+    color: var(--gemini-blue);
+    font: 700 9px 'JetBrains Mono', monospace;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+.chat-hero h2 {
+    margin: 6px 0;
+    font: 700 25px 'Space Grotesk', sans-serif;
+    letter-spacing: -.5px;
+}
+.chat-hero p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.chat-context-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: rgba(99,102,241,.045);
+    color: var(--text-muted);
+    font: 700 9px 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+}
+.chat-context-strip span {
+    white-space: nowrap;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.035);
+    border: 1px solid var(--border-color);
+}
+.chat-context-strip strong {
+    color: var(--text-main);
+}
+.chat-suggestions {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+}
+.chat-suggestions::-webkit-scrollbar { display: none; }
+.chat-suggestions button {
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    border: 1px solid rgba(99,102,241,.25);
+    border-radius: 999px;
+    background: rgba(99,102,241,.07);
+    color: var(--text-main);
+    font: 700 10px 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    cursor: pointer;
+}
+.chat-panel {
+    min-height: 330px;
+    max-height: 54vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: rgba(255,255,255,.012);
+}
+.chat-empty {
+    margin: auto;
+    max-width: 300px;
+    text-align: center;
+    color: var(--text-muted);
+}
+.chat-empty strong,
+.chat-empty span {
+    display: block;
+}
+.chat-empty strong {
+    color: var(--text-main);
+    font: 700 15px 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+}
+.chat-empty span {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.chat-message {
+    max-width: 86%;
+    padding: 12px 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: rgba(255,255,255,.025);
+}
+.chat-message span {
+    display: block;
+    margin-bottom: 5px;
+    font: 700 8px 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: .9px;
+    color: var(--text-muted);
+}
+.chat-message p {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.chat-user {
+    align-self: flex-end;
+    border-color: rgba(16,185,129,.25);
+    background: rgba(16,185,129,.075);
+}
+.chat-assistant {
+    align-self: flex-start;
+    border-color: rgba(99,102,241,.25);
+    background: rgba(99,102,241,.075);
+}
+.chat-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+.chat-sources button {
+    border: 1px solid rgba(99,102,241,.28);
+    border-radius: 999px;
+    padding: 5px 8px;
+    background: rgba(0,0,0,.1);
+    color: var(--gemini-blue);
+    font: 700 8px 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.chat-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: stretch;
+}
+.chat-input-row textarea {
+    resize: none;
+    min-height: 54px;
+    line-height: 1.35;
+}
+.chat-input-row .btn-search {
+    padding: 0 18px;
+}
+.chat-clear-btn {
+    width: 100%;
+}
 #reader { 
     width: 100%; 
     border-radius: var(--radius); 
@@ -974,6 +1134,72 @@ body {
     color: var(--text-muted); 
     line-height: 1.55; 
     margin: 0; 
+}
+.changelog-timeline {
+    display: grid;
+    gap: 12px;
+    color: var(--text-main) !important;
+}
+.changelog-card {
+    position: relative;
+    padding: 15px;
+    border: 1px solid rgba(99,102,241,.22);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(99,102,241,.12), rgba(16,185,129,.035)),
+        rgba(255,255,255,.018);
+}
+.changelog-card::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: -1px;
+    width: 3px;
+    height: 28px;
+    border-radius: 0 4px 4px 0;
+    background: var(--gemini-blue);
+    box-shadow: 0 0 14px rgba(99,102,241,.55);
+}
+.changelog-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 9px;
+}
+.changelog-card-head span {
+    color: var(--matrix-green);
+    font: 800 11px 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+}
+.changelog-card-head b {
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(99,102,241,.12);
+    color: var(--gemini-blue);
+    font: 800 8px 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.changelog-card h4 {
+    margin: 0 0 10px;
+    color: var(--text-main);
+    font: 700 15px 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.changelog-card ul {
+    margin: 0;
+    padding-left: 18px;
+}
+.changelog-card li {
+    margin: 0 0 7px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.48;
+}
+.changelog-card li:last-child {
+    margin-bottom: 0;
 }
 
 .gemini-btn { 

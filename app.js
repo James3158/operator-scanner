@@ -4,6 +4,8 @@ let viewStack = ['home'];
 let activeArchiveInjectBarcode = "";
 const summaryGenerationLocks = new Set();
 const guidedScanFiles = { front: null, label: null, packaging: null };
+const APP_SCHEMA_VERSION = '14.1';
+const APP_ANALYSIS_VERSION = 14.1;
 
 function setScanMode(mode) {
     let isBarcode = mode === 'barcode';
@@ -38,10 +40,10 @@ function resetGuidedScan() {
     document.getElementById('guidedAnalyzeBtn').disabled = true;
 }
 
-function migrateArchiveToV14() {
-    if (localStorage.getItem('op_schema_version') === '14') return;
+function migrateArchiveToCurrentVersion() {
+    if (localStorage.getItem('op_schema_version') === APP_SCHEMA_VERSION) return;
     let history = getHistory();
-    if (saveHistory(history)) localStorage.setItem('op_schema_version', '14');
+    if (saveHistory(history)) localStorage.setItem('op_schema_version', APP_SCHEMA_VERSION);
 }
 
 function renderScannerRecents() {
@@ -54,7 +56,7 @@ function renderScannerRecents() {
     }
     container.innerHTML = recent.map(item => `
         <button class="scan-recent-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
-            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14</span>'}
+            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.1</span>'}
             <span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.category)} · Score ${item.score}</small></span>
         </button>`).join('');
 }
@@ -146,6 +148,7 @@ function openModal(title, desc, detail, isAlertOrSeverity) {
         }
     }
     
+    document.getElementById('mod-detail').className = '';
     document.getElementById('mod-detail').innerText = detail;
     document.getElementById('detailModalOverlay').style.display = 'block';
     setTimeout(() => {
@@ -306,11 +309,25 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
         foundToxins: analysisMeta.foundToxins || existing?.foundToxins || [],
         foundGood: analysisMeta.foundGood || existing?.foundGood || [],
         webAlternatives: analysisMeta.webAlternatives || existing?.webAlternatives || [],
-        analysisVersion: 14,
+        analysisVersion: APP_ANALYSIS_VERSION,
         dateIso: new Date().toISOString() 
     });
     if (history.length > 100) history.pop();
     saveHistory(history);
+}
+
+function openChangelogModal() {
+    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.1';
+    document.getElementById('mod-desc').innerText = 'System-Aktualisierungsprotokoll';
+    document.getElementById('mod-desc').style.color = 'var(--gemini-blue)';
+    document.getElementById('mod-hazard-container').style.display = 'none';
+    document.getElementById('mod-detail').className = 'changelog-timeline';
+    document.getElementById('mod-detail').innerHTML = renderChangelogHtml();
+    document.getElementById('detailModalOverlay').style.display = 'block';
+    setTimeout(() => {
+        document.getElementById('detailModalOverlay').style.opacity = '1';
+        document.getElementById('detailModal').style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
 }
 
 async function generateArchiveSummary(barcode) {
@@ -336,7 +353,7 @@ async function generateArchiveSummary(barcode) {
         if (!summary) throw new Error('Die KI hat keine verwertbare Zusammenfassung geliefert.');
         item.kiSummary = summary;
         item.summaryStatus = 'ready';
-        item.analysisVersion = 14;
+        item.analysisVersion = APP_ANALYSIS_VERSION;
         saveHistory(history);
         loadFromArchive(barcode);
     } catch (error) {
@@ -663,6 +680,145 @@ function renderStats() {
     document.getElementById('stats-content').innerHTML = html;
 }
 
+// ─── PHASE 3: Archiv-KI Chat ───
+function getArchiveChatMessages() {
+    return readJsonStorage('op_archive_chat', []).filter(item =>
+        item && ['user', 'assistant', 'system'].includes(item.role) && item.content
+    ).slice(-40);
+}
+
+function saveArchiveChatMessages(messages) {
+    writeJsonStorage('op_archive_chat', messages.slice(-40));
+}
+
+function getArchiveContextSummary() {
+    let history = getHistory();
+    let categoryCounts = {};
+    let packagingRisks = {};
+    history.forEach(item => {
+        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+        let risk = item.packaging?.risk || 'unknown';
+        packagingRisks[risk] = (packagingRisks[risk] || 0) + 1;
+    });
+    let avgScore = history.length ? Math.round(history.reduce((sum, item) => sum + item.score, 0) / history.length) : 0;
+    return { total: history.length, avgScore, categoryCounts, packagingRisks };
+}
+
+function renderChatContextStrip() {
+    let el = document.getElementById('chatContextStrip');
+    if (!el) return;
+    let summary = getArchiveContextSummary();
+    let categories = Object.entries(summary.categoryCounts).map(([name, count]) => `${name}: ${count}`).join(' · ') || 'keine Kategorien';
+    el.innerHTML = `
+        <span><strong>${summary.total}</strong> Archivobjekte</span>
+        <span><strong>${summary.avgScore || '-'}</strong> Ø Score</span>
+        <span>${escapeHTML(categories)}</span>`;
+}
+
+function renderArchiveChat() {
+    renderChatContextStrip();
+    let log = document.getElementById('archiveChatLog');
+    if (!log) return;
+    let messages = getArchiveChatMessages();
+    if (!messages.length) {
+        log.innerHTML = `
+            <div class="chat-empty">
+                <strong>Archiv-KI bereit</strong>
+                <span>Stelle Fragen wie: "Welche Produkte sollte ich ersetzen?" oder "Welche Kategorie hat die meisten kritischen Treffer?"</span>
+            </div>`;
+        return;
+    }
+    log.innerHTML = messages.map(message => `
+        <article class="chat-message ${message.role === 'user' ? 'chat-user' : 'chat-assistant'}">
+            <span>${message.role === 'user' ? 'DU' : 'KI CORE'}</span>
+            <p>${escapeHTML(message.content)}</p>
+            ${Array.isArray(message.sources) && message.sources.length ? `<div class="chat-sources">${message.sources.slice(0, 4).map(src => `<button type="button" onclick="loadFromArchive(${jsArg(src.barcode || '')})">${escapeHTML(src.name || src.barcode || 'Archivobjekt')}</button>`).join('')}</div>` : ''}
+        </article>`).join('');
+    log.scrollTop = log.scrollHeight;
+}
+
+function buildArchiveChatContext() {
+    let history = getHistory();
+    let summary = getArchiveContextSummary();
+    let products = history.slice(0, 30).map(item => ({
+        barcode: item.barcode,
+        name: item.name,
+        category: item.category,
+        score: item.score,
+        toxins: item.foundToxins || [],
+        positives: item.foundGood || [],
+        packaging: item.packaging ? {
+            material: item.packaging.material,
+            score: item.packaging.score,
+            risk: item.packaging.risk,
+            confidence: item.packaging.confidence
+        } : null,
+        summary: item.kiSummary || '',
+        raw: String(item.rawIngredients || '').slice(0, 700)
+    }));
+    return JSON.stringify({ summary, products }, null, 2);
+}
+
+async function sendArchiveChatMessage(prefilledPrompt = '') {
+    let input = document.getElementById('archiveChatInput');
+    let question = (prefilledPrompt || input.value || '').trim();
+    if (!question) return;
+    if (!getSecretKey('gemini') && !getSecretKey('deepseek')) {
+        alert('Für den Archiv-KI-Chat wird ein aktiver Gemini- oder DeepSeek-Key benötigt.');
+        return;
+    }
+    let messages = getArchiveChatMessages();
+    messages.push({ role: 'user', content: question, ts: new Date().toISOString() });
+    saveArchiveChatMessages(messages);
+    if (input) input.value = '';
+    renderArchiveChat();
+
+    let sendBtn = document.getElementById('archiveChatSendBtn');
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = '...';
+    }
+    try {
+        let prompt = `Du bist der Archiv-KI-Core einer lokalen Produktanalyse-App.
+Nutze ausschließlich den folgenden Archivkontext. Wenn eine Information dort nicht enthalten ist, sage klar "nicht im Archiv verifiziert".
+Antworte kurz, konkret und auf Deutsch. Priorisiere Risiko, Kategorie, Packaging, bessere Alternativen und nächste sinnvolle Handlung.
+Gib bis zu vier Quellen aus dem Archiv zurück, wenn du konkrete Produkte erwähnst.
+
+ARCHIVKONTEXT:
+${buildArchiveChatContext()}
+
+LETZTE CHAT-NACHRICHTEN:
+${messages.slice(-8).map(m => `${m.role}: ${m.content}`).join('\n')}
+
+NUTZERFRAGE:
+${question}
+
+Antworte ausschließlich als JSON:
+{"answer":"Antworttext","sources":[{"barcode":"Barcode aus Kontext","name":"Produktname aus Kontext"}]}`;
+        let result = await executeKIEngine(prompt);
+        let answer = result?.answer || 'Die KI hat keine verwertbare Antwort geliefert.';
+        let sources = Array.isArray(result?.sources) ? result.sources : [];
+        messages = getArchiveChatMessages();
+        messages.push({ role: 'assistant', content: answer, sources, ts: new Date().toISOString() });
+        saveArchiveChatMessages(messages);
+    } catch (error) {
+        messages = getArchiveChatMessages();
+        messages.push({ role: 'assistant', content: 'Archiv-Chat konnte nicht ausgeführt werden: ' + (error?.message || error), ts: new Date().toISOString() });
+        saveArchiveChatMessages(messages);
+    } finally {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'SEND';
+        }
+        renderArchiveChat();
+    }
+}
+
+function clearArchiveChat() {
+    localStorage.removeItem('op_archive_chat');
+    renderArchiveChat();
+}
+
 // ─── FEATURE: Produkt-Vergleich ───
 let compareData = { A: null, B: null };
 
@@ -757,7 +913,77 @@ openView = function(viewName, isBackAction) {
     if (viewName === 'home') renderStats();
     if (viewName === 'settings') renderCustomToxinList();
     if (viewName === 'compare') updateCompareUI();
+    if (viewName === 'chat') renderArchiveChat();
 };
+
+function renderChangelogHtml() {
+    const releases = [
+        {
+            version: 'V14.1',
+            tag: 'Phase 3',
+            title: 'Archive AI Core',
+            highlights: [
+                'Neuer separater KI-Chat mit Zugriff auf lokale Archivprodukte, Kategorien, Scores, Packaging und gespeicherte Summaries.',
+                'Gemini-Aufrufe nutzen eine Flash-Fallback-Kette mit Retry bei temporärer Überlastung statt sofortigem Abbruch.',
+                'Changelog wurde als lesbare Timeline mit Release-Karten, Tags und klarer Typografie neu aufgebaut.',
+                'Systemlabels, README und lokale Analyseversion wurden auf V14.1 aktualisiert.'
+            ]
+        },
+        {
+            version: 'V14',
+            tag: 'Scanner + Material Core',
+            title: 'Guided Scanner, Packaging & Multi-Category',
+            highlights: [
+                'Scanner-Interface mit getrennten Modi für Live-Barcode und geführte Produktfotos.',
+                'Guided Vision erfasst Vorderseite, Inhalts- oder Materialetikett und optional Packaging.',
+                'Packaging Core ergänzt einen separaten 0-100 Teilscore mit Material, Risiko, Konfidenz und Entsorgungshinweis.',
+                'Archivobjekte werden in das versionierte Datenmodell überführt; fehlende KI-Summaries können einmalig erzeugt und gespeichert werden.',
+                'Kleidung, Haushalt und Möbel nutzen eigene Materialprofile; Lebensmittelregeln werden nicht auf diese Kategorien übertragen.',
+                'Kuratierte Alternativen und unbestätigte Web-Alternativen werden getrennt dargestellt.'
+            ]
+        },
+        {
+            version: 'V13.8.3',
+            tag: 'Security + Quality',
+            title: 'Key-Sicherheit und Analysehärtung',
+            highlights: [
+                'API-Keys können per WebCrypto AES-GCM und PBKDF2-Master-Passphrase verschlüsselt gespeichert werden.',
+                'OCR- und QuickScan-Ergebnisse können durch KI bereinigt, übersetzt und zusammengefasst werden.',
+                'Negierte Treffer wie "ohne Zucker", "zuckerfrei" oder "ohne Parfum" werden nicht mehr als echte Schadstofftreffer gewertet.',
+                'System-Reset löscht nur App-eigene op_-Speicherwerte.'
+            ]
+        },
+        {
+            version: 'V13.8.2',
+            tag: 'Quota Hotfix',
+            title: 'Gemini Grounding entfernt',
+            highlights: [
+                'Google Search Grounding wurde aus Gemini-Aufrufen entfernt, weil die App eine eigene Websuch-Pipeline besitzt.'
+            ]
+        },
+        {
+            version: 'V13.7 - V13.5',
+            tag: 'Foundation',
+            title: 'RAG Kamera, Setup und lokales Archiv',
+            highlights: [
+                'Multimodale Kamera-Pipeline identifiziert Produktnamen aus Fotos, sucht Kontext und analysiert Zutaten.',
+                'Setup-Anleitung für Gemini und DeepSeek wurde integriert.',
+                'Lokaler Import, Export, Custom Toxins und Offline-Archiv wurden eingeführt.'
+            ]
+        }
+    ];
+
+    return releases.map(release => `
+        <article class="changelog-card">
+            <div class="changelog-card-head">
+                <span>${escapeHTML(release.version)}</span>
+                <b>${escapeHTML(release.tag)}</b>
+            </div>
+            <h4>${escapeHTML(release.title)}</h4>
+            <ul>${release.highlights.map(item => `<li>${escapeHTML(item)}</li>`).join('')}</ul>
+        </article>
+    `).join('');
+}
 
 // Boot-Sequenz & Event-Binding
 let dbTimestamp = new Date().getTime();
@@ -783,7 +1009,7 @@ Promise.all([
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    migrateArchiveToV14();
+    migrateArchiveToCurrentVersion();
     // Side-Drawer (Burger-Menü) Event-Binding
     if (document.getElementById('burgerBtn')) {
         document.getElementById('burgerBtn').addEventListener('click', openDrawer);
@@ -805,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('nav-search').addEventListener('click', () => openView('search'));
     document.getElementById('nav-history').addEventListener('click', () => openView('history'));
+    document.getElementById('nav-chat').addEventListener('click', () => openView('chat'));
     if (document.getElementById('nav-settings')) {
         document.getElementById('nav-settings').addEventListener('click', () => openView('settings'));
     }
@@ -813,6 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('card-search').addEventListener('click', () => openView('search'));
     document.getElementById('card-history').addEventListener('click', () => openView('history'));
     document.getElementById('card-compare').addEventListener('click', () => openView('compare'));
+    document.getElementById('card-chat').addEventListener('click', () => openView('chat'));
 
     // Quick-Scan
     document.getElementById('quickScanBtn').addEventListener('click', executeQuickScan);
@@ -845,6 +1073,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Compare
     document.getElementById('compareRunBtn').addEventListener('click', runCompare);
+    document.getElementById('archiveChatSendBtn').addEventListener('click', () => sendArchiveChatMessage());
+    document.getElementById('archiveChatClearBtn').addEventListener('click', clearArchiveChat);
+    document.getElementById('archiveChatInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendArchiveChatMessage();
+        }
+    });
+    document.querySelectorAll('[data-chat-prompt]').forEach(button => {
+        button.addEventListener('click', () => sendArchiveChatMessage(button.dataset.chatPrompt || ''));
+    });
 
     document.getElementById('flt-alle').addEventListener('click', () => filterHistory('Alle', 'flt-alle'));
     document.getElementById('flt-nahrung').addEventListener('click', () => filterHistory('Nahrung', 'flt-nahrung'));
@@ -925,45 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionTagBtn = document.getElementById('versionTagBtn');
     if (versionTagBtn) {
         versionTagBtn.addEventListener('click', () => {
-            const changelogText = `SYSTEM-AKTUALISIERUNGSHISTORIE:\n\n` +
-                `=== SYSTEM V14 ===\n` +
-                `- Scanner-Interface neu aufgebaut: getrennte Modi für Live-Barcode und geführte Produktfotos.\n` +
-                `- Guided Vision erfasst Vorderseite, Inhalts-/Materialetikett und optional die Verpackung.\n` +
-                `- Packaging Core ergänzt einen separaten 0-100 Teilscore mit Material, Risiko, Konfidenz und Entsorgungshinweis. Der Hauptscore bleibt davon unberührt.\n` +
-                `- Alte Archivobjekte werden automatisch in das versionierte V14-Datenmodell überführt.\n` +
-                `- Fehlende KI-Summaries können im Archiv exakt einmal erzeugt und anschließend dauerhaft wiederverwendet werden.\n` +
-                `- Bereits gespeicherte Summaries, Bilder und Packaging-Daten bleiben bei erneuter Analyse erhalten.\n\n` +
-                `- Multi-Category-Core ergänzt getrennte Materialregeln für Kleidung, Haushalt und Möbel. Lebensmittelregeln werden nicht auf diese Kategorien übertragen.\n` +
-                `- Fotoanalyse und Schnellbewertung erkennen und speichern fünf Hauptkategorien.\n` +
-                `- Kuratierte Alternativen zeigen konkrete Kaufkriterien und verifizierbare Zertifikatsquellen.\n` +
-                `- Optionale Web-Alternativen werden separat als unbestätigt gespeichert und niemals als kuratierte Empfehlung ausgegeben.\n\n` +
-                `=== SYSTEM V13.8.3 ===\n` +
-                `- Key-Sicherheit verbessert: Dauerhaft gespeicherte API-Keys werden jetzt per WebCrypto AES-GCM mit PBKDF2-Key-Ableitung und Master-Passphrase verschlüsselt. Alte PIN-Altbestände werden beim Entsperren weiterhin gelesen.\n\n` +
-                `- Datenschutztexte korrigiert: Die App unterscheidet jetzt klar zwischen lokaler Speicherung, API-Anfragen an gewählte Anbieter und der optionalen Websuche über Google CSE bzw. Proxy-Fallback.\n\n` +
-                `- Analysequalität verbessert: OCR- und QuickScan-Ergebnisse können nun ebenfalls durch KI bereinigt, übersetzt und zusammengefasst werden.\n\n` +
-                `- Ingredient-Matching gehärtet: Negierte Treffer wie "ohne Zucker", "zuckerfrei" oder "ohne Parfum" werden nicht mehr als echte Schadstofftreffer gewertet.\n\n` +
-                `- Reset-Verhalten korrigiert: Der System-Reset löscht nur noch App-eigene Speicherwerte mit op_-Prefix und lässt andere Daten derselben Domain unangetastet.\n\n` +
-                `=== SYSTEM V13.8.2 ===\n` +
-                `- Behebung von Quoten-Fehlern: Google Search Grounding-Tool aus Gemini-API-Aufruf entfernt. Da die App eine eigene Websuch-Pipeline besitzt, ist das Grounding redundant. Anfragen im kostenlosen Free-Tier funktionieren nun wieder einwandfrei ohne Billing-Konto.\n\n` +
-                `=== SYSTEM V13.8.1 ===\n` +
-                `- Hotfix für Syntax-Fehler: Behebung eines Klammerfehlers bei der Key-Speicherung, der das Laden der Event-Listener verhinderte (Buttons funktionierten nicht).\n\n` +
-                `=== SYSTEM V13.8 ===\n` +
-                `- Legacy-Key-Speicherung: Verschlüsseltes Speichern der API-Keys im Browser.\n` +
-                `- Schließen-Optimierungen: Schließen des Changelogs auf Mobilgeräten über dedizierten Button und native Wischgeste (Swipe-down) behoben.\n\n` +
-                `=== SYSTEM V13.7 ===\n` +
-                `- Multimodale RAG Kamera-Pipeline: Höhere Genauigkeit beim Scannen. Die KI identifiziert erst den Namen aus Fotos, führt eine Websuche durch und analysiert dann die präzisen Zutaten.\n` +
-                `- Setup-Anleitung: Schritt-für-Schritt-Guide für Gemini 3.5 Flash & DeepSeek in den Einstellungen integriert.\n` +
-                `- System-Reset: Neue Funktion zum Zurücksetzen aller API-Keys, des Cache-Speichers und der benutzerdefinierten Toxine auf Werkseinstellungen.\n` +
-                `- Version-Tag Changelog: Interaktiver Versions-Knopf zum schnellen Aufrufen dieser Update-Protokolle.\n\n` +
-                `=== SYSTEM V13.6 ===\n` +
-                `- Lokaler Import/Export: Backup- und Wiederherstellungsfunktion für das gesamte Offline-Archiv sowie Custom Toxine im JSON-Format.\n` +
-                `- Custom Toxin-Definition: Benutzerdefinierte Spezifikation von Toxinen direkt über das Interface.\n` +
-                `- Erweiterter Offline-Abgleich mit intelligenter Regex-Mustererkennung.\n\n` +
-                `=== SYSTEM V13.5 ===\n` +
-                `- Gemini 3.5 API-Integration & DeepSeek Fallback.\n` +
-                `- Dynamic Core Status Badges & Live API-Traffic Monitor.\n` +
-                `- Lokales Offline-Archiv zur Speicherung gescannter Signaturen.`;
-            openModal("PATCH NOTES V14", "System-Aktualisierungsprotokoll", changelogText, "alternative");
+            openChangelogModal();
         });
     }
 

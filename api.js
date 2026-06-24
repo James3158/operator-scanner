@@ -233,6 +233,46 @@ function loadSettings() {
     checkDeepSeekCounter();
 }
 
+const GEMINI_MODEL_CHAIN = [
+    'gemini-3.5-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite'
+];
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseJsonFromModelText(rawText) {
+    let jsonStr = String(rawText || '').replace(/```json/g, '').replace(/```/g, '').trim();
+    try {
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        let start = jsonStr.indexOf('{');
+        let end = jsonStr.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && end > start) {
+            return JSON.parse(jsonStr.slice(start, end + 1));
+        }
+        throw error;
+    }
+}
+
+function isTransientGeminiError(status, message) {
+    let text = String(message || '').toLowerCase();
+    return status === 429 || status === 503 || status === 500 ||
+        text.includes('high demand') ||
+        text.includes('overloaded') ||
+        text.includes('unavailable') ||
+        text.includes('temporarily') ||
+        text.includes('rate limit');
+}
+
+function showProviderError(provider, message, isTransient = false) {
+    let prefix = isTransient ? `${provider} temporär ausgelastet` : `${provider}-Fehler`;
+    alert(`${prefix}: ${message}`);
+}
+
 // Nativer Core-Wechsler für KI-Abfragen
 async function executeKIEngine(prompt, base64Image = null) {
     let selectedModel = document.getElementById('activeModelSelect').value;
@@ -300,7 +340,6 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format (ohne Markdown-Formatierung, o
 async function callGeminiAPI(prompt, base64Image = null) {
     let key = getSecretKey('gemini');
     if(!key) { alert("Gemini API Key fehlt."); return null; }
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`;
     let parts = [{ text: prompt }];
     if(base64Image) {
         let mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,/);
@@ -309,21 +348,50 @@ async function callGeminiAPI(prompt, base64Image = null) {
         let b64Data = base64Image.split(',')[1];
         parts.push({ inline_data: { mime_type: mime, data: b64Data } });
     }
+    let lastError = null;
     try {
         incrementApiCounter();
-        let response = await fetch(url, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, 
-            body: JSON.stringify({ contents: [{ parts }] }) 
-        });
-        let data = await response.json();
-        if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
-        if(data.error) throw new Error(data.error.message);
-        let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) throw new Error('Leere oder unerwartete Gemini-Antwort.');
-        let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
-    } catch (err) { alert("Gemini-Fehler: " + err.message); return null; }
+        for (let modelIndex = 0; modelIndex < GEMINI_MODEL_CHAIN.length; modelIndex++) {
+            let model = GEMINI_MODEL_CHAIN[modelIndex];
+            let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    let response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+                        body: JSON.stringify({
+                            contents: [{ parts }],
+                            generationConfig: { responseMimeType: 'application/json' }
+                        })
+                    });
+                    let data = await response.json().catch(() => ({}));
+                    if (!response.ok || data.error) {
+                        let message = data?.error?.message || `HTTP ${response.status}`;
+                        let transient = isTransientGeminiError(response.status, message);
+                        lastError = new Error(`${model}: ${message}`);
+                        lastError.transient = transient;
+                        if (transient) {
+                            await sleep(650 * (attempt + 1) * (modelIndex + 1));
+                            break;
+                        }
+                        throw lastError;
+                    }
+                    let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!rawText) throw new Error(`${model}: Leere oder unerwartete Gemini-Antwort.`);
+                    return parseJsonFromModelText(rawText);
+                } catch (err) {
+                    lastError = err;
+                    if (!err.transient && !isTransientGeminiError(0, err.message)) throw err;
+                    await sleep(650 * (attempt + 1) * (modelIndex + 1));
+                }
+            }
+        }
+        throw lastError || new Error('Kein Gemini-Modell lieferte eine verwertbare Antwort.');
+    } catch (err) {
+        let transient = Boolean(err?.transient || isTransientGeminiError(0, err?.message));
+        showProviderError('Gemini', transient ? 'Die Modellkapazität ist gerade belegt. Die App hat mehrere Modelle versucht; bitte später erneut starten oder DeepSeek für Textfunktionen wählen.' : (err.message || err), transient);
+        return null;
+    }
 }
 
 async function callDeepSeekAPI(prompt, base64Image = null) {
@@ -366,8 +434,7 @@ async function callDeepSeekAPI(prompt, base64Image = null) {
         if(data.error) throw new Error(data.error.message);
         let rawText = data?.choices?.[0]?.message?.content;
         if (!rawText) throw new Error('Leere oder unerwartete DeepSeek-Antwort.');
-        let jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
+        return parseJsonFromModelText(rawText);
     } catch (err) { alert("DeepSeek-Fehler: " + err.message); return null; }
 }
 
@@ -489,15 +556,15 @@ async function processGuidedProductScan(files) {
         let labelImage = files.label ? await fileToOptimizedDataUrl(files.label) : frontImage;
         let packagingImage = files.packaging ? await fileToOptimizedDataUrl(files.packaging) : frontImage;
 
-        showLoading('V14 Vision: Produkt und Kategorie werden identifiziert...');
+        showLoading('V14.1 Vision: Produkt und Kategorie werden identifiziert...');
         let identity = await executeKIEngine(`Analysiere das Produktfoto. Identifiziere Marke, genauen Produktnamen und Produkttyp. Setze category ausschließlich auf "Nahrung", "Kosmetik", "Kleidung", "Haushalt" oder "Möbel". Wenn etwas nicht sicher lesbar ist, erfinde nichts. Antworte ausschließlich als JSON: {"product_name":"Name oder Unbekanntes Produkt","category":"Nahrung","confidence":"high|medium|low"}`, frontImage || labelImage);
 
-        showLoading('V14 Vision: Inhalte und Materialangaben werden extrahiert...');
+        showLoading('V14.1 Vision: Inhalte und Materialangaben werden extrahiert...');
         let contents = await executeKIEngine(`Extrahiere alle sichtbaren Zutaten, Inhaltsstoffe oder Materialangaben exakt aus diesem Etikett und übersetze sie fachlich korrekt ins Deutsche. Korrigiere nur eindeutige OCR-Fehler und erfinde keine fehlenden Angaben. Antworte ausschließlich als JSON: {"ingredients_text":"kommagetrennte Angaben","confidence":"high|medium|low"}`, labelImage);
 
         let packaging = null;
         if (packagingImage) {
-            showLoading('V14 Packaging Core: Verpackung wird separat bewertet...');
+            showLoading('V14.1 Packaging Core: Verpackung wird separat bewertet...');
             packaging = await executeKIEngine(`Bewerte ausschließlich die sichtbare Produktverpackung. Identifiziere Material und Materialcode, ohne unbekannte Angaben zu erfinden. Der Score 0-100 bewertet Materialstabilität, Wiederverwendbarkeit und Entsorgung; er verändert nicht den Produktscore. Antworte ausschließlich als JSON: {"material":"Material oder Nicht verifiziert","score":50,"risk":"low|moderate|high|unknown","confidence":"high|medium|low","reason":"kurze direkte Begründung","disposal":"kurzer Entsorgungshinweis"}`, packagingImage);
         }
 
