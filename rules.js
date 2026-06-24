@@ -99,7 +99,7 @@ function normalizeHistoryItem(item) {
     if (Number.isNaN(score)) score = 0;
     let dateIso = item.dateIso || item.date || new Date().toISOString();
     return {
-        schemaVersion: '14.1',
+        schemaVersion: '14.3',
         productId: String(item.productId || barcode).slice(0, 120),
         barcode,
         name: String(item.name || 'Unbekanntes Objekt').slice(0, 180),
@@ -114,7 +114,7 @@ function normalizeHistoryItem(item) {
         foundToxins: Array.isArray(item.foundToxins) ? item.foundToxins.map(String).slice(0, 80) : [],
         foundGood: Array.isArray(item.foundGood) ? item.foundGood.map(String).slice(0, 80) : [],
         webAlternatives: normalizeWebAlternatives(item.webAlternatives),
-        analysisVersion: Number.parseFloat(item.analysisVersion) || 14.1,
+        analysisVersion: Number.parseFloat(item.analysisVersion) || 14.3,
         date: getDisplayDate(dateIso),
         dateIso
     };

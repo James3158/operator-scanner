@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal V14.1</title>
+    <title>Operator Terminal V14.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14.1 (ARCHIVE AI CORE) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14.3 (LOCAL MAP CORE) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -25,7 +25,7 @@
     
     <div id="db-status">⚠️ DATENBANKEN KONNTEN NICHT GELADEN WERDEN. ANALYSE-FUNKTIONEN EINGESCHRÄNKT.</div>
 
-    <!-- Schlanke 4-Element-Navigationsleiste für iOS -->
+    <!-- Schlanke iOS-Navigationsleiste -->
     <div class="glass-nav" role="navigation" aria-label="Hauptmenü">
         <div class="nav-item active" id="nav-home" role="button" aria-label="Home" tabindex="0">
             <div class="nav-icon" aria-hidden="true">
@@ -44,6 +44,12 @@
                 <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <span>Suche</span>
+        </div>
+        <div class="nav-item" id="nav-map" role="button" aria-label="Karte" tabindex="0">
+            <div class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/><circle cx="12" cy="11" r="2"/></svg>
+            </div>
+            <span>Karte</span>
         </div>
         <div class="nav-item" id="nav-history" role="button" aria-label="Archiv" tabindex="0">
             <div class="nav-icon" aria-hidden="true">
@@ -78,6 +84,12 @@
                 <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
             </div>
             <div class="dash-text"><h3>Lokal-Archiv</h3><p>Offline Matrix-Daten</p></div>
+        </div>
+        <div class="dash-card" id="card-map">
+            <div class="dash-icon-lg" style="color:#14b8a6;">
+                <svg viewBox="0 0 24 24"><path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/><circle cx="12" cy="11" r="2"/></svg>
+            </div>
+            <div class="dash-text"><h3>Clean Shopping Map</h3><p>Lokale Märkte, Bio-Läden & Alternativen</p></div>
         </div>
         <div class="dash-card" id="card-compare">
             <div class="dash-icon-lg" style="color:#a78bfa;">
@@ -166,9 +178,69 @@
         <div id="search-results"></div>
     </div>
 
+    <!-- Local Shopping Map View -->
+    <div id="view-map" class="view">
+        <section class="map-hero">
+            <span>Local Map Core</span>
+            <h2>Clean Shopping Map</h2>
+            <p>Findet nahe Märkte, Bio-Läden, Drogerien, Second-Hand- und Material-Alternativen. Standort bleibt im Browser und wird nur für die Kartenabfrage genutzt.</p>
+        </section>
+        <div class="map-control-card">
+            <button id="mapLocateBtn" class="map-locate-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="5"/></svg>
+                Standort nutzen
+            </button>
+            <select id="mapRadiusSelect" aria-label="Suchradius">
+                <option value="1000">1 km</option>
+                <option value="2500" selected>2,5 km</option>
+                <option value="5000">5 km</option>
+            </select>
+        </div>
+        <div class="map-filter-row" aria-label="Kartenkategorien">
+            <button class="map-filter-btn active" type="button" data-map-category="clean-food">Clean Food</button>
+            <button class="map-filter-btn" type="button" data-map-category="market">Märkte</button>
+            <button class="map-filter-btn" type="button" data-map-category="beauty">Kosmetik</button>
+            <button class="map-filter-btn" type="button" data-map-category="clothing">Kleidung</button>
+            <button class="map-filter-btn" type="button" data-map-category="home">Home</button>
+        </div>
+        <div class="map-status-card" id="mapStatusCard">
+            <strong>Bereit für lokale Suche</strong>
+            <span>Tippe auf Standort nutzen. Danach zeigt die App Pins, Distanz und externe Routenlinks.</span>
+        </div>
+        <div class="local-map-shell">
+            <div id="localMapCanvas" class="local-map-canvas" aria-label="Lokale Einkaufskarte">
+                <div class="map-empty-state">
+                    <span>◎</span>
+                    <strong>Noch kein Standort</strong>
+                    <small>Die Karte startet erst nach deiner Freigabe.</small>
+                </div>
+            </div>
+        </div>
+        <div id="mapPoiList" class="map-poi-list"></div>
+        <div class="map-footnote">Datenquelle: OpenStreetMap/Overpass. Einträge können unvollständig sein; Route und Details öffnen externe Karten.</div>
+    </div>
+
     <!-- History View -->
     <div id="view-history" class="view">
-        <div class="filter-row">
+        <section class="archive-hero">
+            <span>Local Vault</span>
+            <h2>Archiv</h2>
+            <p>Alle Scans, Kategorien, Scores und Packaging-Risiken in einer lesbaren Produktübersicht.</p>
+        </section>
+        <div id="historyStats" class="archive-stats-grid"></div>
+        <div class="archive-toolbar">
+            <div class="archive-search-wrap">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="historySearchInput" placeholder="Archiv durchsuchen..." autocomplete="off">
+            </div>
+            <select id="historySortSelect" aria-label="Archiv sortieren">
+                <option value="recent">Neueste</option>
+                <option value="scoreAsc">Kritischste</option>
+                <option value="scoreDesc">Beste</option>
+                <option value="name">Name</option>
+            </select>
+        </div>
+        <div class="filter-row archive-filter-row">
             <button id="flt-alle" class="flt-btn active">Alle</button>
             <button id="flt-nahrung" class="flt-btn">Nahrung</button>
             <button id="flt-kosmetik" class="flt-btn">Kosmetik</button>
@@ -177,12 +249,12 @@
             <button id="flt-moebel" class="flt-btn">Möbel</button>
             <button id="flt-optisch" class="flt-btn">Optisch</button>
         </div>
-        <button class="hist-clear-all" id="clearHistoryBtn">Gesamtes Archiv Leeren</button>
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <button class="flt-btn" id="exportHistoryBtn" style="flex:1;">📤 Export JSON</button>
-            <button class="flt-btn" id="importHistoryBtn" style="flex:1;">📥 Import JSON</button>
+        <div class="archive-action-row">
+            <button class="archive-action-btn" id="exportHistoryBtn">Export JSON</button>
+            <button class="archive-action-btn" id="importHistoryBtn">Import JSON</button>
+            <button class="archive-action-btn archive-danger" id="clearHistoryBtn">Leeren</button>
         </div>
-        <div id="history-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <div id="history-list" class="archive-list"></div>
     </div>
 
     <!-- Results View -->
@@ -211,23 +283,28 @@
 
     <!-- Archive AI Chat View -->
     <div id="view-chat" class="view">
-        <div class="chat-hero">
-            <span>Phase 3 Core</span>
-            <h2>Frag dein Archiv</h2>
-            <p>Die KI nutzt lokal gespeicherte Produkte, Kategorien, Scores, Packaging und Summaries als Kontext. API-Aufruf nur beim Absenden.</p>
+        <div class="ai-chat-shell">
+            <div class="ai-chat-header">
+                <div class="ai-orb">AI</div>
+                <div>
+                    <h2>Archiv Assistant</h2>
+                    <p id="chatContextStrip">Archiv wird geladen...</p>
+                </div>
+                <button id="archiveChatClearBtn" class="ai-chat-clear" aria-label="Chatverlauf löschen">Reset</button>
+            </div>
+            <div class="chat-suggestions" aria-label="Beispiel-Fragen">
+                <button type="button" data-chat-prompt="Welche Produkte in meinem Archiv sind am kritischsten und warum?">Kritischste Produkte</button>
+                <button type="button" data-chat-prompt="Welche fairen Alternativen passen zu meinen schlechtesten Scans?">Faire Alternativen</button>
+                <button type="button" data-chat-prompt="Welche Verpackungen im Archiv sollte ich vermeiden?">Packaging prüfen</button>
+            </div>
+            <div class="chat-panel" id="archiveChatLog"></div>
+            <div class="chat-composer">
+                <textarea id="archiveChatInput" placeholder="Nachricht an den Archiv-Core..." rows="1"></textarea>
+                <button id="archiveChatSendBtn" aria-label="Nachricht senden">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </button>
+            </div>
         </div>
-        <div class="chat-context-strip" id="chatContextStrip">Archiv wird geladen...</div>
-        <div class="chat-suggestions" aria-label="Beispiel-Fragen">
-            <button type="button" data-chat-prompt="Welche Produkte in meinem Archiv sind am kritischsten und warum?">Kritischste Produkte</button>
-            <button type="button" data-chat-prompt="Welche fairen Alternativen passen zu meinen schlechtesten Scans?">Faire Alternativen</button>
-            <button type="button" data-chat-prompt="Welche Verpackungen im Archiv sollte ich vermeiden?">Packaging prüfen</button>
-        </div>
-        <div class="chat-panel" id="archiveChatLog"></div>
-        <div class="chat-input-row">
-            <textarea id="archiveChatInput" class="std-input" placeholder="Frage zum Archiv stellen..." rows="2"></textarea>
-            <button id="archiveChatSendBtn" class="btn-search">SEND</button>
-        </div>
-        <button id="archiveChatClearBtn" class="flt-btn chat-clear-btn">Chatverlauf löschen</button>
     </div>
 
     <!-- iOS Side-Drawer (Burger-Menü für Einstellungen) -->

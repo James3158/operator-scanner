@@ -556,15 +556,15 @@ async function processGuidedProductScan(files) {
         let labelImage = files.label ? await fileToOptimizedDataUrl(files.label) : frontImage;
         let packagingImage = files.packaging ? await fileToOptimizedDataUrl(files.packaging) : frontImage;
 
-        showLoading('V14.1 Vision: Produkt und Kategorie werden identifiziert...');
+        showLoading('V14.3 Vision: Produkt und Kategorie werden identifiziert...');
         let identity = await executeKIEngine(`Analysiere das Produktfoto. Identifiziere Marke, genauen Produktnamen und Produkttyp. Setze category ausschließlich auf "Nahrung", "Kosmetik", "Kleidung", "Haushalt" oder "Möbel". Wenn etwas nicht sicher lesbar ist, erfinde nichts. Antworte ausschließlich als JSON: {"product_name":"Name oder Unbekanntes Produkt","category":"Nahrung","confidence":"high|medium|low"}`, frontImage || labelImage);
 
-        showLoading('V14.1 Vision: Inhalte und Materialangaben werden extrahiert...');
+        showLoading('V14.3 Vision: Inhalte und Materialangaben werden extrahiert...');
         let contents = await executeKIEngine(`Extrahiere alle sichtbaren Zutaten, Inhaltsstoffe oder Materialangaben exakt aus diesem Etikett und übersetze sie fachlich korrekt ins Deutsche. Korrigiere nur eindeutige OCR-Fehler und erfinde keine fehlenden Angaben. Antworte ausschließlich als JSON: {"ingredients_text":"kommagetrennte Angaben","confidence":"high|medium|low"}`, labelImage);
 
         let packaging = null;
         if (packagingImage) {
-            showLoading('V14.1 Packaging Core: Verpackung wird separat bewertet...');
+            showLoading('V14.3 Packaging Core: Verpackung wird separat bewertet...');
             packaging = await executeKIEngine(`Bewerte ausschließlich die sichtbare Produktverpackung. Identifiziere Material und Materialcode, ohne unbekannte Angaben zu erfinden. Der Score 0-100 bewertet Materialstabilität, Wiederverwendbarkeit und Entsorgung; er verändert nicht den Produktscore. Antworte ausschließlich als JSON: {"material":"Material oder Nicht verifiziert","score":50,"risk":"low|moderate|high|unknown","confidence":"high|medium|low","reason":"kurze direkte Begründung","disposal":"kurzer Entsorgungshinweis"}`, packagingImage);
         }
 

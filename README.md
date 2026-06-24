@@ -1,4 +1,4 @@
-# Operator Terminal V14.1 - Product, Toxin & Packaging Scanner
+# Operator Terminal V14.3 - Product, Toxin, Packaging & Local Map Scanner
 
 A local-first web terminal for barcode capture, guided product photography, ingredient analysis and separate packaging assessment. The interface is optimized for mobile Safari and static deployment through GitHub Pages.
 
@@ -14,7 +14,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 
 ## ⚡ Key Features
 
-### 1. V14.1 Guided Scanner
+### 1. V14.3 Guided Scanner
 *   **Two explicit modes:** Live barcode scanning and guided product photography are separated to reduce camera errors and unclear workflows.
 *   **Guided capture:** The photo flow requests a product front, an ingredient/material label and an optional packaging image.
 *   **Optimized local image:** The archived front image is compressed before local storage to reduce quota pressure.
@@ -44,10 +44,10 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   If a toxin with `severity === 'high'` (e.g., neurotoxins) is detected, the product is **strictly capped at a maximum of 50 points**.
     *   Lighter toxins (e.g., fillers or sugar) can be compensated by positive ingredients: each whitelisted ingredient increases the dynamic score cap by its benefit value (up to a limit of **75 points**).
 
-### 5. Persistent AI Summaries & V14.1 Archive
+### 5. Persistent AI Summaries & V14.3 Archive
 *   **Biological Evaluations:** The AI (Gemini or DeepSeek) writes a concise, 2-3 sentence summary explaining the biological and cellular impact of the product on the human body.
 *   **Generate once:** Older archive entries without a summary expose an explicit action. A successful result is saved and reused without another API request.
-*   **Versioned records:** Legacy history objects are normalized into the V14.1 schema while preserving existing products, images and summaries.
+*   **Versioned records:** Legacy history objects are normalized into the V14.3 schema while preserving existing products, images and summaries.
 *   **Backup & Restore:** The export feature packages both your scan history and custom toxins into a single JSON file.
 
 ### 6. Packaging Core
@@ -76,6 +76,17 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Controlled context:** The prompt sends compact text metadata only; archived product images are not included in chat requests.
 *   **Source chips:** When the answer references archived products, the chat can show quick links back to the relevant local entries.
 
+### 10.1 Phase 4 Archive & Chat UI
+*   **Vault archive:** The archive now includes summary metrics, category counts, text search, sorting and denser product cards with score state, top signals, packaging risk and data previews.
+*   **AI chat interface:** The chat view uses an iOS-style assistant header, message bubbles, quick prompts and a compact composer inspired by modern AI chat apps.
+*   **Performance focus:** Archive filtering is local and bounded; AI chat context is relevance-sorted and trimmed before provider calls to reduce prompt size.
+
+### 10.2 Phase 5 Local Shopping Map
+*   **Clean Shopping Map:** A dedicated map view helps find nearby markets, organic/health-food shops, pharmacies, cosmetics stores, second-hand clothing, furniture and household alternatives.
+*   **User-controlled location:** Geolocation is requested only after tapping the map action; the app does not auto-track on boot.
+*   **Lightweight rendering:** The app renders a local pin map and POI list without adding a heavy map tile library.
+*   **Performance guardrails:** Overpass results are cached for 20 minutes per rough location, category and radius, capped at 30 visible POIs, and have external OpenStreetMap fallback links.
+
 ### 11. Gemini Resilience
 *   **Flash fallback chain:** Gemini calls try the configured stable Flash model first and then compatible fallback aliases/models when temporary demand or rate-limit errors occur.
 *   **Retry handling:** Temporary provider overload is reported as capacity pressure instead of a misleading API-key failure.
@@ -89,9 +100,10 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   [Html5-Qrcode](https://github.com/mebjas/html5-qrcode) (Camera barcode scanning)
     *   [Tesseract.js](https://github.com/naptha/tesseract.js) (Offline client-side OCR)
 *   **API Integrations:**
-*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and archive chat. V14.1 uses a Flash fallback chain to reduce failures from temporary model demand.
+*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and archive chat. V14.3 uses a Flash fallback chain to reduce failures from temporary model demand.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
 *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
+*   **OpenStreetMap / Overpass API:** Optional local POI lookup for the Clean Shopping Map after user-triggered geolocation.
 *   **Local rule data:** `category_profiles.json` contains category-specific material rules; `curated_alternatives.json` contains the reviewed alternative directory.
 
 ---
@@ -117,10 +129,24 @@ Then navigate to `http://localhost:8000` in your web browser.
 ## 🔒 Security and Privacy
 *   **No Backend Servers:** History, custom toxins, and preferences are stored locally within the browser (`localStorage` and `sessionStorage`).
 *   **API Keys:** If "Remember keys" is disabled, keys are kept only for the current tab/session. If persistent key storage is enabled, keys are encrypted in the browser with WebCrypto AES-GCM and a PBKDF2-derived key from your Master-Passphrase. This is safer than plaintext storage, but it is not equivalent to a backend secret store because a static web app must still use API keys in browser requests.
-*   **External Requests:** Gemini, DeepSeek, Google CSE, OpenFoodFacts, OpenBeautyFacts, and optional CORS proxy requests receive the data required for the selected operation. Google CSE uses JSONP, so the Google key is part of the browser request URL. Proxy fallback providers can see the product/search query routed through them.
+*   **External Requests:** Gemini, DeepSeek, Google CSE, OpenFoodFacts, OpenBeautyFacts, Overpass, and optional CORS proxy requests receive the data required for the selected operation. Google CSE uses JSONP, so the Google key is part of the browser request URL. Proxy fallback providers can see the product/search query routed through them. The map sends approximate latitude/longitude only after the user taps the location action.
 *   **No Repository Uploads:** The app does not upload your keys, archive, custom toxins, or preferences to GitHub.
 
 ---
+
+## V14.3 Changes
+
+*   Added the Clean Shopping Map with local categories for clean food, markets, cosmetics, clothing and home/furniture.
+*   Added explicit geolocation flow, radius selector, category chips, local map pins and sorted POI cards with route links.
+*   Added Overpass result caching, 30-result rendering cap and fallback OpenStreetMap search links for network or provider outages.
+*   Added map entry points to the bottom navigation and Home dashboard.
+
+## V14.2 Changes
+
+*   Redesigned the archive as a readable Vault UI with metrics, search, sorting and category count chips.
+*   Rebuilt archive product cards with clearer hierarchy, score state, packaging metadata and top signal chips.
+*   Redesigned the Archive AI Chat into a modern iOS-style AI chat surface.
+*   Reduced chat prompt payload by relevance-sorting and trimming archive context.
 
 ## V14.1 Changes
 

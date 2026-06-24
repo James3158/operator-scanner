@@ -1,11 +1,20 @@
 let html5QrCode; 
 let currentHistoryFilter = 'Alle';
+let currentHistorySearch = '';
+let currentHistorySort = 'recent';
 let viewStack = ['home']; 
 let activeArchiveInjectBarcode = "";
 const summaryGenerationLocks = new Set();
 const guidedScanFiles = { front: null, label: null, packaging: null };
-const APP_SCHEMA_VERSION = '14.1';
-const APP_ANALYSIS_VERSION = 14.1;
+const APP_SCHEMA_VERSION = '14.3';
+const APP_ANALYSIS_VERSION = 14.3;
+const MAP_POI_LIMIT = 30;
+let currentMapCategory = 'clean-food';
+let currentMapRadius = 2500;
+let currentMapCenter = null;
+let currentMapPois = [];
+let currentMapLoading = false;
+let mapAbortController = null;
 
 function setScanMode(mode) {
     let isBarcode = mode === 'barcode';
@@ -56,7 +65,7 @@ function renderScannerRecents() {
     }
     container.innerHTML = recent.map(item => `
         <button class="scan-recent-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
-            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.1</span>'}
+            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.3</span>'}
             <span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.category)} · Score ${item.score}</small></span>
         </button>`).join('');
 }
@@ -317,7 +326,7 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
 }
 
 function openChangelogModal() {
-    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.1';
+    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.3';
     document.getElementById('mod-desc').innerText = 'System-Aktualisierungsprotokoll';
     document.getElementById('mod-desc').style.color = 'var(--gemini-blue)';
     document.getElementById('mod-hazard-container').style.display = 'none';
@@ -367,7 +376,7 @@ async function generateArchiveSummary(barcode) {
 function filterHistory(category, btnId) {
     currentHistoryFilter = category;
     document.querySelectorAll('.flt-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(btnId).classList.add('active');
+    document.getElementById(btnId)?.classList.add('active');
     renderHistory();
 }
 
@@ -383,27 +392,127 @@ function clearHistory() {
     if(confirm("Lokal-Archiv komplett löschen?")) { localStorage.removeItem('op_history'); renderHistory(); }
 }
 
+function getScoreColor(score) {
+    return score >= 80 ? 'var(--matrix-green)' : (score >= 40 ? 'var(--warn)' : 'var(--alert)');
+}
+
+function getScoreLabel(score) {
+    if (score >= 80) return 'Clean';
+    if (score >= 40) return 'Prüfen';
+    return 'Kritisch';
+}
+
+function getHistorySummary(history) {
+    let categories = {};
+    let risks = {};
+    let avgScore = history.length ? Math.round(history.reduce((sum, item) => sum + item.score, 0) / history.length) : 0;
+    let critical = history.filter(item => item.score < 40).length;
+    history.forEach(item => {
+        categories[item.category] = (categories[item.category] || 0) + 1;
+        let risk = item.packaging?.risk || 'unknown';
+        risks[risk] = (risks[risk] || 0) + 1;
+    });
+    return { categories, risks, avgScore, critical };
+}
+
+function renderHistoryStats(history) {
+    let el = document.getElementById('historyStats');
+    if (!el) return;
+    let summary = getHistorySummary(history);
+    el.innerHTML = `
+        <article><span>Produkte</span><strong>${history.length}</strong></article>
+        <article><span>Ø Score</span><strong style="color:${getScoreColor(summary.avgScore)}">${summary.avgScore || '-'}</strong></article>
+        <article><span>Kritisch</span><strong style="color:var(--alert)">${summary.critical}</strong></article>
+        <article><span>Packaging High</span><strong>${summary.risks.high || 0}</strong></article>`;
+}
+
+function updateHistoryFilterCounts(history) {
+    let summary = getHistorySummary(history);
+    const map = {
+        'flt-alle': history.length,
+        'flt-nahrung': summary.categories.Nahrung || 0,
+        'flt-kosmetik': summary.categories.Kosmetik || 0,
+        'flt-kleidung': summary.categories.Kleidung || 0,
+        'flt-haushalt': summary.categories.Haushalt || 0,
+        'flt-moebel': summary.categories.Möbel || 0,
+        'flt-optisch': summary.categories.Optisch || 0
+    };
+    Object.entries(map).forEach(([id, count]) => {
+        let btn = document.getElementById(id);
+        if (!btn) return;
+        let label = btn.dataset.label || btn.textContent.replace(/\s+\d+$/, '');
+        btn.dataset.label = label;
+        btn.innerHTML = `${escapeHTML(label)} <span>${count}</span>`;
+    });
+}
+
+function getFilteredHistory(history) {
+    let search = normalizeIngredientText(currentHistorySearch);
+    let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category === currentHistoryFilter);
+    if (search) {
+        filtered = filtered.filter(item => normalizeIngredientText([
+            item.name,
+            item.category,
+            item.rawIngredients,
+            (item.foundToxins || []).join(' '),
+            item.packaging?.material || ''
+        ].join(' ')).includes(search));
+    }
+    let sorted = filtered.slice();
+    if (currentHistorySort === 'scoreAsc') sorted.sort((a, b) => a.score - b.score);
+    else if (currentHistorySort === 'scoreDesc') sorted.sort((a, b) => b.score - a.score);
+    else if (currentHistorySort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    else sorted.sort((a, b) => new Date(b.dateIso || 0) - new Date(a.dateIso || 0));
+    return sorted;
+}
+
+function getHistoryTopSignals(item) {
+    let signals = [];
+    (item.foundToxins || []).slice(0, 2).forEach(value => signals.push({ label: value, type: 'bad' }));
+    (item.foundGood || []).slice(0, 1).forEach(value => signals.push({ label: value, type: 'good' }));
+    if (item.packaging?.risk && item.packaging.risk !== 'unknown') signals.push({ label: `Pack ${item.packaging.risk}`, type: item.packaging.risk === 'high' ? 'bad' : 'neutral' });
+    return signals.slice(0, 4);
+}
+
 function renderHistory() {
     let history = getHistory();
+    renderHistoryStats(history);
+    updateHistoryFilterCounts(history);
+    let filtered = getFilteredHistory(history);
     let html = '';
-    let filtered = currentHistoryFilter === 'Alle' ? history : history.filter(item => item.category === currentHistoryFilter);
 
-    if (filtered.length === 0) { html = '<div style="text-align:center;color:#666;padding:20px;">Archiv leer.</div>'; } 
+    if (filtered.length === 0) {
+        html = `<div class="archive-empty"><strong>Keine Treffer</strong><span>Filter oder Suche anpassen, oder neue Produkte scannen.</span></div>`;
+    }
     else {
         filtered.forEach(item => {
-            let sColor = item.score >= 80 ? 'var(--matrix-green)' : (item.score >= 40 ? 'var(--warn)' : 'var(--alert)');
-            let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;text-align:center;background:#000;">NO<br>IMG</div>`;
+            let sColor = getScoreColor(item.score);
+            let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" loading="lazy" alt="">` : `<div class="hist-img hist-img-empty">NO IMG</div>`;
+            let signals = getHistoryTopSignals(item);
+            let signalHtml = signals.length
+                ? `<div class="hist-signal-row">${signals.map(signal => `<span class="hist-signal hist-signal-${signal.type}">${escapeHTML(signal.label)}</span>`).join('')}</div>`
+                : `<div class="hist-signal-row"><span class="hist-signal hist-signal-neutral">Keine Signatur gespeichert</span></div>`;
+            let packaging = item.packaging ? `${item.packaging.material} · ${item.packaging.risk}` : 'Packaging nicht verifiziert';
+            let rawPreview = String(item.rawIngredients || '').slice(0, 115);
             
             html += `
             <div class="hist-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
                 <div class="hist-img-container">
                     ${imgHtml}
-                    <div class="hist-img-upload-trigger" onclick="triggerArchiveImageInject(event, ${jsArg(item.barcode)})">➕ FOTO</div>
+                    <button class="hist-img-upload-trigger" onclick="triggerArchiveImageInject(event, ${jsArg(item.barcode)})" aria-label="Archivfoto ersetzen">FOTO</button>
                 </div>
-                <div class="hist-info"><span class="res-badge" style="margin-bottom:3px;">${escapeHTML(item.category)}</span><div style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(item.name)}</div><div style="font-size:11px; color:var(--text-muted);">${escapeHTML(item.date)}</div></div>
-                <div class="hist-score" style="color:${sColor}; margin-right:30px;">${item.score}</div>
-                <button class="hist-delete" onclick="deleteHistoryItem(event, ${jsArg(item.barcode)})">DELETE</button>
-                    </div>`;
+                <div class="hist-info">
+                    <div class="hist-topline"><span class="res-badge">${escapeHTML(item.category)}</span><small>${escapeHTML(item.date)}</small></div>
+                    <div class="hist-title">${escapeHTML(item.name)}</div>
+                    <div class="hist-meta">${escapeHTML(packaging)}</div>
+                    ${signalHtml}
+                    <div class="hist-preview">${escapeHTML(rawPreview)}${rawPreview.length >= 115 ? '...' : ''}</div>
+                </div>
+                <div class="hist-side">
+                    <div class="hist-score-ring" style="--score-color:${sColor};">${item.score}<span>${getScoreLabel(item.score)}</span></div>
+                    <button class="hist-delete" onclick="deleteHistoryItem(event, ${jsArg(item.barcode)})">Löschen</button>
+                </div>
+            </div>`;
         });
     }
     document.getElementById('history-list').innerHTML = html;
@@ -708,11 +817,8 @@ function renderChatContextStrip() {
     let el = document.getElementById('chatContextStrip');
     if (!el) return;
     let summary = getArchiveContextSummary();
-    let categories = Object.entries(summary.categoryCounts).map(([name, count]) => `${name}: ${count}`).join(' · ') || 'keine Kategorien';
-    el.innerHTML = `
-        <span><strong>${summary.total}</strong> Archivobjekte</span>
-        <span><strong>${summary.avgScore || '-'}</strong> Ø Score</span>
-        <span>${escapeHTML(categories)}</span>`;
+    let categories = Object.entries(summary.categoryCounts).map(([name, count]) => `${name} ${count}`).join(' · ') || 'keine Kategorien';
+    el.textContent = `${summary.total} Produkte · Ø ${summary.avgScore || '-'} · ${categories}`;
 }
 
 function renderArchiveChat() {
@@ -723,24 +829,52 @@ function renderArchiveChat() {
     if (!messages.length) {
         log.innerHTML = `
             <div class="chat-empty">
-                <strong>Archiv-KI bereit</strong>
-                <span>Stelle Fragen wie: "Welche Produkte sollte ich ersetzen?" oder "Welche Kategorie hat die meisten kritischen Treffer?"</span>
+                <div class="ai-empty-orb">AI</div>
+                <strong>Wie kann ich dein Archiv analysieren?</strong>
+                <span>Frage nach kritischen Produkten, Packaging-Risiken, Kategorie-Trends oder besseren Alternativen.</span>
             </div>`;
         return;
     }
     log.innerHTML = messages.map(message => `
         <article class="chat-message ${message.role === 'user' ? 'chat-user' : 'chat-assistant'}">
-            <span>${message.role === 'user' ? 'DU' : 'KI CORE'}</span>
-            <p>${escapeHTML(message.content)}</p>
+            <div class="chat-avatar">${message.role === 'user' ? 'DU' : 'AI'}</div>
+            <div class="chat-bubble">
+                <span>${message.role === 'user' ? 'Du' : 'Archiv Assistant'}</span>
+                <p>${escapeHTML(message.content)}</p>
+            </div>
             ${Array.isArray(message.sources) && message.sources.length ? `<div class="chat-sources">${message.sources.slice(0, 4).map(src => `<button type="button" onclick="loadFromArchive(${jsArg(src.barcode || '')})">${escapeHTML(src.name || src.barcode || 'Archivobjekt')}</button>`).join('')}</div>` : ''}
         </article>`).join('');
     log.scrollTop = log.scrollHeight;
 }
 
-function buildArchiveChatContext() {
+function scoreArchiveRelevance(item, question) {
+    let normalizedQuestion = normalizeIngredientText(question);
+    if (!normalizedQuestion) return 0;
+    let haystack = normalizeIngredientText([
+        item.name,
+        item.category,
+        item.rawIngredients,
+        (item.foundToxins || []).join(' '),
+        (item.foundGood || []).join(' '),
+        item.packaging?.material || '',
+        item.packaging?.risk || ''
+    ].join(' '));
+    return normalizedQuestion.split(' ').filter(token => token.length > 2 && haystack.includes(token)).length;
+}
+
+function buildArchiveChatContext(question = '') {
     let history = getHistory();
     let summary = getArchiveContextSummary();
-    let products = history.slice(0, 30).map(item => ({
+    let candidates = history
+        .map((item, index) => ({ item, index, relevance: scoreArchiveRelevance(item, question) }))
+        .sort((a, b) => {
+            if (b.relevance !== a.relevance) return b.relevance - a.relevance;
+            if (a.item.score !== b.item.score) return a.item.score - b.item.score;
+            return a.index - b.index;
+        })
+        .slice(0, 36)
+        .map(entry => entry.item);
+    let products = candidates.map(item => ({
         barcode: item.barcode,
         name: item.name,
         category: item.category,
@@ -754,9 +888,18 @@ function buildArchiveChatContext() {
             confidence: item.packaging.confidence
         } : null,
         summary: item.kiSummary || '',
-        raw: String(item.rawIngredients || '').slice(0, 700)
+        raw: String(item.rawIngredients || '').slice(0, 420)
     }));
     return JSON.stringify({ summary, products }, null, 2);
+}
+
+function setArchiveChatBusy(isBusy) {
+    let sendBtn = document.getElementById('archiveChatSendBtn');
+    if (!sendBtn) return;
+    sendBtn.disabled = isBusy;
+    sendBtn.innerHTML = isBusy
+        ? '<span class="send-dot"></span>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 }
 
 async function sendArchiveChatMessage(prefilledPrompt = '') {
@@ -772,12 +915,13 @@ async function sendArchiveChatMessage(prefilledPrompt = '') {
     saveArchiveChatMessages(messages);
     if (input) input.value = '';
     renderArchiveChat();
-
-    let sendBtn = document.getElementById('archiveChatSendBtn');
-    if (sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.textContent = '...';
+    let log = document.getElementById('archiveChatLog');
+    if (log) {
+        log.insertAdjacentHTML('beforeend', `<article class="chat-message chat-assistant chat-thinking"><div class="chat-avatar">AI</div><div class="chat-bubble"><span>Archiv Assistant</span><p><i></i><i></i><i></i></p></div></article>`);
+        log.scrollTop = log.scrollHeight;
     }
+
+    setArchiveChatBusy(true);
     try {
         let prompt = `Du bist der Archiv-KI-Core einer lokalen Produktanalyse-App.
 Nutze ausschließlich den folgenden Archivkontext. Wenn eine Information dort nicht enthalten ist, sage klar "nicht im Archiv verifiziert".
@@ -785,7 +929,7 @@ Antworte kurz, konkret und auf Deutsch. Priorisiere Risiko, Kategorie, Packaging
 Gib bis zu vier Quellen aus dem Archiv zurück, wenn du konkrete Produkte erwähnst.
 
 ARCHIVKONTEXT:
-${buildArchiveChatContext()}
+${buildArchiveChatContext(question)}
 
 LETZTE CHAT-NACHRICHTEN:
 ${messages.slice(-8).map(m => `${m.role}: ${m.content}`).join('\n')}
@@ -806,10 +950,7 @@ Antworte ausschließlich als JSON:
         messages.push({ role: 'assistant', content: 'Archiv-Chat konnte nicht ausgeführt werden: ' + (error?.message || error), ts: new Date().toISOString() });
         saveArchiveChatMessages(messages);
     } finally {
-        if (sendBtn) {
-            sendBtn.disabled = false;
-            sendBtn.textContent = 'SEND';
-        }
+        setArchiveChatBusy(false);
         renderArchiveChat();
     }
 }
@@ -817,6 +958,320 @@ Antworte ausschließlich als JSON:
 function clearArchiveChat() {
     localStorage.removeItem('op_archive_chat');
     renderArchiveChat();
+}
+
+function setMapStatus(title, message = '', tone = 'neutral') {
+    let card = document.getElementById('mapStatusCard');
+    if (!card) return;
+    card.className = `map-status-card map-status-${tone}`;
+    card.innerHTML = `<strong>${escapeHTML(title)}</strong><span>${escapeHTML(message)}</span>`;
+}
+
+function getMapCategoryLabel(category = currentMapCategory) {
+    const labels = {
+        'clean-food': 'Clean Food',
+        market: 'Märkte',
+        beauty: 'Kosmetik',
+        clothing: 'Kleidung',
+        home: 'Home'
+    };
+    return labels[category] || 'Lokale Läden';
+}
+
+function getMapQueryParts(category = currentMapCategory) {
+    const foodShops = 'supermarket|greengrocer|health_food|organic|farm|butcher|bakery|deli|convenience';
+    const queries = {
+        'clean-food': [
+            `node["shop"~"${foodShops}"](around:RADIUS,LAT,LON);`,
+            `way["shop"~"${foodShops}"](around:RADIUS,LAT,LON);`,
+            `node["amenity"="marketplace"](around:RADIUS,LAT,LON);`,
+            `way["amenity"="marketplace"](around:RADIUS,LAT,LON);`
+        ],
+        market: [
+            `node["amenity"="marketplace"](around:RADIUS,LAT,LON);`,
+            `way["amenity"="marketplace"](around:RADIUS,LAT,LON);`,
+            `node["shop"~"farm|greengrocer|organic"](around:RADIUS,LAT,LON);`,
+            `way["shop"~"farm|greengrocer|organic"](around:RADIUS,LAT,LON);`
+        ],
+        beauty: [
+            `node["shop"~"chemist|cosmetics|beauty|perfumery"](around:RADIUS,LAT,LON);`,
+            `way["shop"~"chemist|cosmetics|beauty|perfumery"](around:RADIUS,LAT,LON);`,
+            `node["amenity"="pharmacy"](around:RADIUS,LAT,LON);`,
+            `way["amenity"="pharmacy"](around:RADIUS,LAT,LON);`
+        ],
+        clothing: [
+            `node["shop"~"clothes|shoes|second_hand|fabric|tailor"](around:RADIUS,LAT,LON);`,
+            `way["shop"~"clothes|shoes|second_hand|fabric|tailor"](around:RADIUS,LAT,LON);`
+        ],
+        home: [
+            `node["shop"~"furniture|houseware|doityourself|hardware|interior_decoration"](around:RADIUS,LAT,LON);`,
+            `way["shop"~"furniture|houseware|doityourself|hardware|interior_decoration"](around:RADIUS,LAT,LON);`
+        ]
+    };
+    return queries[category] || queries['clean-food'];
+}
+
+function buildOverpassQuery(lat, lon, radius, category = currentMapCategory) {
+    let safeRadius = Math.max(500, Math.min(5000, Number.parseInt(radius, 10) || 2500));
+    let safeLat = Number(lat).toFixed(6);
+    let safeLon = Number(lon).toFixed(6);
+    let body = getMapQueryParts(category)
+        .join('\n')
+        .replace(/RADIUS/g, safeRadius)
+        .replace(/LAT/g, safeLat)
+        .replace(/LON/g, safeLon);
+    return `[out:json][timeout:18];\n(\n${body}\n);\nout center tags;`;
+}
+
+function getMapCacheKey(lat, lon, radius, category) {
+    return `op_map_${category}_${radius}_${Number(lat).toFixed(2)}_${Number(lon).toFixed(2)}`;
+}
+
+function getPoiCoordinates(element) {
+    let lat = Number(element.lat ?? element.center?.lat);
+    let lon = Number(element.lon ?? element.center?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { lat, lon };
+}
+
+function getMapPoiCategory(tags = {}) {
+    if (tags.amenity === 'marketplace') return 'Markt';
+    if (tags.amenity === 'pharmacy') return 'Apotheke';
+    const shopMap = {
+        supermarket: 'Supermarkt',
+        greengrocer: 'Gemüse/Obst',
+        health_food: 'Bio-/Health-Food',
+        organic: 'Bio-Laden',
+        farm: 'Hofladen',
+        butcher: 'Metzgerei',
+        bakery: 'Bäckerei',
+        deli: 'Feinkost',
+        convenience: 'Nahversorgung',
+        chemist: 'Drogerie',
+        cosmetics: 'Kosmetik',
+        beauty: 'Beauty',
+        perfumery: 'Parfümerie',
+        clothes: 'Kleidung',
+        shoes: 'Schuhe',
+        second_hand: 'Second-Hand',
+        fabric: 'Stoffe',
+        tailor: 'Schneiderei',
+        furniture: 'Möbel',
+        houseware: 'Haushalt',
+        doityourself: 'Baumarkt',
+        hardware: 'Hardware',
+        interior_decoration: 'Interior'
+    };
+    return shopMap[tags.shop] || tags.shop || 'Laden';
+}
+
+function getPoiName(element) {
+    let tags = element?.tags || {};
+    return tags.name || tags.brand || tags.operator || getMapPoiCategory(tags) || 'Lokaler Eintrag';
+}
+
+function getPoiAddress(tags = {}) {
+    let parts = [tags['addr:street'], tags['addr:housenumber'], tags['addr:postcode'], tags['addr:city']]
+        .filter(Boolean)
+        .join(' ');
+    return parts || tags.opening_hours || 'Adresse nicht hinterlegt';
+}
+
+function sanitizeMapWebsite(url) {
+    let value = String(url || '').trim().slice(0, 400);
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) return value;
+    if (/^www\./i.test(value)) return `https://${value}`;
+    return '';
+}
+
+function distanceMeters(aLat, aLon, bLat, bLon) {
+    const radius = 6371000;
+    const toRad = value => Number(value) * Math.PI / 180;
+    const dLat = toRad(bLat - aLat);
+    const dLon = toRad(bLon - aLon);
+    const lat1 = toRad(aLat);
+    const lat2 = toRad(bLat);
+    const hav = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return Math.round(radius * 2 * Math.atan2(Math.sqrt(hav), Math.sqrt(1 - hav)));
+}
+
+function formatDistance(meters) {
+    if (!Number.isFinite(meters)) return 'Distanz offen';
+    if (meters < 1000) return `${Math.max(10, Math.round(meters / 10) * 10)} m`;
+    return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0).replace('.', ',')} km`;
+}
+
+function normalizeMapPois(elements, center) {
+    let seen = new Set();
+    return (elements || [])
+        .map(element => {
+            let coords = getPoiCoordinates(element);
+            if (!coords) return null;
+            let tags = element.tags || {};
+            let name = getPoiName(element);
+            let key = `${name}|${coords.lat.toFixed(5)}|${coords.lon.toFixed(5)}`;
+            if (seen.has(key)) return null;
+            seen.add(key);
+            let distance = distanceMeters(center.lat, center.lon, coords.lat, coords.lon);
+            return {
+                id: `poi-${String(element.id || key).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80)}`,
+                name,
+                category: getMapPoiCategory(tags),
+                address: getPoiAddress(tags),
+                lat: coords.lat,
+                lon: coords.lon,
+                distance,
+                openingHours: tags.opening_hours || '',
+                website: sanitizeMapWebsite(tags.website || tags['contact:website'])
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, MAP_POI_LIMIT);
+}
+
+async function fetchLocalShopPois(lat, lon, radius, category) {
+    let cacheKey = getMapCacheKey(lat, lon, radius, category);
+    let cached = readJsonStorage(cacheKey, null);
+    if (cached?.timestamp && Date.now() - cached.timestamp < 1000 * 60 * 20 && Array.isArray(cached.pois)) {
+        return cached.pois;
+    }
+    if (mapAbortController) mapAbortController.abort();
+    mapAbortController = new AbortController();
+    let timeout = setTimeout(() => mapAbortController.abort(), 15000);
+    try {
+        let response = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: buildOverpassQuery(lat, lon, radius, category),
+            signal: mapAbortController.signal
+        });
+        if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
+        let data = await response.json();
+        let pois = normalizeMapPois(data.elements || [], { lat, lon });
+        writeJsonStorage(cacheKey, { timestamp: Date.now(), pois });
+        return pois;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function getMapExternalSearchUrl() {
+    if (!currentMapCenter) return 'https://www.openstreetmap.org/';
+    let query = encodeURIComponent(`${getMapCategoryLabel()} near ${currentMapCenter.lat},${currentMapCenter.lon}`);
+    return `https://www.openstreetmap.org/search?query=${query}`;
+}
+
+function renderLocalMap() {
+    let canvas = document.getElementById('localMapCanvas');
+    let list = document.getElementById('mapPoiList');
+    if (!canvas || !list) return;
+    if (currentMapLoading) {
+        canvas.innerHTML = `<div class="map-loading"><i></i><strong>Lokale Karte wird geladen</strong><small>${escapeHTML(getMapCategoryLabel())} im Radius ${formatDistance(currentMapRadius)}</small></div>`;
+        list.innerHTML = '';
+        return;
+    }
+    if (!currentMapCenter) {
+        canvas.innerHTML = `<div class="map-empty-state"><span>◎</span><strong>Noch kein Standort</strong><small>Die Karte startet erst nach deiner Freigabe.</small></div>`;
+        list.innerHTML = '';
+        return;
+    }
+    let radius = Math.max(1000, currentMapRadius);
+    let pins = currentMapPois.map((poi, index) => {
+        let x = 50 + ((poi.lon - currentMapCenter.lon) / (radius / 111320)) * 35;
+        let y = 50 - ((poi.lat - currentMapCenter.lat) / (radius / 111320)) * 35;
+        x = Math.max(8, Math.min(92, x));
+        y = Math.max(8, Math.min(92, y));
+        return `<button class="map-pin" style="left:${x}%; top:${y}%;" title="${escapeHTML(poi.name)}" onclick="document.getElementById('poi-${escapeHTML(poi.id)}')?.scrollIntoView({behavior:'smooth', block:'center'});">${index + 1}</button>`;
+    }).join('');
+    canvas.innerHTML = `
+        <div class="map-grid"></div>
+        <div class="map-user-dot" style="left:50%; top:50%;"></div>
+        ${pins}
+        <div class="map-radius-label">${escapeHTML(formatDistance(currentMapRadius))}</div>
+    `;
+    if (!currentMapPois.length) {
+        list.innerHTML = `<div class="map-poi-empty"><strong>Keine Treffer</strong><span>Radius oder Kategorie ändern, oder externe Suche öffnen.</span><a href="${escapeHTML(getMapExternalSearchUrl())}" target="_blank" rel="noopener">In OpenStreetMap suchen</a></div>`;
+        return;
+    }
+    list.innerHTML = currentMapPois.map((poi, index) => {
+        let mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${poi.lat},${poi.lon}`)}`;
+        let osmUrl = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(poi.lat)}&mlon=${encodeURIComponent(poi.lon)}#map=18/${encodeURIComponent(poi.lat)}/${encodeURIComponent(poi.lon)}`;
+        return `
+            <article class="map-poi-card" id="poi-${escapeHTML(poi.id)}">
+                <div class="map-poi-index">${index + 1}</div>
+                <div class="map-poi-main">
+                    <div class="map-poi-head">
+                        <strong>${escapeHTML(poi.name)}</strong>
+                        <span>${escapeHTML(formatDistance(poi.distance))}</span>
+                    </div>
+                    <p>${escapeHTML(poi.category)} · ${escapeHTML(poi.address)}</p>
+                    ${poi.openingHours ? `<small>${escapeHTML(poi.openingHours)}</small>` : ''}
+                    <div class="map-poi-actions">
+                        <a href="${escapeHTML(mapsUrl)}" target="_blank" rel="noopener">Route</a>
+                        <a href="${escapeHTML(osmUrl)}" target="_blank" rel="noopener">OSM</a>
+                        ${poi.website ? `<a href="${escapeHTML(poi.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+async function loadMapPoisForCurrentCenter() {
+    if (!currentMapCenter) return;
+    currentMapLoading = true;
+    renderLocalMap();
+    setMapStatus('Suche lokale Einkaufsoptionen...', `${getMapCategoryLabel()} · ${formatDistance(currentMapRadius)} Radius`, 'loading');
+    try {
+        currentMapPois = await fetchLocalShopPois(currentMapCenter.lat, currentMapCenter.lon, currentMapRadius, currentMapCategory);
+        setMapStatus(
+            currentMapPois.length ? `${currentMapPois.length} lokale Treffer` : 'Keine lokalen Treffer',
+            currentMapPois.length ? 'Sortiert nach Entfernung. Route öffnet externe Karten.' : 'Versuche eine andere Kategorie oder einen größeren Radius.',
+            currentMapPois.length ? 'success' : 'warning'
+        );
+    } catch (error) {
+        currentMapPois = [];
+        setMapStatus('Kartenabfrage nicht verfügbar', 'Overpass kann temporär ausgelastet sein. Externe Suche bleibt verfügbar.', 'warning');
+    } finally {
+        currentMapLoading = false;
+        renderLocalMap();
+    }
+}
+
+function locateAndLoadMapPois() {
+    if (!navigator.geolocation) {
+        setMapStatus('Standort nicht verfügbar', 'Dieser Browser unterstützt keine Geolocation. Nutze die externe OpenStreetMap-Suche.', 'warning');
+        renderLocalMap();
+        return;
+    }
+    setMapStatus('Standort wird angefragt...', 'Der Browser fragt dich gleich nach Freigabe.', 'loading');
+    currentMapLoading = true;
+    renderLocalMap();
+    navigator.geolocation.getCurrentPosition(position => {
+        currentMapCenter = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+        };
+        loadMapPoisForCurrentCenter();
+    }, () => {
+        currentMapLoading = false;
+        setMapStatus('Standort blockiert', 'Ohne Standort kann die App keine lokalen Pins berechnen. Du kannst die Freigabe im Browser ändern.', 'warning');
+        renderLocalMap();
+    }, {
+        enableHighAccuracy: false,
+        timeout: 12000,
+        maximumAge: 1000 * 60 * 10
+    });
+}
+
+function setMapCategory(category) {
+    currentMapCategory = category;
+    document.querySelectorAll('.map-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mapCategory === category);
+    });
+    if (currentMapCenter) loadMapPoisForCurrentCenter();
 }
 
 // ─── FEATURE: Produkt-Vergleich ───
@@ -914,10 +1369,33 @@ openView = function(viewName, isBackAction) {
     if (viewName === 'settings') renderCustomToxinList();
     if (viewName === 'compare') updateCompareUI();
     if (viewName === 'chat') renderArchiveChat();
+    if (viewName === 'map') renderLocalMap();
 };
 
 function renderChangelogHtml() {
     const releases = [
+        {
+            version: 'V14.3',
+            tag: 'Phase 5',
+            title: 'Local Shopping Map Core',
+            highlights: [
+                'Neue Clean Shopping Map für lokale Märkte, Bio-/Health-Food-Läden, Drogerien, Kleidung, Second-Hand, Möbel und Haushaltsalternativen.',
+                'Standort wird nur nach Nutzeraktion verwendet; lokale Pins, Distanz, Kategorie und externe Route werden im Browser berechnet.',
+                'Overpass-Abfragen sind gecacht, auf 30 Treffer begrenzt und fallen bei Last oder Netzwerkproblemen auf externe OpenStreetMap-Suche zurück.',
+                'Bottom-Navigation und Home-Dashboard enthalten jetzt einen direkten Karten-Einstieg.'
+            ]
+        },
+        {
+            version: 'V14.2',
+            tag: 'Phase 4',
+            title: 'Vault UI und AI Chat Polish',
+            highlights: [
+                'Archiv wurde als übersichtlicher Vault mit Kennzahlen, Suche, Sortierung, Kategorie-Counts und lesbaren Produktkarten neu aufgebaut.',
+                'Produktkarten zeigen Score-Zustand, Top-Signaturen, Packaging-Risiko und Rohdaten-Vorschau ohne Textüberladung.',
+                'Archiv-Chat wurde an moderne iOS-AI-Chat-Apps angelehnt: Header, Assistant-Orb, Bubble-Layout, Suggestions und Composer-Bar.',
+                'Chat-Kontext wird relevanzsortiert und gekürzt, damit KI-Anfragen performanter und stabiler bleiben.'
+            ]
+        },
         {
             version: 'V14.1',
             tag: 'Phase 3',
@@ -1030,6 +1508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-home').addEventListener('click', () => openView('home'));
     document.getElementById('nav-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('nav-search').addEventListener('click', () => openView('search'));
+    document.getElementById('nav-map').addEventListener('click', () => openView('map'));
     document.getElementById('nav-history').addEventListener('click', () => openView('history'));
     document.getElementById('nav-chat').addEventListener('click', () => openView('chat'));
     if (document.getElementById('nav-settings')) {
@@ -1039,6 +1518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('card-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('card-search').addEventListener('click', () => openView('search'));
     document.getElementById('card-history').addEventListener('click', () => openView('history'));
+    document.getElementById('card-map').addEventListener('click', () => openView('map'));
     document.getElementById('card-compare').addEventListener('click', () => openView('compare'));
     document.getElementById('card-chat').addEventListener('click', () => openView('chat'));
 
@@ -1049,6 +1529,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
     document.getElementById('importHistoryBtn').addEventListener('click', () => document.getElementById('importHistoryInput').click());
     document.getElementById('importHistoryInput').onchange = (e) => { if(e.target.files.length > 0) importHistory(e.target.files[0]); };
+    document.getElementById('historySearchInput').addEventListener('input', (e) => {
+        currentHistorySearch = e.target.value;
+        renderHistory();
+    });
+    document.getElementById('historySortSelect').addEventListener('change', (e) => {
+        currentHistorySort = e.target.value;
+        renderHistory();
+    });
     
     // Custom Toxin
     document.getElementById('addCustomToxinBtn').addEventListener('click', addCustomToxin);
@@ -1081,8 +1569,21 @@ document.addEventListener('DOMContentLoaded', () => {
             sendArchiveChatMessage();
         }
     });
+    document.getElementById('archiveChatInput').addEventListener('input', (e) => {
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(118, e.target.scrollHeight) + 'px';
+    });
     document.querySelectorAll('[data-chat-prompt]').forEach(button => {
         button.addEventListener('click', () => sendArchiveChatMessage(button.dataset.chatPrompt || ''));
+    });
+
+    document.getElementById('mapLocateBtn').addEventListener('click', locateAndLoadMapPois);
+    document.getElementById('mapRadiusSelect').addEventListener('change', (e) => {
+        currentMapRadius = Number.parseInt(e.target.value, 10) || 2500;
+        if (currentMapCenter) loadMapPoisForCurrentCenter();
+    });
+    document.querySelectorAll('[data-map-category]').forEach(button => {
+        button.addEventListener('click', () => setMapCategory(button.dataset.mapCategory || 'clean-food'));
     });
 
     document.getElementById('flt-alle').addEventListener('click', () => filterHistory('Alle', 'flt-alle'));
