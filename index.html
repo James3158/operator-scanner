@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Operator Terminal V14.3</title>
+    <title>Operator Terminal V14.4</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
         <button id="backBtn">&#10094; ZURÜCK</button>
         <div class="header-title">
             Operator Interface
-            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14.3 (LOCAL MAP CORE) ⓘ</span>
+            <span class="version-tag" id="versionTagBtn" style="cursor:pointer;" title="Changelog anzeigen">SYSTEM EXECUTION V14.4 (READINESS CORE) ⓘ</span>
             <span id="coreStatusBadge" class="core-status-badge core-status-offline">OFFLINE-CORE ACTIVE</span>
         </div>
         <button id="burgerBtn" aria-label="Menü öffnen">
@@ -410,6 +410,7 @@
     <input type="file" accept="image/*" id="geminiVisionGallery" style="display:none;">
     <input type="file" accept="image/*" id="archiveImageInjectorInput" style="display:none;">
     <input type="file" accept=".json,application/json" id="importHistoryInput" style="display:none;">
+    <div id="operatorToast" class="operator-toast" role="status" aria-live="polite" style="display:none;"></div>
 
     <div id="detailModalOverlay"></div>
     <div id="detailModal" role="dialog" aria-modal="true" aria-labelledby="mod-title">

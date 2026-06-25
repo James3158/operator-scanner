@@ -6,8 +6,8 @@ let viewStack = ['home'];
 let activeArchiveInjectBarcode = "";
 const summaryGenerationLocks = new Set();
 const guidedScanFiles = { front: null, label: null, packaging: null };
-const APP_SCHEMA_VERSION = '14.3';
-const APP_ANALYSIS_VERSION = 14.3;
+const APP_SCHEMA_VERSION = '14.4';
+const APP_ANALYSIS_VERSION = 14.4;
 const MAP_POI_LIMIT = 30;
 let currentMapCategory = 'clean-food';
 let currentMapRadius = 2500;
@@ -65,7 +65,7 @@ function renderScannerRecents() {
     }
     container.innerHTML = recent.map(item => `
         <button class="scan-recent-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
-            ${item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.3</span>'}
+            ${isSafeImageUrl(item.imageUrl) ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.4</span>'}
             <span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.category)} · Score ${item.score}</small></span>
         </button>`).join('');
 }
@@ -326,7 +326,7 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
 }
 
 function openChangelogModal() {
-    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.3';
+    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.4';
     document.getElementById('mod-desc').innerText = 'System-Aktualisierungsprotokoll';
     document.getElementById('mod-desc').style.color = 'var(--gemini-blue)';
     document.getElementById('mod-hazard-container').style.display = 'none';
@@ -487,7 +487,7 @@ function renderHistory() {
     else {
         filtered.forEach(item => {
             let sColor = getScoreColor(item.score);
-            let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" loading="lazy" alt="">` : `<div class="hist-img hist-img-empty">NO IMG</div>`;
+            let imgHtml = isSafeImageUrl(item.imageUrl) ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" loading="lazy" alt="">` : `<div class="hist-img hist-img-empty">NO IMG</div>`;
             let signals = getHistoryTopSignals(item);
             let signalHtml = signals.length
                 ? `<div class="hist-signal-row">${signals.map(signal => `<span class="hist-signal hist-signal-${signal.type}">${escapeHTML(signal.label)}</span>`).join('')}</div>`
@@ -1078,11 +1078,7 @@ function getPoiAddress(tags = {}) {
 }
 
 function sanitizeMapWebsite(url) {
-    let value = String(url || '').trim().slice(0, 400);
-    if (!value) return '';
-    if (/^https?:\/\//i.test(value)) return value;
-    if (/^www\./i.test(value)) return `https://${value}`;
-    return '';
+    return sanitizeExternalUrl(url);
 }
 
 function distanceMeters(aLat, aLon, bLat, bLon) {
@@ -1291,7 +1287,7 @@ function selectCompareSlot(slot) {
     
     let html = `<div id="compareArchiveList"><h3 style="color:var(--text-main); margin:0 0 15px; text-transform:uppercase; letter-spacing:1px;">Produkt für Slot ${slot} wählen</h3>`;
     history.forEach((item, i) => {
-        let imgHtml = item.imageUrl ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;">NO IMG</div>`;
+        let imgHtml = isSafeImageUrl(item.imageUrl) ? `<img src="${escapeHTML(item.imageUrl)}" class="hist-img" alt="">` : `<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:7px;color:#555;">NO IMG</div>`;
         html += `<div class="hist-item" onclick="setCompareSlot('${slot}', ${i}); document.getElementById('compareArchiveModal').classList.remove('active');">
             <div class="hist-img-container">${imgHtml}</div>
             <div class="hist-info"><span class="res-badge">${escapeHTML(item.category)}</span><div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHTML(item.name)}</div></div>
@@ -1317,7 +1313,7 @@ function updateCompareUI() {
         let content = el.querySelector('.compare-content');
         
         if (data) {
-            let imgHtml = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img" alt="">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
+            let imgHtml = isSafeImageUrl(data.imageUrl) ? `<img src="${escapeHTML(data.imageUrl)}" class="res-img" alt="">` : `<div class="res-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;">NO IMG</div>`;
             content.innerHTML = `<div class="res-header">${imgHtml}<div class="res-info"><span class="res-badge">${escapeHTML(data.category)}</span><h3 class="res-title">${escapeHTML(data.name)}</h3><div style="font-size:20px; font-weight:900; color:${data.score>=80?'var(--matrix-green)':(data.score>=40?'var(--warn)':'var(--alert)')};">${data.score}</div></div></div>`;
             placeholder.style.display = 'none';
             content.style.display = 'block';
@@ -1374,6 +1370,18 @@ openView = function(viewName, isBackAction) {
 
 function renderChangelogHtml() {
     const releases = [
+        {
+            version: 'V14.4',
+            tag: 'Readiness',
+            title: 'Security, Responsive und KI-Robustheit',
+            highlights: [
+                'Gemini-JSON-Antworten werden robuster extrahiert; Parse-Fehler blockieren die App nicht mehr als iOS-Systemalert.',
+                'Textanalysen können bei Gemini-Problemen auf DeepSeek ausweichen, während Vision-Funktionen bei Gemini bleiben.',
+                'Vision-Pipelines sichern die Websuche vor der KI-Detailanalyse: Google CSE zuerst, DuckDuckGo als Fallback.',
+                'Desktop-, Tablet- und Android-Layouts wurden mit eigenen Breakpoints ergänzt.',
+                'Externe URLs und dynamische Renderpfade wurden zusätzlich gehärtet.'
+            ]
+        },
         {
             version: 'V14.3',
             tag: 'Phase 5',

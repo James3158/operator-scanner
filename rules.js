@@ -84,6 +84,14 @@ function isSafeImageUrl(url) {
     return /^https?:\/\//i.test(val) || /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val);
 }
 
+function sanitizeExternalUrl(url) {
+    let val = String(url || '').trim().slice(0, 500);
+    if (!val) return '';
+    if (/^https?:\/\//i.test(val)) return val;
+    if (/^www\./i.test(val)) return `https://${val}`;
+    return '';
+}
+
 function getDisplayDate(isoDate) {
     let d = isoDate ? new Date(isoDate) : new Date();
     if (Number.isNaN(d.getTime())) d = new Date();
@@ -99,7 +107,7 @@ function normalizeHistoryItem(item) {
     if (Number.isNaN(score)) score = 0;
     let dateIso = item.dateIso || item.date || new Date().toISOString();
     return {
-        schemaVersion: '14.3',
+        schemaVersion: '14.4',
         productId: String(item.productId || barcode).slice(0, 120),
         barcode,
         name: String(item.name || 'Unbekanntes Objekt').slice(0, 180),
@@ -114,7 +122,7 @@ function normalizeHistoryItem(item) {
         foundToxins: Array.isArray(item.foundToxins) ? item.foundToxins.map(String).slice(0, 80) : [],
         foundGood: Array.isArray(item.foundGood) ? item.foundGood.map(String).slice(0, 80) : [],
         webAlternatives: normalizeWebAlternatives(item.webAlternatives),
-        analysisVersion: Number.parseFloat(item.analysisVersion) || 14.3,
+        analysisVersion: Number.parseFloat(item.analysisVersion) || 14.4,
         date: getDisplayDate(dateIso),
         dateIso
     };
@@ -145,8 +153,9 @@ function renderCuratedAlternatives(category) {
     if (!items.length) return '';
     return `<div class="sec-title">Kuratierte faire Alternativen</div><div class="curated-alternative-list">${items.map(item => {
         let criteria = Array.isArray(item.criteria) ? item.criteria.slice(0, 4) : [];
-        let link = /^https:\/\//i.test(item.verificationUrl || '')
-            ? `<a href="${escapeHTML(item.verificationUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceLabel || 'Quelle prüfen')}</a>`
+        let verificationUrl = sanitizeExternalUrl(item.verificationUrl);
+        let link = verificationUrl
+            ? `<a href="${escapeHTML(verificationUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceLabel || 'Quelle prüfen')}</a>`
             : `<span>${escapeHTML(item.sourceLabel || 'Lokal kuratiert')}</span>`;
         return `<article class="curated-alternative"><strong>${escapeHTML(item.name)}</strong><p>${escapeHTML(item.reason || '')}</p><ul>${criteria.map(value => `<li>${escapeHTML(value)}</li>`).join('')}</ul><div>${link}</div></article>`;
     }).join('')}</div>`;

@@ -1,4 +1,4 @@
-# Operator Terminal V14.3 - Product, Toxin, Packaging & Local Map Scanner
+# Operator Terminal V14.4 - Product, Toxin, Packaging & Local Map Scanner
 
 A local-first web terminal for barcode capture, guided product photography, ingredient analysis and separate packaging assessment. The interface is optimized for mobile Safari and static deployment through GitHub Pages.
 
@@ -14,7 +14,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 
 ## ⚡ Key Features
 
-### 1. V14.3 Guided Scanner
+### 1. V14.4 Guided Scanner
 *   **Two explicit modes:** Live barcode scanning and guided product photography are separated to reduce camera errors and unclear workflows.
 *   **Guided capture:** The photo flow requests a product front, an ingredient/material label and an optional packaging image.
 *   **Optimized local image:** The archived front image is compressed before local storage to reduce quota pressure.
@@ -44,10 +44,10 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   If a toxin with `severity === 'high'` (e.g., neurotoxins) is detected, the product is **strictly capped at a maximum of 50 points**.
     *   Lighter toxins (e.g., fillers or sugar) can be compensated by positive ingredients: each whitelisted ingredient increases the dynamic score cap by its benefit value (up to a limit of **75 points**).
 
-### 5. Persistent AI Summaries & V14.3 Archive
+### 5. Persistent AI Summaries & V14.4 Archive
 *   **Biological Evaluations:** The AI (Gemini or DeepSeek) writes a concise, 2-3 sentence summary explaining the biological and cellular impact of the product on the human body.
 *   **Generate once:** Older archive entries without a summary expose an explicit action. A successful result is saved and reused without another API request.
-*   **Versioned records:** Legacy history objects are normalized into the V14.3 schema while preserving existing products, images and summaries.
+*   **Versioned records:** Legacy history objects are normalized into the V14.4 schema while preserving existing products, images and summaries.
 *   **Backup & Restore:** The export feature packages both your scan history and custom toxins into a single JSON file.
 
 ### 6. Packaging Core
@@ -87,6 +87,12 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Lightweight rendering:** The app renders a local pin map and POI list without adding a heavy map tile library.
 *   **Performance guardrails:** Overpass results are cached for 20 minutes per rough location, category and radius, capped at 30 visible POIs, and have external OpenStreetMap fallback links.
 
+### 10.3 V14.4 Readiness Core
+*   **Desktop and Android responsive layer:** The mobile-first interface now has tablet, desktop and wide-monitor breakpoints instead of only scaling the iOS layout.
+*   **Gemini JSON resilience:** Model responses are parsed through a stronger JSON recovery path, and parse failures no longer block the interface with system alerts.
+*   **Search-before-AI guarantee:** Vision and manual KI extraction keep the web-search pipeline first: Google CSE when configured, DuckDuckGo fallback otherwise, then AI analysis.
+*   **Security pass:** Dynamic render paths and external URLs received additional escaping and URL sanitation.
+
 ### 11. Gemini Resilience
 *   **Flash fallback chain:** Gemini calls try the configured stable Flash model first and then compatible fallback aliases/models when temporary demand or rate-limit errors occur.
 *   **Retry handling:** Temporary provider overload is reported as capacity pressure instead of a misleading API-key failure.
@@ -100,7 +106,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   [Html5-Qrcode](https://github.com/mebjas/html5-qrcode) (Camera barcode scanning)
     *   [Tesseract.js](https://github.com/naptha/tesseract.js) (Offline client-side OCR)
 *   **API Integrations:**
-*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and archive chat. V14.3 uses a Flash fallback chain to reduce failures from temporary model demand.
+*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and archive chat. V14.4 uses a Flash fallback chain plus JSON recovery to reduce failures from temporary model demand or malformed model output.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
 *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
 *   **OpenStreetMap / Overpass API:** Optional local POI lookup for the Clean Shopping Map after user-triggered geolocation.
@@ -124,6 +130,12 @@ python -m http.server 8000
 ```
 Then navigate to `http://localhost:8000` in your web browser.
 
+### Local Checks
+```bash
+node check_elements.js .
+node test_v14_4.js
+```
+
 ---
 
 ## 🔒 Security and Privacy
@@ -133,6 +145,14 @@ Then navigate to `http://localhost:8000` in your web browser.
 *   **No Repository Uploads:** The app does not upload your keys, archive, custom toxins, or preferences to GitHub.
 
 ---
+
+## V14.4 Changes
+
+*   Added a readiness hardening pass based on the VibeDoctor findings: safer render paths, URL sanitation and non-blocking provider errors.
+*   Added robust Gemini/DeepSeek JSON extraction for Markdown-wrapped, prefixed or partially noisy model responses.
+*   Preserved and tested the intended web-search flow: Google CSE first when configured, DuckDuckGo fallback, then KI analysis.
+*   Added desktop, tablet, Android landscape and wide-monitor responsive layouts.
+*   Added local V14.4 tests for JSON parser recovery, search provider order and XSS-safe rendering helpers.
 
 ## V14.3 Changes
 
