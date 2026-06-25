@@ -1162,17 +1162,26 @@ function getMapExternalSearchUrl() {
 function renderLocalMap() {
     let canvas = document.getElementById('localMapCanvas');
     let list = document.getElementById('mapPoiList');
+    let mapView = document.getElementById('view-map');
     if (!canvas || !list) return;
+    const setMapLayoutState = (hasPois) => {
+        if (!mapView) return;
+        mapView.classList.toggle('map-has-pois', Boolean(hasPois));
+        mapView.classList.toggle('map-no-pois', !hasPois);
+    };
     if (currentMapLoading) {
+        setMapLayoutState(false);
         canvas.innerHTML = `<div class="map-loading"><i></i><strong>Lokale Karte wird geladen</strong><small>${escapeHTML(getMapCategoryLabel())} im Radius ${formatDistance(currentMapRadius)}</small></div>`;
         list.innerHTML = '';
         return;
     }
     if (!currentMapCenter) {
+        setMapLayoutState(false);
         canvas.innerHTML = `<div class="map-empty-state"><span>◎</span><strong>Noch kein Standort</strong><small>Die Karte startet erst nach deiner Freigabe.</small></div>`;
         list.innerHTML = '';
         return;
     }
+    setMapLayoutState(currentMapPois.length > 0);
     let radius = Math.max(1000, currentMapRadius);
     let pins = currentMapPois.map((poi, index) => {
         let x = 50 + ((poi.lon - currentMapCenter.lon) / (radius / 111320)) * 35;
