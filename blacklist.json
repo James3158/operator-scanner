@@ -124,7 +124,9 @@
     ],
     "desc": "Insulin-Spike / Frequenz-Senker",
     "detail": "Industriell isolierte Fruktose und Saccharose. Erzeugt brutale Blutzuckerschwankungen und fördert viszerales Fett.",
-    "severity": "low"
+    "severity": "low",
+    "scoreImpact": 15,
+    "scoreGroup": "added-sugars"
   },
   "palmöl": {
     "aliases": [

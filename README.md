@@ -28,7 +28,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 
 ## ⚡ Key Features
 
-### 1. V14.4 Guided Scanner
+### 1. V16 Guided Scanner
 *   **Two explicit modes:** Live barcode scanning and guided product photography are separated to reduce camera errors and unclear workflows.
 *   **Guided capture:** The photo flow requests a product front, an ingredient/material label and an optional packaging image.
 *   **Optimized local image:** The archived front image is compressed before local storage to reduce quota pressure.
@@ -50,13 +50,13 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Evidence-aware weighting:** A verified ingredient order increases the impact of a matching substance in positions 1–3 by 1.5 and positions 4–8 by 1.2. For food, a verified sugar value per 100 g or 100 ml adds a bounded quantity impact. Untrusted low-confidence AI facts cannot activate either multiplier.
 *   **Accumulation without unlimited stacking:** Independent hazard groups are weighted 100%, 85%, 70% and then 55%. A detected `high`, `medium` or `low` rule also limits the final result to 49, 69 or 89.
 *   **Small positive bonus:** `high`, `medium` and `low` whitelist signals add 5, 3 and 1 point, with the complete positive bonus capped at 5. A single positive ingredient therefore cannot outweigh several relevant hazards.
-*   **Transparent breakdown:** Native records persist the individual contributions, ingredient position, quantity impact, accumulation factor, positive bonus, ceiling and fact source. Packaging keeps its independent score and never changes the product score.
+*   **Transparent breakdown:** Web and native records persist the individual contributions, ingredient position, quantity impact, accumulation factor, positive bonus and ceiling. Packaging keeps its independent score and never changes the product score.
 
-### 5. Persistent AI Summaries & V14.4 Archive
+### 5. Persistent AI Summaries & V16 Archive
 *   **Catalog-grounded category evaluations:** The AI (Gemini or DeepSeek) starts with actual detections and effects from `blacklist.json`, category material profiles and local custom rules. Only then may it add clearly distinguishable general or web context. It explains why a product appears harmful, comparatively unproblematic or not sufficiently verifiable across food, cosmetics, clothing, household goods and furniture without inventing undeclared ingredients or making a medical diagnosis.
 *   **Actionable alternatives:** The same analysis proposes several category-appropriate alternatives and states the property that should make each option preferable. Web-backed hints remain visibly unconfirmed; generic AI fallback suggestions explicitly tell the user which properties to verify.
 *   **Generate once:** Older archive entries without a summary expose an explicit action. A successful result is saved and reused without another API request.
-*   **Versioned records:** Legacy history objects are normalized into the V14.4 schema while preserving existing products, images and summaries.
+*   **Versioned records:** Legacy history objects are normalized into the V16 schema while preserving existing products, images and summaries.
 *   **Backup & Restore:** The export feature packages both your scan history and custom toxins into a single JSON file.
 
 ### 6. Packaging Core
@@ -66,10 +66,11 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Honest AI fallback:** If web evidence is missing, AI may only provide a cautious low-confidence fallback marked as not web-verified; unknown materials are not silently invented.
 
 ### 7. Premium User Interface (Obsidian Glassmorphism)
-*   **Cyberpunk Aesthetic:** Deep, dark obsidian theme with translucent glassmorphic components, tailored HSL color palettes, and fluid transitions.
+*   **Native-parity information architecture:** The public web app mirrors the native app's five primary areas — Home, Sensor, Search, Chat and Archive — while Map, Compare, Alternatives and AI Core remain focused tools and subviews.
+*   **Obsidian glass design:** Deep obsidian surfaces, restrained translucent layers, the native green/indigo/rose/amber signal palette and continuous rounded geometry translate the SwiftUI hierarchy to HTML and CSS without claiming to reproduce Apple's proprietary Liquid Glass rendering.
 *   **iOS Safe-Area Support:** Optimized padding (`env(safe-area-inset-bottom)`) for iPhone displays and native Safari browser overlays.
-*   **Visual Modal Upgrades:** Toxin details in the bottom-sheet modal feature a glowing, color-coded hazard rating scale (Red/Yellow/Green).
-*   **Core Status Badge:** A live header badge indicating whether the app is running offline or with an active AI engine (`KI-CORE ACTIVE` in indigo vs. `OFFLINE-CORE ACTIVE` in emerald).
+*   **Responsive shell:** Mobile Safari and Android receive the five-item bottom tab bar; desktop and ultrawide layouts use a navigation rail and a centered, bounded workspace.
+*   **Accessible presentation:** System/Light/Dark appearance, reduced motion, stronger contrast and reduced-transparency modes complement keyboard focus states and non-color score labels.
 
 ### 8. Multi-Category Material Core
 *   **Layered profiles:** Clothing, household goods and furniture add dedicated hazard and benefit rules to the shared `blacklist.json`/whitelist basis. Category rules override same-named shared rules, but they no longer suppress declared cross-category substances such as preservatives in a household skin-contact product.
@@ -98,8 +99,12 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Lightweight rendering:** The app renders a local pin map and POI list without adding a heavy map tile library.
 *   **Performance guardrails:** Overpass results are cached for 20 minutes per rough location, category and radius, capped at 30 visible POIs, and have external OpenStreetMap fallback links.
 
-### 10.3 V14.4 Readiness Core
+### 10.3 V16 Web Parity & Readiness Core
 *   **Desktop and Android responsive layer:** The mobile-first interface now has tablet, desktop and wide-monitor breakpoints instead of only scaling the iOS layout.
+*   **Native-style Home:** Direct barcode/photo/search/chat actions, local archive metrics, the latest analysis and the same secondary tool hierarchy as the native app.
+*   **Database-first search:** Name searches query OpenFoodFacts and OpenBeautyFacts in parallel, rank results by useful data quality and preserve explicit local/manual continuations.
+*   **Two-mode Operator Chat:** Archive and General modes keep separate histories, use the same local rule basis and provide bounded local answers when no provider key is configured.
+*   **Transparent product detail:** V16 quick facts, provisional evidence status, score contributions, packaging and original/evaluated text are presented as distinct sections.
 *   **Gemini JSON resilience:** Model responses are parsed through a stronger JSON recovery path, and parse failures no longer block the interface with system alerts.
 *   **Search-before-AI guarantee:** Vision and manual KI extraction keep the web-search pipeline first: Google CSE when configured, DuckDuckGo fallback otherwise, then AI analysis.
 *   **Security pass:** Dynamic render paths and external URLs received additional escaping and URL sanitation.
@@ -118,7 +123,7 @@ The **Operator Terminal** is built for biological optimization by identifying hi
     *   [Html5-Qrcode](https://github.com/mebjas/html5-qrcode) (Camera barcode scanning)
     *   [Tesseract.js](https://github.com/naptha/tesseract.js) (Offline client-side OCR)
 *   **API Integrations:**
-*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and archive chat. V14.4 uses a Flash fallback chain plus JSON recovery to reduce failures from temporary model demand or malformed model output.
+*   **Gemini Vision (AI Studio API):** Primary engine for guided photo extraction, OCR cleanup, translation, packaging, product summaries and Operator Chat. V16 uses a Flash fallback chain plus JSON recovery to reduce failures from temporary model demand or malformed model output.
     *   **DeepSeek V4 API:** Alternative engine for chat completions.
 *   **OpenFoodFacts & OpenBeautyFacts APIs:** Primary product information databases.
 *   **OpenStreetMap / Overpass API:** Optional local POI lookup for the Clean Shopping Map after user-triggered geolocation.
@@ -137,7 +142,7 @@ The native app already has a broad local engineering baseline. The following sco
 Current native foundation:
 
 * SwiftUI tab shell for Home, Scanner, Search, AI Chat and Archive; the Map remains available from Home and the feature hub.
-* SwiftData archive with V14.4 JSON import and web-compatible export.
+* SwiftData archive with V16 JSON import and web-compatible export.
 * Live barcode scanning plus barcode recognition from a selected photo, local Vision OCR and Guided Vision for front, label and packaging images.
 * Unified database-first search: exact barcodes first use the current OpenFoodFacts universal V3 lookup (`product_type=all`) so food and cosmetics resolve to the correct project; name searches query OpenFoodFacts and OpenBeautyFacts, rank multiple matches for selection and run local rule evaluation immediately.
 * Incomplete database entries stay tied to their original barcode and product. A Web+AI supplement action can add missing ingredient, material and packaging information while preserving the original primary-database text for provenance; incomplete barcode scans use this automatically when AI is configured.
@@ -225,6 +230,14 @@ node test_rules.js
 *   **No Repository Uploads:** The app does not upload your keys, archive, custom toxins, or preferences to GitHub.
 
 ---
+
+## V16 Web Parity Changes
+
+* Rebuilt the public web shell around the native five-tab structure and added the native-style Home hierarchy, latest-analysis card, tool hub and App Store coming-soon indicator.
+* Added an Alternatives Catalog and a visible AI Analysis Core without publishing or bundling the proprietary iOS or production-backend source.
+* Added parallel OFF/OBF name search, universal OpenFoodFacts V3 barcode lookup with safe fallbacks, separate local OCR and full AI photo actions, and 2/5/10/20 km map radii.
+* Added Archive and General chat modes with local catalog/archive fallback answers, improved comparison sections and transparent V16 score contributions.
+* Added System/Light/Dark appearance, reduced motion, stronger contrast, reduced transparency and responsive verification at mobile, desktop and ultrawide widths.
 
 ## V14.4 Changes
 

@@ -107,7 +107,7 @@ function normalizeHistoryItem(item) {
     if (Number.isNaN(score)) score = 0;
     let dateIso = item.dateIso || item.date || new Date().toISOString();
     return {
-        schemaVersion: '14.4',
+        schemaVersion: '16.0',
         productId: String(item.productId || barcode).slice(0, 120),
         barcode,
         name: String(item.name || 'Unbekanntes Objekt').slice(0, 180),
@@ -122,6 +122,8 @@ function normalizeHistoryItem(item) {
         foundToxins: Array.isArray(item.foundToxins) ? item.foundToxins.map(String).slice(0, 80) : [],
         foundGood: Array.isArray(item.foundGood) ? item.foundGood.map(String).slice(0, 80) : [],
         webAlternatives: normalizeWebAlternatives(item.webAlternatives),
+        scoreBreakdown: item.scoreBreakdown && typeof item.scoreBreakdown === 'object' ? item.scoreBreakdown : null,
+        originalText: item.originalText ? String(item.originalText).slice(0, 20000) : '',
         analysisVersion: Number.parseFloat(item.analysisVersion) || 14.4,
         date: getDisplayDate(dateIso),
         dateIso
@@ -240,6 +242,8 @@ function matchIngredient(text, alias, itemPattern) {
         let prefix = cleanAlias.slice(0, -1);
         return hasUnicodeBoundary(cleanText, prefix) || new RegExp('(^|[^\\p{L}\\p{N}])' + escapeRegExp(prefix) + '-', 'iu').test(cleanText);
     }
+    cleanText = cleanText.replace(/-/g, ' ');
+    cleanAlias = cleanAlias.replace(/-/g, ' ');
     // Für sehr kurze Kürzel (z.B. PEG, MSG, SLS, BHT) verlangen wir exakte Wortgrenzen
     if (cleanAlias.length < 4) {
         return hasUnicodeBoundary(cleanText, cleanAlias);
@@ -251,6 +255,107 @@ function matchIngredient(text, alias, itemPattern) {
         index = cleanText.indexOf(cleanAlias, index + cleanAlias.length);
     }
     return false;
+}
+
+function extractScoringFacts(product, ingredientText) {
+    const explicit = product && product.scoring_facts && typeof product.scoring_facts === 'object'
+        ? product.scoring_facts
+        : {};
+    const orderedIngredients = Array.isArray(explicit.orderedIngredients)
+        ? explicit.orderedIngredients
+        : String(ingredientText || '').split(/[,;\n]/).map(value => value.trim()).filter(Boolean).slice(0, 80);
+    const rawSugar = explicit.sugarsPer100 ?? product?.nutriments?.sugars_100g;
+    const sugarsPer100 = Number.isFinite(Number(rawSugar)) ? Math.max(0, Math.min(100, Number(rawSugar))) : null;
+    const unit = String(product?.product_quantity_unit || '').toLowerCase();
+    const tags = Array.isArray(product?.categories_tags) ? product.categories_tags.join(' ').toLowerCase() : '';
+    const liquid = ['ml', 'cl', 'l'].includes(unit) || /beverage|drink|getrank/.test(tags);
+    return {
+        orderedIngredients,
+        sugarsPer100,
+        nutritionBasis: explicit.nutritionBasis || (sugarsPer100 === null ? null : (liquid ? 'per100ml' : 'per100g')),
+        sourceLabel: explicit.sourceLabel || (sugarsPer100 === null ? '' : 'OpenFoodFacts'),
+        confidence: explicit.confidence || (orderedIngredients.length || sugarsPer100 !== null ? 'high' : 'low')
+    };
+}
+
+function calculateV16Score(input, activeBlacklist, activeWhitelist, facts = null) {
+    const text = normalizeIngredientText(input || '');
+    // Keep the framework-free web client byte-for-byte equivalent to the
+    // native V16 rule engine's default hazard weights.
+    const severityPenalty = { high: 30, medium: 20, low: 10 };
+    const benefitReward = { high: 5, medium: 3, low: 1 };
+    const hazards = [];
+    const benefits = [];
+    const candidates = [];
+    const trustedFacts = facts && facts.confidence !== 'low' ? facts : null;
+    const ordered = Array.isArray(trustedFacts?.orderedIngredients) ? trustedFacts.orderedIngredients : [];
+
+    Object.entries(activeBlacklist || {}).forEach(([key, rule]) => {
+        if (!rule || !Array.isArray(rule.aliases)) return;
+        const aliases = [key, ...rule.aliases];
+        if (!aliases.some(alias => matchIngredient(text, alias, rule.pattern || null))) return;
+        hazards.push(key);
+        const positionIndex = ordered.findIndex(value => aliases.some(alias =>
+            matchIngredient(normalizeIngredientText(value), alias, rule.pattern || null)
+        ));
+        const position = positionIndex < 0 ? null : positionIndex + 1;
+        const positionMultiplier = position === null ? 1 : (position <= 3 ? 1.5 : (position <= 8 ? 1.2 : 1));
+        const baseImpact = Math.max(0, Math.min(60, Number(rule.scoreImpact ?? severityPenalty[rule.severity] ?? 24)));
+        let quantityImpact = 0;
+        const group = normalizeIngredientText(rule.scoreGroup || key);
+        if ((group === 'added-sugars' || normalizeIngredientText(key) === 'zucker')
+            && Number.isFinite(trustedFacts?.sugarsPer100)
+            && ['per100g', 'per100ml'].includes(trustedFacts?.nutritionBasis)) {
+            const thresholds = trustedFacts.nutritionBasis === 'per100ml' ? { low: 2.5, high: 11.25 } : { low: 5, high: 22.5 };
+            const progress = Math.max(0, Math.min(1, (trustedFacts.sugarsPer100 - thresholds.low) / (thresholds.high - thresholds.low)));
+            quantityImpact = Math.round(progress * 30);
+        }
+        candidates.push({
+            key,
+            group,
+            level: rule.severity || 'medium',
+            baseImpact,
+            position,
+            positionMultiplier,
+            quantityImpact,
+            unweightedImpact: Math.round(baseImpact * positionMultiplier) + quantityImpact
+        });
+    });
+
+    Object.entries(activeWhitelist || {}).forEach(([key, rule]) => {
+        if (!rule || !Array.isArray(rule.aliases)) return;
+        if ([key, ...rule.aliases].some(alias => matchIngredient(text, alias, rule.pattern || null))) benefits.push(key);
+    });
+
+    const grouped = new Map();
+    candidates.forEach(candidate => {
+        const current = grouped.get(candidate.group);
+        if (!current || candidate.unweightedImpact > current.unweightedImpact
+            || (candidate.unweightedImpact === current.unweightedImpact && candidate.key < current.key)) {
+            grouped.set(candidate.group, candidate);
+        }
+    });
+    const accumulation = [1, 0.85, 0.70];
+    const contributions = [...grouped.values()]
+        .sort((left, right) => right.unweightedImpact - left.unweightedImpact || left.key.localeCompare(right.key))
+        .map((candidate, index) => {
+            const accumulationMultiplier = accumulation[index] ?? 0.55;
+            return {
+                ...candidate,
+                accumulationMultiplier,
+                finalImpact: Math.round(candidate.unweightedImpact * accumulationMultiplier)
+            };
+        });
+    const hazardImpact = contributions.reduce((sum, value) => sum + value.finalImpact, 0);
+    const benefitBonus = Math.min(5, benefits.reduce((sum, key) => {
+        const level = activeWhitelist[key]?.benefit || 'low';
+        return sum + (benefitReward[level] || 1);
+    }, 0));
+    let score = Math.max(0, Math.min(100, 100 - hazardImpact + benefitBonus));
+    const levels = candidates.map(value => value.level);
+    const severityCeiling = levels.includes('high') ? 49 : (levels.includes('medium') ? 69 : (levels.includes('low') ? 89 : null));
+    if (severityCeiling !== null) score = Math.min(score, severityCeiling);
+    return { score, hazards, benefits, contributions, benefitBonus, severityCeiling };
 }
 
 async function analyzeProduct(data, category, barcode, isExtracted = false) {
@@ -300,21 +405,18 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         renderFallbackUI(barcode, productName); return;
     }
 
-    let foundToxins = [], foundGood = [], score = 100;
-    const severityPenalty = { high: 30, medium: 20, low: 10 };
-    const benefitReward = { high: 20, medium: 10, low: 5 };
+    let foundToxins = [], foundGood = [];
     
     let rawToxinsNames = [];
     let rawGoodNames = [];
-    let hasHighToxin = false;
     let kiSummary = p.ki_summary || "";
     let packagingAssessment = assessPackaging(p);
 
     let collectedAlts = new Set();
     let contextMatch = false;
 
-    let effectiveBlacklist = Object.assign({}, isMaterialCategory ? (categoryProfile?.hazards || {}) : blacklist);
-    let effectiveWhitelist = Object.assign({}, isMaterialCategory ? (categoryProfile?.benefits || {}) : whitelist);
+    let effectiveBlacklist = Object.assign({}, blacklist, isMaterialCategory ? (categoryProfile?.hazards || {}) : {});
+    let effectiveWhitelist = Object.assign({}, whitelist, isMaterialCategory ? (categoryProfile?.benefits || {}) : {});
     try {
         let customToxins = readJsonStorage('op_custom_toxins', {});
         Object.keys(customToxins).forEach(key => {
@@ -326,13 +428,9 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         for (let mainKey in effectiveBlacklist) {
             let item = effectiveBlacklist[mainKey];
             if (!item || !Array.isArray(item.aliases)) continue;
-            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
+            if ([mainKey, ...item.aliases].some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 foundToxins.push(`<li class="list-toxin" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, ${jsArg(item.severity || 'medium')})">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                score -= (severityPenalty[item.severity] || 20);
                 rawToxinsNames.push(mainKey.toUpperCase());
-                if (item.severity === 'high') {
-                    hasHighToxin = true;
-                }
                 if (!contextMatch) {
                     for (let key in fallbackAlternatives) {
                         if (mainKey.toLowerCase().includes(key)) collectedAlts.add(fallbackAlternatives[key]);
@@ -344,11 +442,8 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         for (let mainKey in effectiveWhitelist) {
             let item = effectiveWhitelist[mainKey];
             if (!item || !Array.isArray(item.aliases)) continue;
-            if (item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
+            if ([mainKey, ...item.aliases].some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
                 foundGood.push(`<li class="list-good" onclick="openModal(${jsArg(mainKey.toUpperCase())}, ${jsArg(item.desc || '')}, ${jsArg(item.detail || '')}, 'good')">${escapeHTML(mainKey.toUpperCase())}</li>`); 
-                let benefit = item.benefit || "low";
-                let reward = benefitReward[benefit] || 5;
-                score += reward;
                 rawGoodNames.push(mainKey.toUpperCase());
             }
         }
@@ -370,24 +465,13 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         }
     }
 
-    score = Math.max(0, Math.min(100, score));
-    if (foundToxins.length > 0) {
-        let maxCap = 50;
-        if (!hasHighToxin) {
-            let totalReward = 0;
-            for (let mainKey in effectiveWhitelist) {
-                let item = effectiveWhitelist[mainKey];
-                if (item && Array.isArray(item.aliases) && item.aliases.some(alias => matchIngredient(ingredientsRaw, alias, item.pattern || null))) {
-                    let benefit = item.benefit || "low";
-                    totalReward += (benefitReward[benefit] || 5);
-                }
-            }
-            maxCap = Math.min(75, 50 + totalReward);
-        }
-        if (score > maxCap) {
-            score = maxCap;
-        }
-    }
+    const scoreResult = calculateV16Score(
+        ingredientsRaw,
+        effectiveBlacklist,
+        effectiveWhitelist,
+        extractScoringFacts(p, ingredientsRawOriginal)
+    );
+    let score = scoreResult.score;
 
     let suggestedAltsHtml = [];
     collectedAlts.forEach(alt => {
@@ -415,7 +499,9 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         foundToxins: rawToxinsNames,
         foundGood: rawGoodNames,
         captureMethod: p._capture_method || (isExtracted ? 'photo' : 'barcode'),
-        webAlternatives: p._web_alternatives || []
+        webAlternatives: p._web_alternatives || [],
+        scoreBreakdown: scoreResult,
+        originalText: p.ingredients_text_original || ''
     });
 
     let resultHtml = `
@@ -423,9 +509,17 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
             <div class="res-header">
                 ${imageHtml}
                 <div class="res-info"><span class="res-badge">${escapeHTML(category)}</span><h3 class="res-title">${escapeHTML(productName)}</h3></div>
-                <div class="res-score-circle" style="color:${scoreColor}; border-color:${scoreColor};">${score}</div>
+                <button class="res-score-circle" style="color:${scoreColor}; border-color:${scoreColor};" onclick="openModal('Score erklärt', 'V16 · ${score} von 100', ${jsArg(`Startwert 100. Kritische Treffer: ${rawToxinsNames.length}. Positive Treffer: ${rawGoodNames.length}. Positiver Bonus: +${scoreResult.benefitBonus} von maximal +5. ${scoreResult.severityCeiling !== null ? `Risiko-Obergrenze: ${scoreResult.severityCeiling}.` : 'Keine Risiko-Obergrenze aktiv.'}`)}, 'alternative')">${score}</button>
             </div>
-            <div class="status-bar ${foundToxins.length > 0 ? 'st-alert' : 'st-clean'}">${foundToxins.length > 0 ? 'ANGRIFF DETEKTIERT' : 'STATUS REIN'}</div>`;
+            <div class="result-quick-facts">
+                <span><b>${rawToxinsNames.length}</b>Kritisch</span><span><b>${rawGoodNames.length}</b>Positiv</span><span><b>${packagingAssessment.score}</b>Verpackung</span><span><b>16.0</b>Regelversion</span>
+            </div>
+            <div class="result-evidence ${keyActive ? 'web-supported' : 'provisional'}">
+                <b>${keyActive ? 'Daten lokal bewertet und optional KI-ergänzt' : 'Score vorläufig'}</b>
+                <span>${keyActive ? 'Score und Signaturen werden immer vom lokalen V16-Regelwerk berechnet.' : 'Keine Web-/KI-Gegenprüfung für diesen Stand. Die lokale Bewertung bleibt vollständig nutzbar.'}</span>
+            </div>
+            <div class="result-disclosure">ⓘ App-eigene Bewertungsregel · keine medizinische Diagnose</div>
+            <div class="status-bar ${foundToxins.length > 0 ? 'st-alert' : 'st-clean'}">${foundToxins.length > 0 ? 'KRITISCHE SIGNATUREN ERKANNT' : 'KEINE KRITISCHE SIGNATUR ERKANNT'}</div>`;
             
     if (kiSummary) {
         resultHtml += `
@@ -457,6 +551,12 @@ async function analyzeProduct(data, category, barcode, isExtracted = false) {
         } else {
             resultHtml += `<button class="web-alternative-btn" onclick="generateWebAlternatives(${jsArg(barcode)})">Unbestätigte Web-Alternativen suchen</button>`;
         }
+    }
+
+    if (scoreResult.contributions.length) {
+        resultHtml += `<div class="sec-title">Score-Aufschlüsselung</div><div class="score-breakdown-list">${scoreResult.contributions.map(item => `
+            <article><div><b>${escapeHTML(item.displayName || item.key)}</b><small>Basis ${item.baseImpact}${item.position ? ` · Position ${item.position}` : ''}${item.quantityImpact ? ` · Menge +${item.quantityImpact}` : ''}</small></div><strong>−${item.finalImpact}</strong></article>`).join('')}
+            <article class="score-benefit-row"><div><b>Positiver Gesamtbonus</b><small>Maximal +5 Punkte</small></div><strong>+${scoreResult.benefitBonus}</strong></article></div>`;
     }
 
     let packagingColor = packagingAssessment.score >= 75 ? 'var(--matrix-green)' : (packagingAssessment.score >= 40 ? 'var(--warn)' : 'var(--alert)');

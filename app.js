@@ -6,11 +6,11 @@ let viewStack = ['home'];
 let activeArchiveInjectBarcode = "";
 const summaryGenerationLocks = new Set();
 const guidedScanFiles = { front: null, label: null, packaging: null };
-const APP_SCHEMA_VERSION = '14.4';
-const APP_ANALYSIS_VERSION = 14.4;
+const APP_SCHEMA_VERSION = '16.0';
+const APP_ANALYSIS_VERSION = 16.0;
 const MAP_POI_LIMIT = 30;
 let currentMapCategory = 'clean-food';
-let currentMapRadius = 2500;
+let currentMapRadius = 5000;
 let currentMapCenter = null;
 let currentMapPois = [];
 let currentMapLoading = false;
@@ -37,6 +37,7 @@ function setGuidedScanFile(kind, file) {
     state.textContent = 'Bereit';
     state.closest('.capture-step').classList.add('complete');
     document.getElementById('guidedAnalyzeBtn').disabled = !(guidedScanFiles.front || guidedScanFiles.label);
+    document.getElementById('guidedLocalBtn').disabled = !guidedScanFiles.label;
 }
 
 function resetGuidedScan() {
@@ -47,6 +48,7 @@ function resetGuidedScan() {
     document.getElementById('capturePackagingState').textContent = 'Optional';
     document.querySelectorAll('.capture-step').forEach(step => step.classList.remove('complete'));
     document.getElementById('guidedAnalyzeBtn').disabled = true;
+    document.getElementById('guidedLocalBtn').disabled = true;
 }
 
 function migrateArchiveToCurrentVersion() {
@@ -65,7 +67,7 @@ function renderScannerRecents() {
     }
     container.innerHTML = recent.map(item => `
         <button class="scan-recent-item" onclick="loadFromArchive(${jsArg(item.barcode)})">
-            ${isSafeImageUrl(item.imageUrl) ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V14.4</span>'}
+            ${isSafeImageUrl(item.imageUrl) ? `<img src="${escapeHTML(item.imageUrl)}" alt="">` : '<span class="scan-recent-placeholder">V16</span>'}
             <span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.category)} · Score ${item.score}</small></span>
         </button>`).join('');
 }
@@ -81,22 +83,38 @@ function fetchJsonWithTimeout(url, timeoutMs = 15000) {
         .finally(() => clearTimeout(timeout));
 }
 
+function applyAppearance(value = 'system') {
+    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+    const isLight = value === 'light' || (value === 'system' && prefersLight);
+    document.documentElement.classList.toggle('light-theme', isLight);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isLight ? '#f2f5f7' : '#080c12');
+    const legacyToggle = document.getElementById('themeToggleCheckbox');
+    if (legacyToggle) legacyToggle.checked = isLight;
+}
+
 function toggleTheme(checkbox) {
-    if (checkbox.checked) {
-        document.documentElement.classList.add('light-theme');
-        localStorage.setItem('op_theme', 'light');
-    } else {
-        document.documentElement.classList.remove('light-theme');
-        localStorage.setItem('op_theme', 'dark');
-    }
+    const appearance = checkbox.checked ? 'light' : 'dark';
+    localStorage.setItem('op_appearance', appearance);
+    localStorage.setItem('op_theme', appearance);
+    applyAppearance(appearance);
 }
 
 function initTheme() {
-    let savedTheme = localStorage.getItem('op_theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.documentElement.classList.add('light-theme');
-        if(document.getElementById('themeToggleCheckbox')) document.getElementById('themeToggleCheckbox').checked = true;
-    }
+    const savedAppearance = localStorage.getItem('op_appearance') || localStorage.getItem('op_theme') || 'system';
+    const appearanceSelect = document.getElementById('appearanceSelect');
+    if (appearanceSelect) appearanceSelect.value = ['system', 'dark', 'light'].includes(savedAppearance) ? savedAppearance : 'system';
+    applyAppearance(savedAppearance);
+    const settings = {
+        reduceMotion: localStorage.getItem('op_reduce_motion') === 'true',
+        highContrast: localStorage.getItem('op_high_contrast') === 'true',
+        reduceTransparency: localStorage.getItem('op_reduce_transparency') === 'true'
+    };
+    document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);
+    document.documentElement.classList.toggle('high-contrast', settings.highContrast);
+    document.documentElement.classList.toggle('reduce-transparency', settings.reduceTransparency);
+    if (document.getElementById('reduceMotionToggle')) document.getElementById('reduceMotionToggle').checked = settings.reduceMotion;
+    if (document.getElementById('highContrastToggle')) document.getElementById('highContrastToggle').checked = settings.highContrast;
+    if (document.getElementById('reduceTransparencyToggle')) document.getElementById('reduceTransparencyToggle').checked = settings.reduceTransparency;
 }
 
 function openModal(title, desc, detail, isAlertOrSeverity) {
@@ -171,10 +189,10 @@ function updateCoreStatusBadge() {
     let badge = document.getElementById('coreStatusBadge');
     if (badge) {
         if (keyActive) {
-            badge.innerText = "KI-CORE ACTIVE";
+            badge.innerText = "KI aktiv";
             badge.className = "core-status-badge core-status-ki";
         } else {
-            badge.innerText = "OFFLINE-CORE ACTIVE";
+            badge.innerText = "Lokal aktiv";
             badge.className = "core-status-badge core-status-offline";
         }
     }
@@ -216,7 +234,11 @@ function openView(viewName, isBackAction = false) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     
     if (!isBackAction) {
-        if (viewStack[viewStack.length - 1] !== viewName) viewStack.push(viewName);
+        if (['home', 'scan', 'search', 'chat', 'history'].includes(viewName)) {
+            viewStack = [viewName];
+        } else if (viewStack[viewStack.length - 1] !== viewName) {
+            viewStack.push(viewName);
+        }
     }
     
     const showBack = viewStack.length > 1;
@@ -227,8 +249,12 @@ function openView(viewName, isBackAction = false) {
     
     document.getElementById('view-' + viewName).classList.add('active');
     if(document.getElementById('nav-' + viewName)) document.getElementById('nav-' + viewName).classList.add('active');
+    const titles = { home: 'Übersicht', scan: 'Sensor', search: 'Produktsuche', chat: 'Operator Chat', history: 'Archiv', map: 'Clean Shopping', compare: 'Vergleich', result: 'Analyse', alternatives: 'Alternativen', aihub: 'KI Analysis Core' };
+    const title = document.getElementById('viewTitle');
+    if (title) title.textContent = titles[viewName] || 'Operator Scanner';
     if(viewName === 'scan') { document.getElementById('startBtn').style.display = 'block'; document.getElementById('reader').style.display = 'none'; renderScannerRecents(); }
     if(viewName === 'history') renderHistory();
+    window.scrollTo({ top: 0, behavior: document.documentElement.classList.contains('reduce-motion') ? 'auto' : 'smooth' });
 }
 
 function goBack() {
@@ -261,35 +287,26 @@ function onScanSuccess(decodedText) {
     }
 }
 
-// Zentrale Barcode-Kaskade: OpenFoodFacts → OpenBeautyFacts → Fallback
-function fetchDataCascade(barcode) {
-    // Primär: OpenFoodFacts
-    fetchJsonWithTimeout(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-    .then(data => {
-        if (data.status === 1 && data.product) {
-            analyzeProduct(data, "Nahrung", barcode, false);
-        } else {
-            // Sekundär: OpenBeautyFacts
-            fetchJsonWithTimeout(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-            .then(dataB => {
-                if (dataB.status === 1 && dataB.product) {
-                    analyzeProduct(dataB, "Kosmetik", barcode, false);
-                } else {
-                    renderFallbackUI(barcode);
-                }
-            }).catch(() => renderFallbackUI(barcode));
+// Zentrale Barcode-Kaskade wie nativ: universelles OFF V3 → OFF/OBF V2 → Fallback
+async function fetchDataCascade(barcode) {
+    const code = encodeURIComponent(barcode);
+    try {
+        const universal = await fetchJsonWithTimeout(`https://world.openfoodfacts.org/api/v3/product/${code}.json?product_type=all`, 12000);
+        if (universal?.product) {
+            const type = String(universal.product_type || universal.product?._data_quality_tags || '').toLowerCase();
+            await analyzeProduct(universal, type.includes('beauty') ? 'Kosmetik' : 'Nahrung', barcode, false);
+            return;
         }
-    }).catch(() => {
-        // Selbst wenn OFF down ist, BeautyFacts versuchen
-        fetchJsonWithTimeout(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`)
-        .then(dataB => {
-            if (dataB.status === 1 && dataB.product) {
-                analyzeProduct(dataB, "Kosmetik", barcode, false);
-            } else {
-                renderFallbackUI(barcode);
-            }
-        }).catch(() => renderFallbackUI(barcode));
-    });
+    } catch (_) {}
+    const settled = await Promise.allSettled([
+        fetchJsonWithTimeout(`https://world.openfoodfacts.org/api/v2/product/${code}.json`, 12000),
+        fetchJsonWithTimeout(`https://world.openbeautyfacts.org/api/v2/product/${code}.json`, 12000)
+    ]);
+    const food = settled[0].status === 'fulfilled' ? settled[0].value : null;
+    const beauty = settled[1].status === 'fulfilled' ? settled[1].value : null;
+    if (food?.status === 1 && food.product) await analyzeProduct(food, 'Nahrung', barcode, false);
+    else if (beauty?.status === 1 && beauty.product) await analyzeProduct(beauty, 'Kosmetik', barcode, false);
+    else renderFallbackUI(barcode);
 }
 
 function triggerArchiveImageInject(event, barcode) {
@@ -304,7 +321,9 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
     history = history.filter(item => item.barcode !== barcode);
     let mainCategory = getBaseCategory(category);
     let nextPackaging = analysisMeta.packaging || existing?.packaging;
-    if (existing?.packaging?.risk !== 'unknown' && nextPackaging?.risk === 'unknown') nextPackaging = existing.packaging;
+    if (existing?.packaging && existing.packaging.risk !== 'unknown' && nextPackaging?.risk === 'unknown') {
+        nextPackaging = existing.packaging;
+    }
     history.unshift({ 
         barcode, 
         name, 
@@ -318,6 +337,8 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
         foundToxins: analysisMeta.foundToxins || existing?.foundToxins || [],
         foundGood: analysisMeta.foundGood || existing?.foundGood || [],
         webAlternatives: analysisMeta.webAlternatives || existing?.webAlternatives || [],
+        scoreBreakdown: analysisMeta.scoreBreakdown || existing?.scoreBreakdown || null,
+        originalText: analysisMeta.originalText || existing?.originalText || '',
         analysisVersion: APP_ANALYSIS_VERSION,
         dateIso: new Date().toISOString() 
     });
@@ -326,7 +347,7 @@ function saveToHistory(barcode, name, score, category, rawIngredients, imgUrl, k
 }
 
 function openChangelogModal() {
-    document.getElementById('mod-title').innerText = 'PATCH NOTES V14.4';
+    document.getElementById('mod-title').innerText = 'PATCH NOTES V16';
     document.getElementById('mod-desc').innerText = 'System-Aktualisierungsprotokoll';
     document.getElementById('mod-desc').style.color = 'var(--gemini-blue)';
     document.getElementById('mod-hazard-container').style.display = 'none';
@@ -462,6 +483,7 @@ function getFilteredHistory(history) {
     if (currentHistorySort === 'scoreAsc') sorted.sort((a, b) => a.score - b.score);
     else if (currentHistorySort === 'scoreDesc') sorted.sort((a, b) => b.score - a.score);
     else if (currentHistorySort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    else if (currentHistorySort === 'oldest') sorted.sort((a, b) => new Date(a.dateIso || 0) - new Date(b.dateIso || 0));
     else sorted.sort((a, b) => new Date(b.dateIso || 0) - new Date(a.dateIso || 0));
     return sorted;
 }
@@ -747,49 +769,49 @@ function processBarcodePhotoViaOCR(file) {
 // ─── FEATURE: Statistik-Dashboard ───
 function renderStats() {
     let history = getHistory();
-    if (history.length === 0) {
-        document.getElementById('stats-content').innerHTML = '<p style="text-align:center;color:var(--text-muted);">Scanne Produkte, um Statistiken zu generieren.</p>';
+    let total = history.length;
+    let avgScore = total ? Math.round(history.reduce((s,i) => s + i.score, 0) / total) : 0;
+    let critical = history.filter(item => item.score < 40).length;
+    const metrics = document.getElementById('stats-content');
+    if (metrics) metrics.innerHTML = `
+        <article class="metric-card"><span>↗ Scans</span><strong>${total}</strong><small>${total ? 'Lokal gespeichert' : 'Noch keine Produkte'}</small></article>
+        <article class="metric-card"><span>◷ Durchschnitt</span><strong style="color:${total ? getScoreColor(avgScore) : 'inherit'}">${total ? avgScore : '–'}<small>${total ? ' / 100' : ''}</small></strong><small>Dein Ø Produktscore</small></article>
+        <article class="metric-card metric-critical"><span>△ Kritisch</span><strong>${critical}</strong><small>Produkte unter 40</small></article>`;
+
+    const latestContainer = document.getElementById('latestAnalysis');
+    if (!latestContainer) return;
+    const latest = history[0];
+    if (!latest) {
+        latestContainer.innerHTML = `<div class="latest-empty"><div><span class="eyebrow">Erster Scan</span><h2>Deine letzte Analyse erscheint hier.</h2><p>Barcode, Produktfoto oder manuelle Angaben – alles wird lokal archiviert.</p></div><button class="primary-cta" onclick="openView('scan')">Jetzt scannen</button></div>`;
         return;
     }
-    let total = history.length;
-    let avgScore = Math.round(history.reduce((s,i) => s + i.score, 0) / total);
-    let thisWeek = history.filter(i => {
-        let d = new Date(i.dateIso || i.date);
-        let weekAgo = new Date(Date.now() - 7*24*60*60*1000);
-        return !Number.isNaN(d.getTime()) && d > weekAgo;
-    }).length;
-    
-    // Häufigste kritische Signaturen aus der gespeicherten Kategorieanalyse
-    let toxinCounts = {};
-    history.forEach(item => {
-        (item.foundToxins || []).forEach(key => { toxinCounts[key] = (toxinCounts[key] || 0) + 1; });
-    });
-    let topToxins = Object.entries(toxinCounts).sort((a,b) => b[1]-a[1]).slice(0, 5);
-    
-    let scoreColor = avgScore >= 80 ? 'var(--matrix-green)' : (avgScore >= 40 ? 'var(--warn)' : 'var(--alert)');
-    
-    let html = `
-    <div class="stats-grid">
-        <div class="stat-item"><div class="stat-value">${total}</div><div class="stat-label">Gesamt-Scans</div></div>
-        <div class="stat-item"><div class="stat-value">${thisWeek}</div><div class="stat-label">Letzte 7 Tage</div></div>
-        <div class="stat-item"><div class="stat-value" style="color:${scoreColor};">${avgScore}</div><div class="stat-label">Ø Score</div></div>
-        <div class="stat-item"><div class="stat-value">${Object.keys(toxinCounts).length}</div><div class="stat-label">Versch. Toxine</div></div>
-    </div>`;
-    
-    if (topToxins.length > 0) {
-        let maxCount = topToxins[0][1];
-        html += '<div class="stat-bar-container"><div class="sec-title">Häufigste Toxine</div>';
-        topToxins.forEach(([key, count]) => {
-            let pct = Math.round((count/maxCount)*100);
-            html += `<div class="stat-bar-row"><span class="stat-bar-name">${escapeHTML(key)}</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%; background:var(--alert);"></div></div><span style="font-size:10px; color:var(--text-muted);">${count}</span></div>`;
-        });
-        html += '</div>';
-    }
-    
-    document.getElementById('stats-content').innerHTML = html;
+    const scoreColor = getScoreColor(latest.score);
+    const image = isSafeImageUrl(latest.imageUrl)
+        ? `<img src="${escapeHTML(latest.imageUrl)}" alt="${escapeHTML(latest.name)}" loading="lazy">`
+        : '<span aria-hidden="true">▧</span>';
+    const primaryHazard = latest.foundToxins?.[0] || 'Keine kritische Signatur';
+    const packaging = latest.packaging?.material || 'Nicht verifiziert';
+    latestContainer.innerHTML = `
+        <article class="latest-card" tabindex="0" role="button" onclick="loadFromArchive(${jsArg(latest.barcode)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadFromArchive(${jsArg(latest.barcode)})}">
+            <div class="latest-image">${image}</div>
+            <div class="latest-body">
+                <span class="eyebrow">Letzte Analyse</span>
+                <div class="latest-title-row">
+                    <div><h2>${escapeHTML(latest.name)}</h2><small>${escapeHTML(latest.category)} · ${escapeHTML(latest.date || '')}</small></div>
+                    <div class="score-ring" style="--score:${latest.score};--score-color:${scoreColor}"><strong>${latest.score}</strong></div>
+                </div>
+                <div class="latest-signals">
+                    <div class="latest-signal"><span>Kritische Signatur</span><strong>${escapeHTML(primaryHazard)}</strong></div>
+                    <div class="latest-signal"><span>Verpackung</span><strong>${escapeHTML(packaging)}</strong></div>
+                </div>
+                <div class="verified-line">${latest.analysisVersion >= 16 ? '✓ V16-Regelwerk' : '△ Älterer Regelstand'} · ${latest.kiSummary ? 'KI-Zusammenfassung vorhanden' : 'Lokal bewertet'}</div>
+            </div>
+        </article>`;
 }
 
-// ─── PHASE 3: Archiv-KI Chat ───
+// ─── V16 Operator Chat: Archiv + allgemeiner Regelkatalog ───
+let currentChatMode = localStorage.getItem('op_chat_mode') === 'general' ? 'general' : 'archive';
+
 function getArchiveChatMessages() {
     return readJsonStorage('op_archive_chat', []).filter(item =>
         item && ['user', 'assistant', 'system'].includes(item.role) && item.content
@@ -816,6 +838,10 @@ function getArchiveContextSummary() {
 function renderChatContextStrip() {
     let el = document.getElementById('chatContextStrip');
     if (!el) return;
+    if (currentChatMode === 'general') {
+        el.textContent = 'Allgemeine Stofffragen · lokaler V16-Katalog als feste Basis';
+        return;
+    }
     let summary = getArchiveContextSummary();
     let categories = Object.entries(summary.categoryCounts).map(([name, count]) => `${name} ${count}`).join(' · ') || 'keine Kategorien';
     el.textContent = `${summary.total} Produkte · Ø ${summary.avgScore || '-'} · ${categories}`;
@@ -825,13 +851,32 @@ function renderArchiveChat() {
     renderChatContextStrip();
     let log = document.getElementById('archiveChatLog');
     if (!log) return;
-    let messages = getArchiveChatMessages();
+    let messages = getArchiveChatMessages().filter(message => (message.mode || 'archive') === currentChatMode);
+    document.querySelectorAll('[data-chat-mode]').forEach(button => {
+        const active = button.dataset.chatMode === currentChatMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', String(active));
+    });
+    const input = document.getElementById('archiveChatInput');
+    if (input) input.placeholder = currentChatMode === 'archive'
+        ? 'Frag nach Produkten, Stoffen oder Scores …'
+        : 'Frag allgemein nach Stoffen oder Produkten …';
+    const suggestionButtons = document.querySelectorAll('[data-chat-prompt]');
+    const suggestions = currentChatMode === 'archive'
+        ? ['Welche Produkte in meinem Archiv sind am kritischsten und warum?', 'Welche fairen Alternativen passen zu meinen schlechtesten Scans?', 'Welche Verpackungen im Archiv sollte ich vermeiden?']
+        : ['Wie bewertet der Katalog Fluorid in Zahnpasta?', 'Welche Schadstoffe sind in Möbeln relevant?', 'Welche problematischen Stoffe stecken oft in Kosmetik?'];
+    suggestionButtons.forEach((button, index) => {
+        button.dataset.chatPrompt = suggestions[index] || suggestions[0];
+        button.textContent = currentChatMode === 'archive'
+            ? ['Kritischste Produkte', 'Faire Alternativen', 'Packaging prüfen'][index]
+            : ['Fluorid prüfen', 'Möbelstoffe', 'Kosmetikstoffe'][index];
+    });
     if (!messages.length) {
         log.innerHTML = `
             <div class="chat-empty">
-                <div class="ai-empty-orb">AI</div>
-                <strong>Wie kann ich dein Archiv analysieren?</strong>
-                <span>Frage nach kritischen Produkten, Packaging-Risiken, Kategorie-Trends oder besseren Alternativen.</span>
+                <div class="ai-empty-orb">✦</div>
+                <strong>${currentChatMode === 'archive' ? 'Frag dein persönliches Archiv' : 'Frag den Schadstoffkatalog'}</strong>
+                <span>${currentChatMode === 'archive' ? 'Scores, Signaturen, Verpackungen und gespeicherte Zusammenfassungen werden verbunden.' : 'Allgemeine Fragen funktionieren lokal bei Katalogtreffern und optional mit deinem KI-Provider.'}</span>
             </div>`;
         return;
     }
@@ -839,12 +884,48 @@ function renderArchiveChat() {
         <article class="chat-message ${message.role === 'user' ? 'chat-user' : 'chat-assistant'}">
             <div class="chat-avatar">${message.role === 'user' ? 'DU' : 'AI'}</div>
             <div class="chat-bubble">
-                <span>${message.role === 'user' ? 'Du' : 'Archiv Assistant'}</span>
+                <span>${message.role === 'user' ? 'Du' : 'Operator'}</span>
                 <p>${escapeHTML(message.content)}</p>
             </div>
             ${Array.isArray(message.sources) && message.sources.length ? `<div class="chat-sources">${message.sources.slice(0, 4).map(src => `<button type="button" onclick="loadFromArchive(${jsArg(src.barcode || '')})">${escapeHTML(src.name || src.barcode || 'Archivobjekt')}</button>`).join('')}</div>` : ''}
         </article>`).join('');
     log.scrollTop = log.scrollHeight;
+}
+
+function setChatMode(mode) {
+    if (!['archive', 'general'].includes(mode)) return;
+    currentChatMode = mode;
+    localStorage.setItem('op_chat_mode', mode);
+    renderArchiveChat();
+}
+
+function localOperatorAnswer(question) {
+    const normalized = normalizeIngredientText(question);
+    const catalog = Object.assign({}, blacklist || {}, whitelist || {});
+    const match = Object.entries(catalog).find(([key, rule]) =>
+        [key, ...(rule.aliases || [])].some(alias => normalized.includes(normalizeIngredientText(alias)))
+    );
+    if (match) {
+        const [key, rule] = match;
+        return `${String(key).toUpperCase()}: ${rule.desc || 'Katalogtreffer'}. ${rule.detail || 'Die Einordnung stammt aus dem lokalen V16-Regelkatalog.'}`;
+    }
+    if (currentChatMode === 'archive') {
+        const records = getHistory();
+        if (!records.length) return 'Im lokalen Archiv sind noch keine Produkte gespeichert.';
+        if (/best|höch|gut/.test(normalized)) {
+            const best = records.reduce((a, b) => a.score >= b.score ? a : b);
+            return `Lokal ermittelt: ${best.name} hat mit ${best.score} den höchsten Score im Archiv.`;
+        }
+        if (/krit|schlecht|niedrig/.test(normalized)) {
+            const lowest = records.reduce((a, b) => a.score <= b.score ? a : b);
+            return `Lokal ermittelt: ${lowest.name} hat mit ${lowest.score} den niedrigsten Score im Archiv.`;
+        }
+        if (/durchschnitt|mittel/.test(normalized)) {
+            const average = Math.round(records.reduce((sum, item) => sum + item.score, 0) / records.length);
+            return `Der lokale Durchschnitt aus ${records.length} Produkten beträgt ${average} Punkte.`;
+        }
+    }
+    return 'Im lokalen Operator-Katalog wurde dazu kein direkter Treffer gefunden. Mit aktivem KI-Core kann die feste Regelbasis um klar gekennzeichnete Zusatzinformationen ergänzt werden.';
 }
 
 function scoreArchiveRelevance(item, question) {
@@ -906,15 +987,18 @@ async function sendArchiveChatMessage(prefilledPrompt = '') {
     let input = document.getElementById('archiveChatInput');
     let question = (prefilledPrompt || input.value || '').trim();
     if (!question) return;
-    if (!getSecretKey('gemini') && !getSecretKey('deepseek')) {
-        alert('Für den Archiv-KI-Chat wird ein aktiver Gemini- oder DeepSeek-Key benötigt.');
-        return;
-    }
     let messages = getArchiveChatMessages();
-    messages.push({ role: 'user', content: question, ts: new Date().toISOString() });
+    messages.push({ role: 'user', mode: currentChatMode, content: question, ts: new Date().toISOString() });
     saveArchiveChatMessages(messages);
     if (input) input.value = '';
     renderArchiveChat();
+    if (!getSecretKey('gemini') && !getSecretKey('deepseek')) {
+        messages = getArchiveChatMessages();
+        messages.push({ role: 'assistant', mode: currentChatMode, content: localOperatorAnswer(question), ts: new Date().toISOString() });
+        saveArchiveChatMessages(messages);
+        renderArchiveChat();
+        return;
+    }
     let log = document.getElementById('archiveChatLog');
     if (log) {
         log.insertAdjacentHTML('beforeend', `<article class="chat-message chat-assistant chat-thinking"><div class="chat-avatar">AI</div><div class="chat-bubble"><span>Archiv Assistant</span><p><i></i><i></i><i></i></p></div></article>`);
@@ -923,13 +1007,13 @@ async function sendArchiveChatMessage(prefilledPrompt = '') {
 
     setArchiveChatBusy(true);
     try {
-        let prompt = `Du bist der Archiv-KI-Core einer lokalen Produktanalyse-App.
-Nutze ausschließlich den folgenden Archivkontext. Wenn eine Information dort nicht enthalten ist, sage klar "nicht im Archiv verifiziert".
+        let prompt = `Du bist der Operator-Chat einer lokalen Produktanalyse-App im Modus "${currentChatMode}".
+Nutze den lokalen V16-Regelkatalog als feste Basis. ${currentChatMode === 'archive' ? 'Nutze ausschließlich den folgenden Archivkontext für Aussagen über persönliche Produkte. Wenn eine Information dort nicht enthalten ist, sage klar "nicht im Archiv verifiziert".' : 'Beantworte allgemeine Stoff- und Produktfragen. Trenne Katalogwissen klar von ergänzender KI-Einordnung.'}
 Antworte kurz, konkret und auf Deutsch. Priorisiere Risiko, Kategorie, Packaging, bessere Alternativen und nächste sinnvolle Handlung.
-Gib bis zu vier Quellen aus dem Archiv zurück, wenn du konkrete Produkte erwähnst.
+${currentChatMode === 'archive' ? 'Gib bis zu vier Quellen aus dem Archiv zurück, wenn du konkrete Produkte erwähnst.' : 'Erfinde keine konkreten Produktbelege, Preise oder Verfügbarkeiten.'}
 
 ARCHIVKONTEXT:
-${buildArchiveChatContext(question)}
+${currentChatMode === 'archive' ? buildArchiveChatContext(question) : 'Nicht verwendet im Allgemein-Modus.'}
 
 LETZTE CHAT-NACHRICHTEN:
 ${messages.slice(-8).map(m => `${m.role}: ${m.content}`).join('\n')}
@@ -943,11 +1027,11 @@ Antworte ausschließlich als JSON:
         let answer = result?.answer || 'Die KI hat keine verwertbare Antwort geliefert.';
         let sources = Array.isArray(result?.sources) ? result.sources : [];
         messages = getArchiveChatMessages();
-        messages.push({ role: 'assistant', content: answer, sources, ts: new Date().toISOString() });
+        messages.push({ role: 'assistant', mode: currentChatMode, content: answer, sources: currentChatMode === 'archive' ? sources : [], ts: new Date().toISOString() });
         saveArchiveChatMessages(messages);
     } catch (error) {
         messages = getArchiveChatMessages();
-        messages.push({ role: 'assistant', content: 'Archiv-Chat konnte nicht ausgeführt werden: ' + (error?.message || error), ts: new Date().toISOString() });
+        messages.push({ role: 'assistant', mode: currentChatMode, content: `${localOperatorAnswer(question)}\n\nKI-Hinweis: ${error?.message || error}`, ts: new Date().toISOString() });
         saveArchiveChatMessages(messages);
     } finally {
         setArchiveChatBusy(false);
@@ -1340,30 +1424,54 @@ function runCompare() {
     if (!compareData.A || !compareData.B) return;
     let a = compareData.A, b = compareData.B;
     let diff = a.score - b.score;
-    let winner = diff > 0 ? a.name : (diff < 0 ? b.name : null);
-    let diffAbs = Math.abs(diff);
-    let diffColor = diff > 0 ? 'var(--matrix-green)' : (diff < 0 ? 'var(--alert)' : 'var(--warn)');
-    
-    let html = `<div class="res-card"><div class="res-body">`;
-    if (winner) {
-        html += `<div class="compare-score-diff" style="color:${diffColor}; background:${diff>0?'rgba(0,255,65,0.08)':'rgba(255,0,60,0.08)'};">
-            🏆 ${escapeHTML(winner)} ist ${diffAbs} Punkte besser
-        </div>`;
-    } else {
-        html += `<div class="compare-score-diff" style="color:var(--warn); background:rgba(245,158,11,0.08);">⚖️ Gleichstand — beide Score ${a.score}</div>`;
-    }
-    html += `<p style="color:var(--text-muted); font-size:13px; text-align:center;">${escapeHTML(a.name)} (${a.score}) vs ${escapeHTML(b.name)} (${b.score})</p>`;
-    
-    // Zutaten-Vergleich
-    let aIng = (a.rawIngredients || '').toLowerCase();
-    let bIng = (b.rawIngredients || '').toLowerCase();
-    if (aIng && bIng) {
-        html += `<div class="sec-title">Zutaten-Vergleich</div>`;
-        html += `<p style="font-size:11px; color:var(--text-muted);"><strong>${escapeHTML(a.name)}:</strong> ${escapeHTML(a.rawIngredients.substring(0,200))}${a.rawIngredients.length>200?'…':''}</p>`;
-        html += `<p style="font-size:11px; color:var(--text-muted);"><strong>${escapeHTML(b.name)}:</strong> ${escapeHTML(b.rawIngredients.substring(0,200))}${b.rawIngredients.length>200?'…':''}</p>`;
-    }
-    html += `</div></div>`;
+    const winner = diff === 0 ? null : (diff > 0 ? a : b);
+    const row = (label, left, right, tone = '') => `<div class="comparison-line ${tone}"><span>${escapeHTML(label)}</span><b>${escapeHTML(String(left))}</b><b>${escapeHTML(String(right))}</b></div>`;
+    const list = values => values?.length ? values.slice(0, 4).join(', ') : 'Keine Treffer';
+    const evidence = item => item.kiSummary ? 'Lokal + KI ergänzt' : 'Lokal bewertet';
+    let html = `<div class="res-card comparison-report"><div class="res-body">
+        <div class="compare-score-diff">${winner ? `<strong>${escapeHTML(winner.name)}</strong> liegt im app-eigenen Score ${Math.abs(diff)} Punkte vorn.` : `Gleichstand bei ${a.score} Punkten.`}<small>Die Entscheidung bleibt vorläufig, wenn Datenbasis oder Regelversion abweichen.</small></div>
+        <div class="comparison-head"><span></span><b>${escapeHTML(a.name)}</b><b>${escapeHTML(b.name)}</b></div>
+        ${row('Score', `${a.score} / 100`, `${b.score} / 100`)}
+        ${row('Kritische Signaturen', a.foundToxins?.length || 0, b.foundToxins?.length || 0, 'comparison-hazard')}
+        ${row('Positive Signaturen', a.foundGood?.length || 0, b.foundGood?.length || 0)}
+        ${row('Verpackung', `${a.packaging?.material || 'Unbekannt'} · ${a.packaging?.score ?? '–'}`, `${b.packaging?.material || 'Unbekannt'} · ${b.packaging?.score ?? '–'}`)}
+        ${row('Datenqualität', evidence(a), evidence(b))}
+        ${row('Regelstand', `V${a.analysisVersion || 'alt'}`, `V${b.analysisVersion || 'alt'}`)}
+        <div class="comparison-signals"><article><span>${escapeHTML(a.name)}</span><b>Kritisch</b><p>${escapeHTML(list(a.foundToxins))}</p><b>Positiv</b><p>${escapeHTML(list(a.foundGood))}</p></article><article><span>${escapeHTML(b.name)}</span><b>Kritisch</b><p>${escapeHTML(list(b.foundToxins))}</p><b>Positiv</b><p>${escapeHTML(list(b.foundGood))}</p></article></div>
+    </div></div>`;
     document.getElementById('compare-result').innerHTML = html;
+}
+
+function renderAlternatives(query = '') {
+    const list = document.getElementById('alternativesList');
+    const filters = document.getElementById('alternativesFilters');
+    if (!list || !filters) return;
+    const archiveWeb = getHistory().flatMap(item => (item.webAlternatives || []).map(alt => ({
+        category: item.category,
+        name: alt.name,
+        reason: alt.reason,
+        criteria: [alt.sourceHint || 'Herstellerangaben vor dem Kauf prüfen'],
+        sourceLabel: `Webvorschlag zu ${item.name}`,
+        verificationUrl: '',
+        origin: 'web'
+    })));
+    const all = [...(Array.isArray(curatedAlternatives) ? curatedAlternatives : []), ...archiveWeb];
+    const categories = [...new Set(all.map(item => item.category).filter(Boolean))];
+    let active = filters.dataset.active || 'Alle';
+    filters.innerHTML = ['Alle', ...categories].map(category => `<button class="flt-btn ${active === category ? 'active' : ''}" type="button" data-alternative-category="${escapeHTML(category)}">${escapeHTML(category)}</button>`).join('');
+    filters.querySelectorAll('[data-alternative-category]').forEach(button => button.addEventListener('click', () => {
+        filters.dataset.active = button.dataset.alternativeCategory;
+        renderAlternatives(document.getElementById('alternativesSearchInput')?.value || '');
+    }));
+    const needle = normalizeIngredientText(query);
+    const items = all.filter(item => (active === 'Alle' || item.category === active) && (!needle || normalizeIngredientText(`${item.name} ${item.reason} ${(item.criteria || []).join(' ')}`).includes(needle)));
+    list.innerHTML = items.length ? items.map(item => `
+        <article>
+            <div class="alternative-top"><div><span class="alternative-badge">${item.origin === 'web' ? 'Unbestätigter Webvorschlag' : 'Kuratierte Orientierung'} · ${escapeHTML(item.category)}</span><b>${escapeHTML(item.name)}</b></div><span aria-hidden="true">♧</span></div>
+            <p>${escapeHTML(item.reason)}</p>
+            <div class="hist-signal-row">${(item.criteria || []).slice(0,3).map(value => `<span class="hist-signal hist-signal-neutral">${escapeHTML(value)}</span>`).join('')}</div>
+            <div class="alternative-source">${item.verificationUrl ? `<a href="${escapeHTML(item.verificationUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceLabel || 'Quelle prüfen')} ↗</a>` : escapeHTML(item.sourceLabel || 'Materialkriterium · selbst prüfen')}</div>
+        </article>`).join('') : `<div class="archive-empty"><strong>Keine Alternativen gefunden</strong><span>Filter oder Suche anpassen. Webvorschläge erscheinen nach einer optionalen Produktanalyse.</span></div>`;
 }
 
 // Event: Home-View rendert Stats
@@ -1375,10 +1483,23 @@ openView = function(viewName, isBackAction) {
     if (viewName === 'compare') updateCompareUI();
     if (viewName === 'chat') renderArchiveChat();
     if (viewName === 'map') renderLocalMap();
+    if (viewName === 'alternatives') renderAlternatives(document.getElementById('alternativesSearchInput')?.value || '');
 };
 
 function renderChangelogHtml() {
     const releases = [
+        {
+            version: 'V16',
+            tag: 'Native Web Parity',
+            title: 'Ein Operator-Erlebnis auf Web und iOS',
+            highlights: [
+                'Home, Sensor, Suche, Chat und Archiv folgen derselben Informationsarchitektur wie die native App.',
+                'Alternativen-Katalog, KI Core, Produktvergleich und Clean Map bleiben als fokussierte Werkzeuge erreichbar.',
+                'OFF und OBF werden parallel durchsucht; Barcode-Lookups verwenden zuerst den universellen V3-Endpunkt.',
+                'Archiv- und Allgemein-Chat funktionieren mit optionaler KI und klaren lokalen Fallback-Antworten.',
+                'Systemdarstellung, Accessibility-Modi und mobile, Desktop- sowie Ultrawide-Breakpoints wurden ergänzt.'
+            ]
+        },
         {
             version: 'V14.4',
             tag: 'Readiness',
@@ -1492,6 +1613,8 @@ Promise.all([
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'none';
     initTheme();
     updateCoreStatusBadge();
+    renderStats();
+    if (document.getElementById('view-alternatives')?.classList.contains('active')) renderAlternatives();
 }).catch(() => {
     blacklist = blacklist || {};
     whitelist = whitelist || {};
@@ -1500,6 +1623,7 @@ Promise.all([
     dbActive = false;
     initTheme();
     updateCoreStatusBadge();
+    renderStats();
     if (document.getElementById('db-status')) document.getElementById('db-status').style.display = 'block';
 });
 
@@ -1525,7 +1649,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-home').addEventListener('click', () => openView('home'));
     document.getElementById('nav-scan').addEventListener('click', () => openView('scan'));
     document.getElementById('nav-search').addEventListener('click', () => openView('search'));
-    document.getElementById('nav-map').addEventListener('click', () => openView('map'));
+    document.getElementById('nav-map')?.addEventListener('click', () => openView('map'));
     document.getElementById('nav-history').addEventListener('click', () => openView('history'));
     document.getElementById('nav-chat').addEventListener('click', () => openView('chat'));
     if (document.getElementById('nav-settings')) {
@@ -1538,6 +1662,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('card-map').addEventListener('click', () => openView('map'));
     document.getElementById('card-compare').addEventListener('click', () => openView('compare'));
     document.getElementById('card-chat').addEventListener('click', () => openView('chat'));
+    document.getElementById('card-aihub')?.addEventListener('click', () => openView('aihub'));
+    document.getElementById('card-alternatives')?.addEventListener('click', () => openView('alternatives'));
+    document.getElementById('brandHomeBtn')?.addEventListener('click', () => openView('home'));
+    document.querySelectorAll('[data-quick-view]').forEach(button => {
+        button.addEventListener('click', () => {
+            openView(button.dataset.quickView);
+            if (button.dataset.scanMode) setScanMode(button.dataset.scanMode);
+        });
+    });
+    document.querySelectorAll('[data-ai-target]').forEach(button => {
+        button.addEventListener('click', () => {
+            const target = button.dataset.aiTarget;
+            if (target === 'photo') { openView('scan'); setScanMode('photo'); }
+            else openView(target);
+        });
+    });
+    document.getElementById('aihubSettingsBtn')?.addEventListener('click', openDrawer);
 
     // Quick-Scan
     document.getElementById('quickScanBtn').addEventListener('click', executeQuickScan);
@@ -1575,9 +1716,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('guidedLabelInput').onchange = (e) => setGuidedScanFile('label', e.target.files[0]);
     document.getElementById('guidedPackagingInput').onchange = (e) => setGuidedScanFile('packaging', e.target.files[0]);
     document.getElementById('guidedAnalyzeBtn').addEventListener('click', () => processGuidedProductScan(guidedScanFiles));
+    document.getElementById('guidedLocalBtn')?.addEventListener('click', () => {
+        if (!guidedScanFiles.label) return;
+        openView('result');
+        processLocalOCR(guidedScanFiles.label, 'Foto-Analyse', 'PHOTO-' + Date.now(), 'Optisch (OCR)');
+    });
     
     // Compare
     document.getElementById('compareRunBtn').addEventListener('click', runCompare);
+    document.getElementById('compareSwapBtn')?.addEventListener('click', () => {
+        [compareData.A, compareData.B] = [compareData.B, compareData.A];
+        updateCompareUI();
+        if (compareData.A && compareData.B) runCompare();
+    });
     document.getElementById('archiveChatSendBtn').addEventListener('click', () => sendArchiveChatMessage());
     document.getElementById('archiveChatClearBtn').addEventListener('click', clearArchiveChat);
     document.getElementById('archiveChatInput').addEventListener('keydown', (e) => {
@@ -1593,10 +1744,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-chat-prompt]').forEach(button => {
         button.addEventListener('click', () => sendArchiveChatMessage(button.dataset.chatPrompt || ''));
     });
+    document.querySelectorAll('[data-chat-mode]').forEach(button => {
+        button.addEventListener('click', () => setChatMode(button.dataset.chatMode));
+    });
+    document.getElementById('alternativesSearchInput')?.addEventListener('input', event => renderAlternatives(event.target.value));
 
     document.getElementById('mapLocateBtn').addEventListener('click', locateAndLoadMapPois);
     document.getElementById('mapRadiusSelect').addEventListener('change', (e) => {
-        currentMapRadius = Number.parseInt(e.target.value, 10) || 2500;
+        currentMapRadius = Number.parseInt(e.target.value, 10) || 5000;
         if (currentMapCenter) loadMapPoisForCurrentCenter();
     });
     document.querySelectorAll('[data-map-category]').forEach(button => {
@@ -1612,6 +1767,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('flt-moebel').addEventListener('click', () => filterHistory('Möbel', 'flt-moebel'));
 
     document.getElementById('themeToggleCheckbox').addEventListener('change', (e) => toggleTheme(e.target));
+    document.getElementById('appearanceSelect')?.addEventListener('change', event => {
+        localStorage.setItem('op_appearance', event.target.value);
+        applyAppearance(event.target.value);
+    });
+    [
+        ['reduceMotionToggle', 'op_reduce_motion', 'reduce-motion'],
+        ['highContrastToggle', 'op_high_contrast', 'high-contrast'],
+        ['reduceTransparencyToggle', 'op_reduce_transparency', 'reduce-transparency']
+    ].forEach(([id, key, className]) => document.getElementById(id)?.addEventListener('change', event => {
+        localStorage.setItem(key, String(event.target.checked));
+        document.documentElement.classList.toggle(className, event.target.checked);
+    }));
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
     document.getElementById('saveDeepSeekKeyBtn').addEventListener('click', saveDeepSeekKey);
     document.getElementById('saveGoogleSearchKeyBtn').addEventListener('click', saveGoogleSearchKey);
@@ -1623,6 +1790,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
     document.getElementById('detailModalOverlay').addEventListener('click', closeModal);
     document.getElementById('closeDetailModalBtn')?.addEventListener('click', closeModal);
+    window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', () => {
+        if ((localStorage.getItem('op_appearance') || 'system') === 'system') applyAppearance('system');
+    });
+    renderStats();
+    renderArchiveChat();
     
     // Swipe-down to close für das Bottom-Sheet Detail-Modal (mit Scroll-Schutz)
     const detailModal = document.getElementById('detailModal');
