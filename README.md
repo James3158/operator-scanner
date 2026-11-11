@@ -9,7 +9,7 @@ A local-first web terminal for barcode capture, guided product photography, ingr
 
 ## 🧭 Project & Development Note
 
-Operator Scanner was developed with **AI assistance**, including **Antigravity / Gemini 3.5 Flash**, **Codex / GPT-5.5** and **GPT-5.6 Sol**. The project creator is responsible for the idea, domain and source research, the blacklist/whitelist rules and scoring design, validation, and code review. Implementation was developed iteratively with these tools, with parts also written directly by the creator. AI assistance does not replace testing, review, or responsibility for the application.
+Operator Scanner was developed with **AI assistance**, including **Antigravity / Gemini 3.5 Flash**, **Codex / GPT-5.5** and **GPT-5.6 Sol**. The project creator is responsible for the idea, domain and source research, the blacklist/whitelist rules and scoring design, and validation. Implementation was developed iteratively with these tools, with parts also written directly by the creator. AI assistance does not replace testing, review, or responsibility for the application.
 
 ---
 
