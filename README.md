@@ -1,14 +1,6 @@
 # Operator Scanner — Product, Toxin, Packaging & Local Shopping Map
 
-<p align="center">
-  <a href="#-native-ios-app--app-store-coming-soon-closed-source">
-    <img src="https://img.shields.io/badge/Native%20iOS%20App-App%20Store%20Coming%20Soon-0A84FF?style=for-the-badge&logo=apple&logoColor=white" alt="Native iOS app coming soon to the App Store">
-  </a>
-</p>
-
-> [!IMPORTANT]
-> **📱 Native iOS App — Coming Soon to the App Store**<br>
-> The native SwiftUI app is in its engineering, device-QA and store-preparation phase. TestFlight and App Store availability will follow after signing, production backend, privacy and release checks are complete.
+> **Repository scope:** This repository contains the browser-only web app. A related native iOS app is a private, unpublished prototype, is not included here, and has no scheduled store release.
 
 A local-first web terminal for barcode capture, guided product photography, ingredient analysis and separate packaging assessment. The interface is optimized for mobile Safari and static deployment through GitHub Pages.
 
@@ -17,12 +9,12 @@ A local-first web terminal for barcode capture, guided product photography, ingr
 
 ## 🧭 Project & Development Note
 
-Operator Scanner is largely a **Vibe-Coded project and application**. A substantial part of the implementation was developed iteratively with **Antigravity / Gemini 3.5 Flash**, **Codex / GPT-5.5** and **GPT-5.6 Sol**. The product idea, domain research, source research and validation are my own work as the project creator; parts of the code were also written by me directly and reviewed throughout development. AI-assisted development does not replace the underlying research, product decisions or responsibility for the application.
+Operator Scanner was developed with **AI assistance**, including **Antigravity / Gemini 3.5 Flash**, **Codex / GPT-5.5** and **GPT-5.6 Sol**. The project creator is responsible for the idea, domain and source research, the blacklist/whitelist rules and scoring design, validation, and code review. Implementation was developed iteratively with these tools, with parts also written directly by the creator. AI assistance does not replace testing, review, or responsibility for the application.
 
 ---
 
 ## 👁️ Core Mission
-The **Operator Terminal** is built for biological optimization by identifying hidden environmental and industrial toxins (neurotoxins, carcinogens, endocrine disruptors, and inflammatory fillers). It empowers users to break through the chemical matrix and discover clean, hormonally advantageous alternatives.
+Operator Scanner helps inspect product ingredients and materials using local rule catalogs, a deterministic 0–100 product score, and a separate packaging assessment. It is an informational project, not a medical product, and does not provide diagnoses.
 
 ---
 
@@ -45,12 +37,12 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 *   **Transparent Raw Data:** The terminal displays both the translated German text and the original input data in the "Zutaten-Rohdaten" view for full transparency.
 
 ### 4. V16 Deterministic Scoring
-*   **One formula in web and native:** Every product starts at **100 points**. The framework-free web app and Swift rule engine use the same parity fixtures and never let an AI model choose the score.
+*   **Local deterministic formula:** Every product starts at **100 points**. The browser app calculates the score from the rule catalogs and scoring facts; an AI model does not choose the score.
 *   **Base hazard impact:** `high`, `medium` and `low` rules subtract 30, 20 and 10 points by default. A rule may declare a bounded `scoreImpact` and a `scoreGroup` in `blacklist.json`; related detections remain visible but are not counted twice.
 *   **Evidence-aware weighting:** A verified ingredient order increases the impact of a matching substance in positions 1–3 by 1.5 and positions 4–8 by 1.2. For food, a verified sugar value per 100 g or 100 ml adds a bounded quantity impact. Untrusted low-confidence AI facts cannot activate either multiplier.
 *   **Accumulation without unlimited stacking:** Independent hazard groups are weighted 100%, 85%, 70% and then 55%. A detected `high`, `medium` or `low` rule also limits the final result to 49, 69 or 89.
 *   **Small positive bonus:** `high`, `medium` and `low` whitelist signals add 5, 3 and 1 point, with the complete positive bonus capped at 5. A single positive ingredient therefore cannot outweigh several relevant hazards.
-*   **Transparent breakdown:** Web and native records persist the individual contributions, ingredient position, quantity impact, accumulation factor, positive bonus and ceiling. Packaging keeps its independent score and never changes the product score.
+*   **Transparent breakdown:** Archive records persist the individual contributions, ingredient position, quantity impact, accumulation factor, positive bonus and ceiling. Packaging keeps its independent score and never changes the product score.
 
 ### 5. Persistent AI Summaries & V16 Archive
 *   **Catalog-grounded category evaluations:** The AI (Gemini or DeepSeek) starts with actual detections and effects from `blacklist.json`, category material profiles and local custom rules. Only then may it add clearly distinguishable general or web context. It explains why a product appears harmful, comparatively unproblematic or not sufficiently verifiable across food, cosmetics, clothing, household goods and furniture without inventing undeclared ingredients or making a medical diagnosis.
@@ -133,70 +125,9 @@ The **Operator Terminal** is built for biological optimization by identifying hi
 
 ## 💾 Installation & Deployment
 
-### 📱 Native iOS App — App Store Coming Soon (Closed Source)
+### Related private prototype
 
-The native Swift 6 / SwiftUI app is being developed as a separate, proprietary product alongside this public web repository. Its iOS source code and production backend are intentionally **closed source** and are not included in this repository. The public repository remains the home of the local-first web app, its public rule/research data and its browser deployment path.
-
-The native app already has a broad local engineering baseline. The following scope is documented here to show what is coming to iPhone and iPad; it does not publish the private implementation.
-
-Current native foundation:
-
-* SwiftUI tab shell for Home, Scanner, Search, AI Chat and Archive; the Map remains available from Home and the feature hub.
-* SwiftData archive with V16 JSON import and web-compatible export.
-* Live barcode scanning plus barcode recognition from a selected photo, local Vision OCR and Guided Vision for front, label and packaging images.
-* Unified database-first search: exact barcodes first use the current OpenFoodFacts universal V3 lookup (`product_type=all`) so food and cosmetics resolve to the correct project; name searches query OpenFoodFacts and OpenBeautyFacts, rank multiple matches for selection and run local rule evaluation immediately.
-* Incomplete database entries stay tied to their original barcode and product. A Web+AI supplement action can add missing ingredient, material and packaging information while preserving the original primary-database text for provenance; incomplete barcode scans use this automatically when AI is configured.
-* Product images share a memory/disk cache and off-main-thread downsampling across Search, Archive and Details. The Archive lazily backfills a small, rate-limited batch of missing database thumbnails instead of refetching every visible row.
-* When databases and completed web/AI research still provide no reliable product image, Product Details offers a local camera follow-up and a one-time reminder that can be suppressed per product. The captured photo uses the existing bounded JPEG/data-URL compression and does not trigger another search or consume AI tokens.
-* If both databases miss, Search offers three explicit continuations instead of silently guessing: web + AI analysis, guided product photos or ordered manual entry. Google CSE is preferred when configured and DuckDuckGo is the zero-configuration fallback.
-* Custom toxin management whose rules participate in new local analyses and remain compatible with web archive import/export.
-* Transparent preservation of the original OCR/input text when optional AI translation or cleanup changes the evaluated text.
-* Native archive metrics, lazy database thumbnails, category counts, search, sorting, clearing, comparison and local-first archive chat with clickable AI source chips.
-* A persistent Alternatives Catalog combines curated entries and the alternatives already saved with archive products. It shows which scanned products an alternative belongs to, enriches details lazily from OpenFoodFacts/OpenBeautyFacts and optional Web+AI research, caches images and separates verified product pages from clearly labeled retailer-search fallbacks.
-* Product Details uses compact image-backed alternative cards and links into the same catalog, so catalog state and product state cannot drift into separate implementations.
-* User-triggered MapKit shopping search with category and 2/5/10/20 km radius controls.
-* Sign in with Apple session handling plus a Cloudflare Worker boundary for Gemini, DeepSeek and Google CSE secrets.
-* A visible native KI Analysis Core for photo identification, search-before-AI product analysis, label/material extraction, automatic German translation and OCR cleanup, packaging assessment, persistent summaries, web-backed alternatives and archive chat.
-* General AI assessments explain the category-specific reasons for or against a product and return multiple practical alternatives. Web packaging evidence is preferred, with a visibly low-confidence AI fallback when no packaging source is available.
-* Product research returns ingredients/materials, assessment, alternatives and packaging together; local OCR and independent visual packaging work run concurrently. Animated, accessibility-aware progress cards rotate short product and app facts during unavoidable network waits.
-* Dual AI execution: recommended authenticated Worker mode or an optional personal direct mode with user-entered Gemini, DeepSeek and Google CSE credentials stored only in the iOS Keychain.
-* The direct text pipeline mirrors the web provider behavior: Gemini with a compatible model fallback chain and optional DeepSeek fallback, or explicit DeepSeek selection. Vision always uses Gemini.
-* Product-name AI analysis follows the web order: Google CSE when configured, direct DuckDuckGo fallback, structured AI extraction, then the local deterministic rule engine.
-* Product scores are never selected freely by AI. Database text, web evidence and structured AI supplements are merged without replacing the product identity; the deterministic V16 `blacklist.json`/whitelist rule engine then recomputes score, critical signals and positive signals from that same merged text. AI may return only structured scoring facts such as a sourced ingredient order or measured sugar value; low-confidence values cannot amplify the score.
-* Score presentation uses one continuous red–orange–amber–yellow-green–green scale from 0 to 100 across Home, Archive, Search, Compare and Product Details. Exact numeric scores and labels remain visible so color is never the sole accessibility signal.
-* Native rule version 16.0 layers household/clothing/furniture profiles onto the shared catalogs, treats a rule key as an additional safe alias, normalizes hyphenated ingredient spellings and adds position-, quantity-, grouping- and accumulation-aware scoring with a maximum five-point positive bonus.
-* On the first launch after this rule update, every archived record below rule version 16.0 that has evaluable text is reanalyzed locally without an API request. Score, critical/positive signals and the deterministic catalog preface are updated in place while barcode, image, original text, evidence, creation order and saved AI narrative are preserved. New scoring metadata survives native and web-compatible archive round trips.
-* Each native record carries analysis confidence, source labels and whether web research actually ran. Database-only or otherwise low-confidence scores are visibly marked as provisional in Product Details and are treated as provisional in Compare rather than as final clearance.
-* Configured AI is now used automatically to web-check selected database matches and barcode results. Missing ingredients/materials and packaging evidence are added to the existing barcode record; original primary-database text remains available for provenance.
-* Settings includes a local AI usage panel for attempts, recent request pace, provider-reported token counts, model and observed rate-limit responses. These are device-local estimates, not invented free-tier quotas; the authoritative per-project/model limits remain linked to Google AI Studio, and a 429 response stops Gemini model retries for that operation.
-* Adaptive light/dark app icon, system appearance, native iOS 26 Liquid Glass surfaces with graceful older-iOS fallbacks, explicit privacy manifest, Keychain-backed rotating refresh sessions, remote logout and in-app account deletion with Apple token revocation.
-* A dedicated animated Chat tab with first-use onboarding, full-width Archive/General controls, horizontal swipe switching, quick prompts, a shared `blacklist.json`/material-profile basis and clickable archive product source chips.
-* General and Archive chat answers can persist safe visual cards for local products, Alternatives Catalog entries and bounded HTTPS web results; duplicate cards are removed before rendering.
-* A full-screen native camera workspace with a top mode switch between live barcode capture and guided front/label/packaging photography. Live scanning is constrained to the visible reticle and tuned for responsiveness.
-* The Scanner workspace also switches between barcode and product-photo modes with a directionally filtered horizontal swipe, while vertical scrolling and loading states remain protected from accidental mode changes.
-* A modern animated Home dashboard with direct scanner, product-photo, search and chat actions while continuous effects remain isolated from archive-driven content.
-* A redesigned native archive with animated overview metrics, accessible category filters, stable lazy rows, richer product previews and native import/export, sorting and swipe deletion.
-* Interactive product details expose score methodology, capture/data provenance, rule-catalog signal explanations, packaging evidence and full selectable source text in dedicated sheets.
-* Compare has a modern image-backed product picker, animated score bars, separate critical/positive/packaging sections, data-quality comparison, Dynamic Type layouts and a provisional verdict whenever evidence or rule versions are not comparable.
-* Appearance now switches consistently between System, Light and Dark across root content and modal settings. Accessibility controls add app-level reduced motion, stronger contrast, reduced-transparency fallbacks and more explicit action labels while continuing to respect iOS Dynamic Type and system accessibility settings.
-* Database records whose source name is empty, unknown or unnamed must be renamed before first save. The original database value remains stored as provenance, and any archive entry can be renamed later without changing its barcode or analysis.
-
-Intentional native differences from the static web app:
-
-* Production can keep Gemini, DeepSeek and Google CSE exclusively as Worker secrets. For personal development and simulator testing, the optional direct mode accepts the user's own keys and stores them in the device-only iOS Keychain; no key is embedded in the app bundle or repository.
-* Native product lookup does not need browser JSONP or public CORS proxies. Public product databases and the DuckDuckGo fallback are called directly by iOS; Worker mode keeps Google CSE server-side.
-* The native map uses MapKit rather than browser-rendered Overpass/OpenStreetMap results.
-* VisionKit supplies live barcode recognition. The native flow favors a bounded reticle and reduced scanner guidance/highlighting for speed; a manual torch control is not currently exposed.
-
-Still external or device-bound:
-
-* A unique production bundle ID, Apple Development Team and Sign in with Apple key.
-* Cloudflare D1/KV resource IDs, production secrets, Worker deployment and final HTTPS API URL.
-* Physical-device validation of camera, barcode, permissions, Apple authentication and every authenticated AI action.
-
-The current internal milestone is a verified local engineering baseline: simulator Debug/Release builds, local scoring parity and the main archive, comparison, assistant, map and scanner flows have been exercised. TestFlight and App Store submission still require final Apple signing, real-device camera and Sign in with Apple QA, a deployed production Worker, privacy review and store metadata.
-
-**Release signal:** 🚧 engineering baseline complete · 🧪 TestFlight preparation next · 🚀 App Store coming soon · 🔒 native source remains private.
+A related native app built with Swift and SwiftUI exists as a private, unpublished test prototype. Its source code is not part of this repository. There is no scheduled store release; this repository documents and distributes the browser-only web app.
 
 ### Existing Web App
 
@@ -231,10 +162,20 @@ node test_rules.js
 
 ---
 
+## Known limitations
+
+- This is a static browser app with no backend secret store. Configured provider keys must be used in browser requests; Google CSE puts its API key in a JSONP request URL. Optional encrypted local storage does not hide keys while they are being used.
+- The web-search fallback depends on third-party CORS proxies (`allorigins.win` and `corsproxy.io`). These providers can see routed queries, and their availability affects search.
+- Barcode databases, web search and optional AI features depend on external services. The local rule score depends on the supplied ingredient/material text and scoring facts; incomplete or incorrect input can affect results.
+
+## License
+
+The project is released under the [MIT License](LICENSE).
+
 ## V16 Web Parity Changes
 
-* Rebuilt the public web shell around the native five-tab structure and added the native-style Home hierarchy, latest-analysis card, tool hub and App Store coming-soon indicator.
-* Added an Alternatives Catalog and a visible AI Analysis Core without publishing or bundling the proprietary iOS or production-backend source.
+* Rebuilt the public web shell around the native five-tab structure and added the native-style Home hierarchy, latest-analysis card and tool hub.
+* Added an Alternatives Catalog and a visible AI Analysis Core within the browser-only web app.
 * Added parallel OFF/OBF name search, universal OpenFoodFacts V3 barcode lookup with safe fallbacks, separate local OCR and full AI photo actions, and 2/5/10/20 km map radii.
 * Added Archive and General chat modes with local catalog/archive fallback answers, improved comparison sections and transparent V16 score contributions.
 * Added System/Light/Dark appearance, reduced motion, stronger contrast, reduced transparency and responsive verification at mobile, desktop and ultrawide widths.
